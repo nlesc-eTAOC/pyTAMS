@@ -16,8 +16,8 @@ introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856).
 | (5/5) checklist                    | [![workflow cii badge](https://bestpractices.coreinfrastructure.org/projects/<replace-with-created-project-identifier>/badge)](https://bestpractices.coreinfrastructure.org/projects/<replace-with-created-project-identifier>) |
 | howfairis                          | [![fair-software badge](https://img.shields.io/badge/fair--software.eu-%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8F%20%20%E2%97%8B-yellow)](https://fair-software.eu) |
 | **Other best practices**           | &nbsp; |
-| Static analysis                    | [![workflow scq badge](https://sonarcloud.io/api/project_badges/measure?project=nlesc-eTAOC_pytams&metric=alert_status)](https://sonarcloud.io/dashboard?id=nlesc-eTAOC_pytams) |
-| Coverage                           | [![workflow scc badge](https://sonarcloud.io/api/project_badges/measure?project=nlesc-eTAOC_pytams&metric=coverage)](https://sonarcloud.io/dashboard?id=nlesc-eTAOC_pytams) |
+| Static analysis                    | [![workflow scq badge](https://sonarcloud.io/api/project_badges/measure?project=nlesc-eTAOC_pyTAMS&metric=alert_status)](https://sonarcloud.io/dashboard?id=nlesc-eTAOC_pyTAMS) |
+| Coverage                           | [![workflow scc badge](https://sonarcloud.io/api/project_badges/measure?project=nlesc-eTAOC_pyTAMS&metric=coverage)](https://sonarcloud.io/dashboard?id=nlesc-eTAOC_pyTAMS) |
 | Documentation                      | |
 | **GitHub Actions**                 | &nbsp; |
 | Build                              | [![build](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/build.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/build.yml) |
