@@ -1,5 +1,35 @@
 """Tests for the pytams.trajectory class."""
+from math import isclose
+from pytams.fmodel import ForwardModel
 from pytams.trajectory import Trajectory
+
+
+class DummyFModel(ForwardModel):
+    """Dummy child model.
+
+    The state is the time and score
+    10 times the state, ceiled to 1.0
+    """
+
+    def __init__(self):
+        """Override the template."""
+        self._state = 0.0
+
+    def advance(self, dt: float, forcingAmpl: float):
+        """Override the template."""
+        self._state = self._state + dt
+
+    def getCurState(self):
+        """Override the template."""
+        return self._state
+
+    def setCurState(self, state):
+        """Override the template."""
+        self._state = state
+
+    def score(self):
+        """Override the template."""
+        return min(self._state * 10.0, 1.0)
 
 
 def test_initBlankTraj():
@@ -13,7 +43,7 @@ def test_initBlankTraj():
 
 
 def test_initParametrizedTraj():
-    """Test paramtrized trajectory creation."""
+    """Test parametrized trajectory creation."""
     fmodel = {}
     parameters = {
         "traj.end_time": 2.0,
@@ -31,3 +61,20 @@ def test_restartTraj():
     t_test = Trajectory(fmodel, parameters, "ttest")
     rst_test = Trajectory.restartFromTraj(t_test, 0.1)
     assert rst_test.ctime() == 0.0
+
+
+def test_DummyModelTraj():
+    """Test trajectory with dummy model."""
+    fmodel = DummyFModel()
+    parameters = {
+        "traj.end_time": 0.04,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.25,
+    }
+    t_test = Trajectory(fmodel, parameters)
+    t_test.advance(0.01)
+    assert isclose(t_test.scoreMax(),0.1,abs_tol=1e-9)
+    assert t_test.isConverged() is False
+    t_test.advance()
+    assert t_test.isConverged() is True
+

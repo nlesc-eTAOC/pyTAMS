@@ -37,7 +37,7 @@ class Trajectory:
         """Return trajectory Id."""
         return self._tid
 
-    def advance(self, t_end: float = 1000.0):
+    def advance(self, t_end: float = 1.0e12):
         """Advance the trajectory to a prescribed end time.
 
         Args:
@@ -127,9 +127,14 @@ class Trajectory:
         return self._t_cur
 
     def stepSize(self) -> float:
-        """Return the time step size"""
+        """Return the time step size."""
         return self._dt
 
     def scoreMax(self) -> float:
         """Return the maximum of the score function."""
         return self._score_max
+
+    def isConverged(self) -> bool:
+        """Return True for converged trajectory."""
+        return self.has_converged
+
