@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = pytams
+SPHINXPROJ    = pyTAMS
 SOURCEDIR     = .
 BUILDDIR      = _build
 

@@ -1,6 +1,5 @@
 ## Badges
 
-(Customize these badges with your own links, and check https://shields.io/ or https://badgen.net/ to see which other badges are available.)
 
 | fair-software.eu recommendations | |
 | :-- | :--  |
@@ -20,7 +19,7 @@
 | SonarCloud                         | [![sonarcloud](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml) |
 | MarkDown link checker              | [![markdown-link-check](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml) |
 
-## How to use pytams
+## How to use pyTAMS
 
 An implementation of the trajectory-adaptive multilevel splitting (TAMS) method.
 
@@ -28,7 +27,7 @@ The project setup is documented in [project_setup.md](project_setup.md). Feel fr
 
 ## Installation
 
-To install pytams from GitHub repository, do:
+To install pyTAMS from GitHub repository, do:
 
 ```console
 git clone git@github.com:nlesc-eTAOC/pyTAMS.git
@@ -42,7 +41,7 @@ Include a link to your project's full documentation here.
 
 ## Contributing
 
-If you want to contribute to the development of pytams,
+If you want to contribute to the development of pyTAMS,
 have a look at the [contribution guidelines](CONTRIBUTING.md).
 
 ## Credits

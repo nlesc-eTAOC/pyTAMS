@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u"pytams"
+project = u"pyTAMS"
 copyright = u"2023, Netherlands eScience Center"
 author = u"Lucas Esclapez"
 

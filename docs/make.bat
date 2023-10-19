@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=pytams
+set SPHINXPROJ=pyTAMS
 
 if "%1" == "" goto help
 

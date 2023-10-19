@@ -1,4 +1,4 @@
-# `pytams` developer documentation
+# `pyTAMS` developer documentation
 
 If you're looking for user documentation, go [here](README.md).
 
@@ -33,7 +33,7 @@ The first way requires an activated virtual environment with the development too
 pytest -v
 ```
 
-The second is to use `tox`, which can be installed separately (e.g. with `pip install tox`), i.e. not necessarily inside the virtual environment you use for installing `pytams`, but then builds the necessary virtual environments itself by simply running:
+The second is to use `tox`, which can be installed separately (e.g. with `pip install tox`), i.e. not necessarily inside the virtual environment you use for installing `pyTAMS`, but then builds the necessary virtual environments itself by simply running:
 
 ```shell
 tox
