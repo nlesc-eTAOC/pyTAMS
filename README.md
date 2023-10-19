@@ -1,5 +1,11 @@
-## Badges
+# pyTAMS
 
+## Overview
+
+pyTAMS is a modular implementation of the trajectory-adaptive multilevel splitting method
+introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856).
+
+## Badges
 
 | fair-software.eu recommendations | |
 | :-- | :--  |
@@ -18,12 +24,6 @@
 | Citation data consistency               | [![cffconvert](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml) |
 | SonarCloud                         | [![sonarcloud](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml) |
 | MarkDown link checker              | [![markdown-link-check](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml) |
-
-## How to use pyTAMS
-
-An implementation of the trajectory-adaptive multilevel splitting (TAMS) method.
-
-The project setup is documented in [project_setup.md](project_setup.md). Feel free to remove this document (and/or the link to this document) if you don't need it.
 
 ## Installation
 
