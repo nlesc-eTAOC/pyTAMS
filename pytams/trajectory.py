@@ -92,12 +92,16 @@ class Trajectory:
 
         Loading the beginning of a provided trajectory
         for all entries with score below a given score
-        and advancing to t_end
 
         Args:
             traj: an already existing trajectory
             score: a threshold score
         """
+        # Check for empty trajectory
+        if not traj._score:
+            restTraj = Trajectory(fmodel=traj._fmodel, parameters=traj._parameters)
+            return restTraj
+
         high_score_idx = 0
         while traj._score[high_score_idx] < score:
             high_score_idx += 1
