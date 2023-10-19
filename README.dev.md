@@ -15,7 +15,7 @@ source env/bin/activate
 python -m pip install --upgrade pip setuptools
 
 # (from the project root directory)
-# install pytams as an editable package
+# install pyTAMS as an editable package
 python -m pip install --no-cache-dir --editable .
 # install development dependencies
 python -m pip install --no-cache-dir --editable .[dev]
@@ -145,7 +145,7 @@ In a new terminal, without an activated virtual environment or an env directory:
 cd $(mktemp -d pytams.XXXXXX)
 
 # fresh git clone ensures the release has the state of origin/main branch
-git clone git@github.com:nlesc-eTAOC/pytams .
+git clone git@github.com:nlesc-eTAOC/pyTAMS .
 
 # prepare a clean virtual environment and activate it
 python -m venv env
@@ -170,7 +170,7 @@ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 ```
 
 Visit
-[https://test.pypi.org/project/pytams](https://test.pypi.org/project/pytams)
+[https://test.pypi.org/project/pyTAMS](https://test.pypi.org/project/pyTAMS)
 and verify that your package was uploaded successfully. Keep the terminal open, we'll need it later.
 
 In a new terminal, without an activated virtual environment or an env directory:
@@ -188,7 +188,7 @@ python -m pip install --upgrade pip setuptools
 # install from test pypi instance:
 python -m pip -v install --no-cache-dir \
 --index-url https://test.pypi.org/simple/ \
---extra-index-url https://pypi.org/simple pytams
+--extra-index-url https://pypi.org/simple pyTAMS
 ```
 
 Check that the package works as it should when installed from pypitest.
@@ -203,4 +203,4 @@ twine upload dist/*
 
 ### (3/3) GitHub
 
-Don't forget to also make a [release on GitHub](git@github.com:nlesc-eTAOC/pytams/releases/new). If your repository uses the GitHub-Zenodo integration this will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
+Don't forget to also make a [release on GitHub](git@github.com:nlesc-eTAOC/pyTAMS/releases/new). If your repository uses the GitHub-Zenodo integration this will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
