@@ -1,5 +1,6 @@
 """Tests for the pytams.trajectory class."""
 from math import isclose
+import pytest
 from pytams.fmodel import ForwardModel
 from pytams.trajectory import Trajectory
 
@@ -63,7 +64,20 @@ def test_restartTraj():
     assert rst_test.ctime() == 0.0
 
 
-def test_DummyModelTraj():
+def test_templateModelExceptions():
+    """Test trajectory exception with template model."""
+    fmodel = ForwardModel()
+    parameters = {
+        "traj.end_time": 0.04,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.25,
+    }
+    t_test = Trajectory(fmodel, parameters)
+    with pytest.raises(Exception):
+        t_test.advance(0.01)
+
+
+def test_dummyModelTraj():
     """Test trajectory with dummy model."""
     fmodel = DummyFModel()
     parameters = {
@@ -73,8 +87,7 @@ def test_DummyModelTraj():
     }
     t_test = Trajectory(fmodel, parameters)
     t_test.advance(0.01)
-    assert isclose(t_test.scoreMax(),0.1,abs_tol=1e-9)
+    assert isclose(t_test.scoreMax(), 0.1, abs_tol=1e-9)
     assert t_test.isConverged() is False
     t_test.advance()
     assert t_test.isConverged() is True
-
