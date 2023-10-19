@@ -21,7 +21,7 @@ introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856).
 | Documentation                      | |
 | **GitHub Actions**                 | &nbsp; |
 | Build                              | [![build](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/build.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/build.yml) |
-| Citation data consistency               | [![cffconvert](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml) |
+| Citation data consistency          | [![cffconvert](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/cffconvert.yml) |
 | SonarCloud                         | [![sonarcloud](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/sonarcloud.yml) |
 | MarkDown link checker              | [![markdown-link-check](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/markdown-link-check.yml) |
 
@@ -31,7 +31,7 @@ To install pyTAMS from GitHub repository, do:
 
 ```console
 git clone git@github.com:nlesc-eTAOC/pyTAMS.git
-cd pytams
+cd pyTAMS
 python -m pip install .
 ```
 
