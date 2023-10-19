@@ -203,4 +203,4 @@ twine upload dist/*
 
 ### (3/3) GitHub
 
-Don't forget to also make a [release on GitHub](git@github.com:nlesc-eTAOC/pyTAMS/releases/new). If your repository uses the GitHub-Zenodo integration this will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
+Don't forget to also make a [release on GitHub](https://github.com/nlesc-eTAOC/pyTAMS/releases/new). If your repository uses the GitHub-Zenodo integration this will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
