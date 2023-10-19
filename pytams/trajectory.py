@@ -1,9 +1,7 @@
-""" A trajectory class """
-
-
 class Trajectory:
-    """A class defining a stochastic trajectory, including an
-    instance of the forward model, current and end times, and
+    """A class defining a stochastic trajectory.
+
+    Includes an instance of the forward model, current and end times, and
     a list of the model snapshots for each new maximum of the
     score function along the way.
     """
@@ -36,10 +34,11 @@ class Trajectory:
         self.has_converged = False
 
     def id(self) -> str:
+        """Return trajectory Id."""
         return self._tid
 
     def advance(self, t_end: float = 1000.0):
-        """Advance the trajectory to a prescribed end time
+        """Advance the trajectory to a prescribed end time.
 
         Args:
             t_end: the end time of the advance
@@ -47,7 +46,6 @@ class Trajectory:
         Returns:
             self: return the updated trajectory
         """
-
         end_time = min(t_end, self._t_end)
         stoichForcingAmpl = self._parameters.get("traj.stoichForcing", 0.5)
         convergedVal = self._parameters.get("traj.targetScore", 0.95)
@@ -73,11 +71,11 @@ class Trajectory:
         cls,
         chkPoint,
     ):
+        """TODO."""
         pass
 
     def printT(self):
-        """Dump the trajectory to screen"""
-
+        """Dump the trajectory to screen."""
         print("\n Trajectory: {} \n".format(self._tid))
         for k in range(len(self._time)):
             print("{} {} {}".format(self._time[k], self._score[k], self._state[k]))
@@ -90,15 +88,16 @@ class Trajectory:
         traj,
         score: float,
     ):
-        """Create a new trajectory, loading the beginning
-        of a provided trajectory for all entries with score
-        below a given score and advancing to t_end
+        """Create a new trajectory.
+
+        Loading the beginning of a provided trajectory
+        for all entries with score below a given score
+        and advancing to t_end
 
         Args:
             traj: an already existing trajectory
             score: a threshold score
         """
-
         high_score_idx = 0
         while traj._score[high_score_idx] < score:
             high_score_idx += 1
@@ -116,10 +115,13 @@ class Trajectory:
         return restTraj
 
     def store(self, traj_id, traj_file):
+        """Store the trajectory to disk."""
         pass
 
     def ctime(self) -> float:
+        """Return the current trajectory time."""
         return self._t_cur
 
     def scoreMax(self) -> float:
+        """Return the maximum of the score function."""
         return self._score_max
