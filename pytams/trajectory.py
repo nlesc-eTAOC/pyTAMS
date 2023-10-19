@@ -126,6 +126,10 @@ class Trajectory:
         """Return the current trajectory time."""
         return self._t_cur
 
+    def stepSize(self) -> float:
+        """Return the time step size"""
+        return self._dt
+
     def scoreMax(self) -> float:
         """Return the maximum of the score function."""
         return self._score_max

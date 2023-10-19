@@ -20,7 +20,8 @@ def test_initParametrizedTraj():
         "traj.step_size": 0.01,
         "traj.targetScore": 0.25,
     }
-    t_test = Trajectory(fmodel, parameters, "ttest")
+    t_test = Trajectory(fmodel, parameters)
+    assert t_test.stepSize() == 0.01
 
 
 def test_restartTraj():
@@ -29,4 +30,4 @@ def test_restartTraj():
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
     rst_test = Trajectory.restartFromTraj(t_test, 0.1)
-    assert t_test.ctime() == 0.0
+    assert rst_test.ctime() == 0.0
