@@ -1,3 +1,14 @@
+class ForwardModelError(Exception):
+    """Exception class for the forward model.
+    """
+    pass
+
+
+class TemplateCallError(ForwardModelError):
+    """Template ForwardModel method called !"""
+    pass
+
+
 class ForwardModel:
     """A template class for the stochastic forward model.
 
@@ -10,23 +21,23 @@ class ForwardModel:
         """Might need something here."""
         pass
 
-    def advance(self, dt: float, forcingAmpl: float):
+    def advance(self, dt: float, forcingampl: float):
         """Advance function of the model.
 
         Args:
             dt: the time step size over which to advance
             forcingAmpl: stochastic multiplicator
         """
-        raise Exception("Template ForwardModel advance method called !")
+        raise TemplateCallError("Calling advance() method !")
 
     def getCurState(self):
         """Return the current state of the model."""
-        raise Exception("Template ForwardModel getCurState method called !")
+        raise TemplateCallError("Calling getCurState() method !")
 
     def setCurState(self, state):
         """Set the current state of the model."""
-        raise Exception("Template ForwardModel setCurState method called !")
+        raise TemplateCallError("Calling setCurState method !")
 
     def score(self):
         """Return the model's current state score."""
-        raise Exception("Template ForwardModel score method called !")
+        raise TemplateCallError("Calling ForwardModel method !")
