@@ -137,4 +137,3 @@ class Trajectory:
     def isConverged(self) -> bool:
         """Return True for converged trajectory."""
         return self.has_converged
-

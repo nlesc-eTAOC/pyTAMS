@@ -1,11 +1,12 @@
 class ForwardModelError(Exception):
-    """Exception class for the forward model.
-    """
+    """Exception class for the forward model."""
+
     pass
 
 
 class TemplateCallError(ForwardModelError):
     """Template ForwardModel method called !"""
+
     pass
 
 
@@ -21,7 +22,7 @@ class ForwardModel:
         """Might need something here."""
         pass
 
-    def advance(self, dt: float, forcingampl: float):
+    def advance(self, dt: float, forcingAmpl: float):
         """Advance function of the model.
 
         Args:
