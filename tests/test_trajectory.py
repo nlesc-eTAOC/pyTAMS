@@ -1,4 +1,5 @@
 """Tests for the pytams.trajectory class."""
+import os
 from math import isclose
 import pytest
 from pytams.fmodel import ForwardModel
@@ -85,12 +86,14 @@ def test_simpleModelTraj():
         "traj.step_size": 0.001,
         "traj.targetScore": 0.25,
     }
-    t_test = Trajectory(fmodel, parameters)
+    t_test = Trajectory(fmodel, parameters, "Traj1")
     t_test.advance(0.01)
     assert isclose(t_test.scoreMax(), 0.1, abs_tol=1e-9)
     assert t_test.isConverged() is False
     t_test.advance()
     assert t_test.isConverged() is True
+    t_test.store("test.xml")
+    assert os.path.exists("test.xml") is True
 
 
 def test_restartSimpleTraj():

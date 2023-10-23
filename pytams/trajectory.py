@@ -1,3 +1,6 @@
+import xml.etree.cElementTree as ET
+
+
 class Trajectory:
     """A class defining a stochastic trajectory.
 
@@ -30,8 +33,8 @@ class Trajectory:
 
         self._tid = trajId
 
-        self.has_ended = False
-        self.has_converged = False
+        self._has_ended = False
+        self._has_converged = False
 
     def id(self) -> str:
         """Return trajectory Id."""
@@ -50,7 +53,7 @@ class Trajectory:
         stoichForcingAmpl = self._parameters.get("traj.stoichForcing", 0.5)
         convergedVal = self._parameters.get("traj.targetScore", 0.95)
 
-        while self._t_cur <= end_time and ~self.has_converged:
+        while self._t_cur <= end_time and ~self._has_converged:
             self._t_cur = self._t_cur + self._dt
             self._fmodel.advance(self._dt, stoichForcingAmpl)
             score = self._fmodel.score()
@@ -61,17 +64,19 @@ class Trajectory:
                 self._score_max = score
 
             if score >= convergedVal:
-                self.has_converged = True
+                self._has_converged = True
 
-        if self._t_cur >= self._t_end or self.has_converged:
-            self.has_ended = True
+        if self._t_cur >= self._t_end or self._has_converged:
+            self._has_ended = True
 
     @classmethod
     def restoreFromChk(
         cls,
         chkPoint,
+        fmodel,
+        parameters=None,
     ):
-        """TODO."""
+        """Return a trajectory restored from an XML chkfile."""
         pass
 
     def printT(self):
@@ -79,7 +84,7 @@ class Trajectory:
         print("\n Trajectory: {} \n".format(self._tid))
         for k in range(len(self._time)):
             print("{} {} {}".format(self._time[k], self._score[k], self._state[k]))
-        if self.has_converged:
+        if self._has_converged:
             print(" Success")
 
     @classmethod
@@ -118,9 +123,23 @@ class Trajectory:
 
         return restTraj
 
-    def store(self, traj_id, traj_file):
-        """Store the trajectory to disk."""
-        pass
+    def store(self, traj_file):
+        """Store the trajectory to an XML chkfile."""
+        root = ET.Element(self._tid)
+        mdata = ET.SubElement(root, "Metadata")
+        ET.SubElement(mdata, "t_cur", t_cur=str(self._t_cur))
+        ET.SubElement(mdata, "t_end", t_end=str(self._t_cur))
+        ET.SubElement(mdata, "dt", dt=str(self._dt))
+        ET.SubElement(mdata, "score_max", score_max=str(self._score_max))
+        ET.SubElement(mdata, "ended", ended=str(self._has_ended))
+        ET.SubElement(mdata, "converged", converged=str(self._has_converged))
+        snaps = ET.SubElement(root, "snapshots")
+        for k in range(len(self._score)):
+            xml_snap = ET.SubElement(snaps, "time", time=str(self._time[k]))
+            ET.SubElement(xml_snap, "state", state=str(self._state[k]))
+            ET.SubElement(xml_snap, "score", state=str(self._score[k]))
+        tree = ET.ElementTree(root)
+        tree.write(traj_file)
 
     def ctime(self) -> float:
         """Return the current trajectory time."""
@@ -136,4 +155,4 @@ class Trajectory:
 
     def isConverged(self) -> bool:
         """Return True for converged trajectory."""
-        return self.has_converged
+        return self._has_converged
