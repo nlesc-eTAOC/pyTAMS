@@ -107,7 +107,7 @@ class TAMS:
         """
         rest_idx = min_idx_list[0]
         while rest_idx in min_idx_list:
-            rest_idx = np.random.randint(len(self.trajs_db))
+            rest_idx = np.random.Generator.integers(len(self.trajs_db))
 
         traj = Trajectory.restartFromTraj(self.trajs_db[rest_idx], min_val)
 
@@ -135,7 +135,7 @@ class TAMS:
             return l_bias, weights
 
         with Client(threads_per_worker=1, n_workers=self.nProc):
-            for k in range(int(self.nSplitIter / self.nProc)):
+            for _ in range(int(self.nSplitIter / self.nProc)):
                 maxes = np.zeros(len(self.trajs_db))
 
                 for i in range(len(self.trajs_db)):
@@ -143,8 +143,6 @@ class TAMS:
 
                 min_idx_list = np.argpartition(maxes, self.nProc)[: self.nProc]
                 min_vals = maxes[min_idx_list]
-
-                restartedTrajs = [self.trajs_db[i] for i in min_idx_list]
 
                 l_bias.append(len(min_idx_list))
                 weights.append(weights[-1] * (1 - l_bias[-1] / self.nTraj))
