@@ -1,5 +1,10 @@
-import xml.etree.cElementTree as ET
+import os
+import xml.etree.ElementTree as ET
 from pytams.xmlutils import dict_to_xml
+from pytams.xmlutils import make_xml_snapshot
+from pytams.xmlutils import new_element
+from pytams.xmlutils import read_xml_snapshot
+from pytams.xmlutils import xml_to_dict
 
 
 class Trajectory:
@@ -78,7 +83,32 @@ class Trajectory:
         parameters=None,
     ):
         """Return a trajectory restored from an XML chkfile."""
-        pass
+        assert os.path.exists(chkPoint) is True
+
+        tree = ET.parse(chkPoint)
+        root = tree.getroot()
+        paramsfromxml = xml_to_dict(root.find("parameters"))
+        if parameters is not None:
+            restTraj = Trajectory(fmodel=fmodel, parameters=parameters)
+        else:
+            restTraj = Trajectory(fmodel=fmodel, parameters=paramsfromxml)
+
+        metadata = xml_to_dict(root.find("metadata"))
+        restTraj._t_end = metadata["t_end"]
+        restTraj._t_cur = metadata["t_cur"]
+        restTraj._dt = metadata["dt"]
+        restTraj._score_max = metadata["score_max"]
+        restTraj._has_ended = metadata["ended"]
+        restTraj._has_converged = metadata["converged"]
+
+        snapshots = root.find("snapshots")
+        for snap in snapshots:
+            time, score, state = read_xml_snapshot(snap)
+            restTraj._time.append(time)
+            restTraj._score.append(score)
+            restTraj._state.append(state)
+
+        return restTraj
 
     def printT(self):
         """Dump the trajectory to screen."""
@@ -128,18 +158,18 @@ class Trajectory:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self._tid)
         root.append(dict_to_xml("parameters", self._parameters))
-        mdata = ET.SubElement(root, "Metadata")
-        ET.SubElement(mdata, "t_cur", t_cur=str(self._t_cur))
-        ET.SubElement(mdata, "t_end", t_end=str(self._t_cur))
-        ET.SubElement(mdata, "dt", dt=str(self._dt))
-        ET.SubElement(mdata, "score_max", score_max=str(self._score_max))
-        ET.SubElement(mdata, "ended", ended=str(self._has_ended))
-        ET.SubElement(mdata, "converged", converged=str(self._has_converged))
+        mdata = ET.SubElement(root, "metadata")
+        mdata.append(new_element("t_cur", self._t_cur))
+        mdata.append(new_element("t_end", self._t_end))
+        mdata.append(new_element("dt", self._dt))
+        mdata.append(new_element("score_max", self._score_max))
+        mdata.append(new_element("ended", self._has_ended))
+        mdata.append(new_element("converged", self._has_converged))
         snaps = ET.SubElement(root, "snapshots")
         for k in range(len(self._score)):
-            xml_snap = ET.SubElement(snaps, "time", time=str(self._time[k]))
-            ET.SubElement(xml_snap, "state", state=str(self._state[k]))
-            ET.SubElement(xml_snap, "score", score=str(self._score[k]))
+            snaps.append(
+                make_xml_snapshot(k, self._time[k], self._score[k], self._state[k])
+            )
         tree = ET.ElementTree(root)
         tree.write(traj_file)
 

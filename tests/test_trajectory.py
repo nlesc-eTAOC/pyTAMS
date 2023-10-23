@@ -92,8 +92,26 @@ def test_simpleModelTraj():
     assert t_test.isConverged() is False
     t_test.advance()
     assert t_test.isConverged() is True
+
+
+def test_storeAndRestoreSimpleTraj():
+    """Test store and restoring trajectory with simple model."""
+    fmodel = SimpleFModel()
+    parameters = {
+        "traj.end_time": 0.05,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.25,
+    }
+    t_test = Trajectory(fmodel, parameters, "Traj1")
+    t_test.advance(0.02)
+    assert isclose(t_test.scoreMax(), 0.2, abs_tol=1e-9)
+    assert t_test.isConverged() is False
     t_test.store("test.xml")
     assert os.path.exists("test.xml") is True
+    rst_test = Trajectory.restoreFromChk("test.xml", fmodel)
+    assert isclose(rst_test.scoreMax(), 0.2, abs_tol=1e-9)
+    rst_test.advance()
+    assert rst_test.isConverged() is True
 
 
 def test_restartSimpleTraj():
