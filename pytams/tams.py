@@ -105,9 +105,10 @@ class TAMS:
                           the current splitting iteration
             min_val: the value of the score function to restart from
         """
+        rng = np.random.default_rng()
         rest_idx = min_idx_list[0]
         while rest_idx in min_idx_list:
-            rest_idx = np.random.Generator.integers(len(self.trajs_db))
+            rest_idx = rng.integers(0,len(self.trajs_db))
 
         traj = Trajectory.restartFromTraj(self.trajs_db[rest_idx], min_val)
 
