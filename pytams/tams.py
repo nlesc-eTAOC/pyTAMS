@@ -96,11 +96,10 @@ class TAMS:
         if self.v:
             print("Run time: {} s".format(self.elapsed_walltime()))
 
-    def worker(self, traj, t_end, min_idx_list, min_val):
+    def worker(self, t_end, min_idx_list, min_val):
         """A worker to restart trajectories.
 
         Args:
-            traj: a trajectory
             t_end: a final time
             min_idx_list: the list of trajectory restarted in
                           the current splitting iteration
@@ -153,7 +152,7 @@ class TAMS:
                 tasks_p = []
                 for i in range(len(min_idx_list)):
                     lazy_result = dask.delayed(self.worker)(
-                        self.trajs_db[min_idx_list[i]], 19, min_idx_list, min_vals[i]
+                        19, min_idx_list, min_vals[i]
                     )
                     tasks_p.append(lazy_result)
 
