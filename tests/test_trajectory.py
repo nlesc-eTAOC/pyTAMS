@@ -4,34 +4,7 @@ from math import isclose
 import pytest
 from pytams.fmodel import ForwardModel
 from pytams.trajectory import Trajectory
-
-
-class SimpleFModel(ForwardModel):
-    """Simple forward model.
-
-    The state is the time and score
-    10 times the state, ceiled to 1.0
-    """
-
-    def __init__(self):
-        """Override the template."""
-        self._state = 0.0
-
-    def advance(self, dt: float, forcingAmpl: float):
-        """Override the template."""
-        self._state = self._state + dt
-
-    def getCurState(self):
-        """Override the template."""
-        return self._state
-
-    def setCurState(self, state):
-        """Override the template."""
-        self._state = state
-
-    def score(self):
-        """Override the template."""
-        return min(self._state * 10.0, 1.0)
+from tests.models import SimpleFModel
 
 
 def test_initBlankTraj():
