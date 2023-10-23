@@ -1,4 +1,5 @@
 import xml.etree.cElementTree as ET
+from pytams.xmlutils import dict_to_xml
 
 
 class Trajectory:
@@ -126,6 +127,7 @@ class Trajectory:
     def store(self, traj_file):
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self._tid)
+        root.append(dict_to_xml("parameters", self._parameters))
         mdata = ET.SubElement(root, "Metadata")
         ET.SubElement(mdata, "t_cur", t_cur=str(self._t_cur))
         ET.SubElement(mdata, "t_end", t_end=str(self._t_cur))
@@ -137,7 +139,7 @@ class Trajectory:
         for k in range(len(self._score)):
             xml_snap = ET.SubElement(snaps, "time", time=str(self._time[k]))
             ET.SubElement(xml_snap, "state", state=str(self._state[k]))
-            ET.SubElement(xml_snap, "score", state=str(self._score[k]))
+            ET.SubElement(xml_snap, "score", score=str(self._score[k]))
         tree = ET.ElementTree(root)
         tree.write(traj_file)
 
