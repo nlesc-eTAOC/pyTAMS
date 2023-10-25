@@ -28,7 +28,7 @@ class TAMS:
 
         self.v = parameters.get("Verbose", False)
 
-        self.nTraj = self.parameters.get("nTrajcetories", 500)
+        self.nTraj = self.parameters.get("nTrajectories", 500)
         self.nSplitIter = self.parameters.get("nSplitIter", 2000)
 
         self.nProc = self.parameters.get("nProc", 1)
@@ -108,7 +108,7 @@ class TAMS:
         rng = np.random.default_rng()
         rest_idx = min_idx_list[0]
         while rest_idx in min_idx_list:
-            rest_idx = rng.integers(0,len(self.trajs_db))
+            rest_idx = rng.integers(0, len(self.trajs_db))
 
         traj = Trajectory.restartFromTraj(self.trajs_db[rest_idx], min_val)
 
@@ -132,16 +132,41 @@ class TAMS:
                 break
 
         if allConverged:
-            print("All trajectory converged prior to splitting !")
+            if self.v:
+                print("All trajectory converged prior to splitting !")
             return l_bias, weights
 
         with Client(threads_per_worker=1, n_workers=self.nProc):
-            for _ in range(int(self.nSplitIter / self.nProc)):
+            for k in range(int(self.nSplitIter / self.nProc)):
+                # Gather max score from all trajectories
+                # and check for early convergence
+                allConverged = True
                 maxes = np.zeros(len(self.trajs_db))
-
                 for i in range(len(self.trajs_db)):
                     maxes[i] = self.trajs_db[i].scoreMax()
+                    allConverged = allConverged and self.trajs_db[i].isConverged()
 
+                # Exit if our work is done
+                if allConverged:
+                    if self.v:
+                        print(
+                            "All trajectory converged after {} splitting iterations".format(
+                                k
+                            )
+                        )
+                    break
+
+                # Exit if splitting is stalled
+                if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
+                    if self.v:
+                        print(
+                            "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
+                                np.amax(maxes)
+                            )
+                        )
+                    break
+
+                # Get the nProc lower scored trajectories
                 min_idx_list = np.argpartition(maxes, self.nProc)[: self.nProc]
                 min_vals = maxes[min_idx_list]
 
