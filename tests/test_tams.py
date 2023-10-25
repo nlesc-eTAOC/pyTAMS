@@ -18,7 +18,7 @@ def test_simpleModelTAMS():
     parameters = {
         "nTrajectories": 100,
         "nSplitIter": 200,
-        "Verbose": True,
+        "Verbose": False,
         "nProc": 1,
         "traj.end_time": 0.02,
         "traj.step_size": 0.001,

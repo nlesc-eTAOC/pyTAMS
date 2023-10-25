@@ -36,6 +36,11 @@ class TAMS:
         self._wallTime = self.parameters.get("wallTime", 600.0)
         self._startTime = time.monotonic()
 
+    def verbosePrint(self, message: str):
+        """Print only in verbose mode."""
+        if self.v:
+            print("TAMS-[{}]".format(message))
+
     def elapsed_walltime(self) -> float:
         """Return the elapsed wallclock time.
 
@@ -80,8 +85,9 @@ class TAMS:
 
     def generate_trajectory_pool(self):
         """Schedule the generation of a pool of stochastic trajectories."""
-        if self.v:
-            print("Creating the initial pool of {} trajectories".format(self.nTraj))
+        self.verbosePrint(
+            "Creating the initial pool of {} trajectories".format(self.nTraj)
+        )
 
         self.init_trajectory_pool()
 
@@ -93,8 +99,7 @@ class TAMS:
 
             self.trajs_db = list(dask.compute(*tasks_p))
 
-        if self.v:
-            print("Run time: {} s".format(self.elapsed_walltime()))
+        self.verbosePrint("Run time: {} s".format(self.elapsed_walltime()))
 
     def worker(self, t_end, min_idx_list, min_val):
         """A worker to restart trajectories.
@@ -118,8 +123,7 @@ class TAMS:
 
     def do_multilevel_splitting(self):
         """Schedule splitting of the initial pool of stochastic trajectories."""
-        if self.v:
-            print("Using multi-level splitting to get the probability")
+        self.verbosePrint("Using multi-level splitting to get the probability")
 
         l_bias = []
         weights = [1]
@@ -132,8 +136,7 @@ class TAMS:
                 break
 
         if allConverged:
-            if self.v:
-                print("All trajectory converged prior to splitting !")
+            self.verbosePrint("All trajectory converged prior to splitting !")
             return l_bias, weights
 
         with Client(threads_per_worker=1, n_workers=self.nProc):
@@ -148,22 +151,20 @@ class TAMS:
 
                 # Exit if our work is done
                 if allConverged:
-                    if self.v:
-                        print(
-                            "All trajectory converged after {} splitting iterations".format(
-                                k
-                            )
+                    self.verbosePrint(
+                        "All trajectory converged after {} splitting iterations".format(
+                            k
                         )
+                    )
                     break
 
                 # Exit if splitting is stalled
                 if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-                    if self.v:
-                        print(
-                            "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                                np.amax(maxes)
-                            )
+                    self.verbosePrint(
+                        "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
+                            np.amax(maxes)
                         )
+                    )
                     break
 
                 # Get the nProc lower scored trajectories
@@ -193,8 +194,7 @@ class TAMS:
         Returns:
             the transition probability
         """
-        if self.v:
-            print("Computing rare event probability using TAMS")
+        self.verbosePrint("Computing rare event probability using TAMS")
 
         self.generate_trajectory_pool()
 
@@ -212,7 +212,6 @@ class TAMS:
 
         trans_prob = successCount * weights[-1] / W
 
-        if self.v:
-            print("Run time: {} s".format(self.elapsed_walltime()))
+        self.verbosePrint("Run time: {} s".format(self.elapsed_walltime()))
 
         return trans_prob
