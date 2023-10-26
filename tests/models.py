@@ -30,6 +30,10 @@ class SimpleFModel(ForwardModel):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
+    def name(self):
+        """Return the model name."""
+        return "SimpleFModel"
+
 
 class DoubleWellModel(ForwardModel):
     """2D double well forward model.
@@ -80,3 +84,7 @@ class DoubleWellModel(ForwardModel):
         f1 = 0.5
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
+
+    def name(self):
+        """Return the model name."""
+        return "DoubleWellModel"
