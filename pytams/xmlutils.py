@@ -1,6 +1,30 @@
 import xml.etree.ElementTree as ET
 
 
+class XMLUtilsError(Exception):
+    """Exception class for the xmlutils."""
+
+    pass
+
+
+def manualCast(elem: ET.Element):
+    """Manually cast XML elements reads."""
+    if elem.attrib["type"] == "int":
+        return elem.tag, int(elem.text)
+    elif elem.attrib["type"] == "float":
+        return elem.tag, float(elem.text)
+    elif elem.attrib["type"] == "complex":
+        return elem.tag, complex(elem.text)
+    elif elem.attrib["type"] == "bool":
+        return elem.tag, bool(elem.text)
+    elif elem.attrib["type"] == "str":
+        return elem.tag, str(elem.text)
+    else:
+        raise XMLUtilsError(
+            "Type {} not handled by manualCast !".format(elem.attrib["type"])
+        )
+
+
 def dict_to_xml(tag: str, d) -> ET.Element:
     """Return an Element from a dictionnary.
 
@@ -12,13 +36,14 @@ def dict_to_xml(tag: str, d) -> ET.Element:
     for key, val in d.items():
         # Append an Element
         child = ET.Element(key)
+        child.attrib["type"] = type(val).__name__
         child.text = str(val)
         elem.append(child)
 
     return elem
 
 
-def xml_to_dict(elem: ET.Element):
+def xml_to_dict(elem: ET.Element) -> dict:
     """Return an dictionnary an Element.
 
     Args:
@@ -27,26 +52,27 @@ def xml_to_dict(elem: ET.Element):
     """
     d = {}
     for child in elem:
-        # Append to dict
-        d[child.tag] = eval(child.text)
+        tag, entry = manualCast(child)
+        d[tag] = entry
 
     return d
 
 
-def new_element(key: str, text):
+def new_element(key: str, val) -> ET.Element:
     """Return an Element from two args.
 
     Args:
         key: the element key
-        text: the element value
+        val: the element value
     """
     elem = ET.Element(key)
-    elem.text = str(text)
+    elem.attrib["type"] = type(val).__name__
+    elem.text = str(val)
 
     return elem
 
 
-def make_xml_snapshot(idx: int, time: float, score: float, state):
+def make_xml_snapshot(idx: int, time: float, score: float, state) -> ET.Element:
     """Return a snapshot in XML elemt format.
 
     Args:
@@ -55,7 +81,7 @@ def make_xml_snapshot(idx: int, time: float, score: float, state):
         score: the snapshot score function
         state: the associated state
     """
-    elem = ET.Element("Snap_{:06d}".format(idx))
+    elem = ET.Element("Snap_{:07d}".format(idx))
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
     elem.attrib["state"] = str(state)
@@ -69,8 +95,8 @@ def read_xml_snapshot(snap: ET.Element):
     Args:
         snap: an XML snapshot elemt
     """
-    time = eval(snap.attrib["time"])
-    score = eval(snap.attrib["score"])
+    time = float(snap.attrib["time"])
+    score = float(snap.attrib["score"])
     state = eval(snap.attrib["state"])
 
     return time, score, state
