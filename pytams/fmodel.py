@@ -13,7 +13,7 @@ class TemplateCallError(ForwardModelError):
 class ForwardModel:
     """A template class for the stochastic forward model.
 
-    Implement the core methods reauired of the forward
+    Implement the core methods required of the forward
     model within the TAMS context. Exception are thrown
     if those functions are not overritten in actual model.
     """
@@ -42,3 +42,7 @@ class ForwardModel:
     def score(self):
         """Return the model's current state score."""
         raise TemplateCallError("Calling ForwardModel method !")
+
+    def name(self):
+        """Return a the model name."""
+        return "TemplateForwardModel"
