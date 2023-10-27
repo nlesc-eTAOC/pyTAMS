@@ -9,7 +9,7 @@ def test_initTAMS():
     fmodel = {}
     parameters = {}
     tams = TAMS(fmodel=fmodel, parameters=parameters)
-    assert tams.nTraj == 500
+    assert tams.nTraj() == 500
 
 
 def test_simpleModelTAMS():
@@ -19,6 +19,8 @@ def test_simpleModelTAMS():
         "nTrajectories": 100,
         "nSplitIter": 200,
         "Verbose": False,
+        "DB_save": True,
+        "DB_prefix": "simpleModelTest",
         "nProc": 1,
         "traj.end_time": 0.02,
         "traj.step_size": 0.001,
@@ -54,10 +56,13 @@ def test_doublewellModelTAMS():
         "nSplitIter": 400,
         "Verbose": True,
         "nProc": 1,
+        "DB_save": True,
+        "DB_prefix": "dwTest",
+        "wallTime": 50.0,
         "traj.end_time": 10.0,
         "traj.step_size": 0.01,
         "traj.targetScore": 0.8,
-        "traj.stoichForcing": 1.0,
+        "traj.stoichForcing": 0.8,
     }
     tams = TAMS(fmodel=fmodel, parameters=parameters)
     transition_proba = tams.compute_probability()

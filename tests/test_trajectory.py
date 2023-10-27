@@ -25,7 +25,7 @@ def test_initParametrizedTraj():
         "traj.step_size": 0.01,
         "traj.targetScore": 0.25,
     }
-    t_test = Trajectory(fmodel, parameters)
+    t_test = Trajectory(fmodel, parameters, "ttest")
     assert t_test.stepSize() == 0.01
 
 
@@ -46,7 +46,7 @@ def test_templateModelExceptions():
         "traj.step_size": 0.001,
         "traj.targetScore": 0.25,
     }
-    t_test = Trajectory(fmodel, parameters)
+    t_test = Trajectory(fmodel, parameters, "ttest")
     with pytest.raises(Exception):
         t_test.advance()
 
@@ -95,7 +95,7 @@ def test_restartSimpleTraj():
         "traj.step_size": 0.001,
         "traj.targetScore": 0.25,
     }
-    t_test = Trajectory(fmodel, parameters)
+    t_test = Trajectory(fmodel, parameters, "rstSimple")
     t_test.advance(0.01)
     rst_test = Trajectory.restartFromTraj(t_test, 0.05)
     assert rst_test.ctime() == 0.005
