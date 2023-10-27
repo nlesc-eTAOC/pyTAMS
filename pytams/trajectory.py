@@ -204,6 +204,10 @@ class Trajectory:
         """Return True for converged trajectory."""
         return self._has_converged
 
+    def hasStarted(self) -> bool:
+        """Return True if computation has started."""
+        return self._t_cur > 0.0
+
     def checkFile(self) -> str:
         """Return the trajectory check file name."""
         return self._checkFile
