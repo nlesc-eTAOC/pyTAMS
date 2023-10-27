@@ -124,14 +124,6 @@ class Trajectory:
 
         return restTraj
 
-    def printT(self) -> None:
-        """Dump the trajectory to screen."""
-        print("\n Trajectory: {} \n".format(self._tid))
-        for k in range(len(self._time)):
-            print("{} {} {}".format(self._time[k], self._score[k], self._state[k]))
-        if self._has_converged:
-            print(" Success")
-
     @classmethod
     def restartFromTraj(
         cls,
