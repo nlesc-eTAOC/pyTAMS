@@ -41,10 +41,10 @@ class DoubleWellModel(ForwardModel):
     V(x,y) = x^4/4 - x^2/2 + y^2
 
     Associated SDE:
-    dX_t = -\nabla V(X_t)dt + g(X_t)dW_t
+    dX_t = -nabla V(X_t)dt + g(X_t)dW_t
 
     with:
-    -\nabla V(X_t) = [x - x^3, -2y]
+    -nabla V(X_t) = [x - x^3, -2y]
 
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
