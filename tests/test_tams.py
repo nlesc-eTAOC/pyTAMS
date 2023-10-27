@@ -28,6 +28,7 @@ def test_simpleModelTAMS():
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
 
+
 def test_simpleModelTwiceTAMS():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel()
@@ -85,6 +86,7 @@ def test_doublewellModelTAMS():
     tams = TAMS(fmodel=fmodel, parameters=parameters)
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
+
 
 def test_doublewellModel2WorkersTAMS():
     """Test TAMS with the doublewell model using two workers."""
