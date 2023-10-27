@@ -76,7 +76,27 @@ def test_doublewellModelTAMS():
         "nProc": 1,
         "DB_save": True,
         "DB_prefix": "dwTest",
-        "wallTime": 50.0,
+        "wallTime": 500.0,
+        "traj.end_time": 10.0,
+        "traj.step_size": 0.01,
+        "traj.targetScore": 0.8,
+        "traj.stoichForcing": 0.8,
+    }
+    tams = TAMS(fmodel=fmodel, parameters=parameters)
+    transition_proba = tams.compute_probability()
+    assert transition_proba >= 0.2
+
+def test_doublewellModel2WorkersTAMS():
+    """Test TAMS with the doublewell model using two workers."""
+    fmodel = DoubleWellModel()
+    parameters = {
+        "nTrajectories": 100,
+        "nSplitIter": 400,
+        "Verbose": True,
+        "nProc": 2,
+        "DB_save": True,
+        "DB_prefix": "dwTest",
+        "wallTime": 500.0,
         "traj.end_time": 10.0,
         "traj.step_size": 0.01,
         "traj.targetScore": 0.8,
