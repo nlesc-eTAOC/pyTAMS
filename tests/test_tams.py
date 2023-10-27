@@ -19,6 +19,22 @@ def test_simpleModelTAMS():
         "nTrajectories": 100,
         "nSplitIter": 200,
         "Verbose": False,
+        "nProc": 1,
+        "traj.end_time": 0.02,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.15,
+    }
+    tams = TAMS(fmodel=fmodel, parameters=parameters)
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 1.0
+
+def test_simpleModelTwiceTAMS():
+    """Test TAMS with simple model."""
+    fmodel = SimpleFModel()
+    parameters = {
+        "nTrajectories": 100,
+        "nSplitIter": 200,
+        "Verbose": False,
         "DB_save": True,
         "DB_prefix": "simpleModelTest",
         "nProc": 1,
@@ -29,6 +45,8 @@ def test_simpleModelTAMS():
     tams = TAMS(fmodel=fmodel, parameters=parameters)
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
+    tams = TAMS(fmodel=fmodel, parameters=parameters)
+    transition_proba = tams.compute_probability()
 
 
 def test_stallingSimpleModelTAMS():
