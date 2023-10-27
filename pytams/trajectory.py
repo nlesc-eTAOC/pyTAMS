@@ -1,4 +1,5 @@
 import os
+import time
 import xml.etree.ElementTree as ET
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
@@ -15,7 +16,7 @@ class Trajectory:
     score function along the way.
     """
 
-    def __init__(self, fmodel, parameters, trajId: str = None) -> None:
+    def __init__(self, fmodel, parameters: dict, trajId: str) -> None:
         """Create a trajectory.
 
         Args:
@@ -38,28 +39,37 @@ class Trajectory:
         self._score_max = 0.0
 
         self._tid = trajId
+        self._checkFile = "{}.xml".format(trajId)
 
         self._has_ended = False
         self._has_converged = False
+
+    def setCheckFile(self, file: str) -> None:
+        """Setter of the trajectory checkFile."""
+        self._checkFile = file
 
     def id(self) -> str:
         """Return trajectory Id."""
         return self._tid
 
-    def advance(self, t_end: float = 1.0e12):
+    def advance(self, t_end: float = 1.0e12, walltime: float = 1.0e12) -> None:
         """Advance the trajectory to a prescribed end time.
 
         Args:
             t_end: the end time of the advance
-
-        Returns:
-            self: return the updated trajectory
+            walltime: a walltime limit to advance the model to t_end
         """
+        startTime = time.monotonic()
+        remainingTime = walltime - time.monotonic() + startTime
         end_time = min(t_end, self._t_end)
         stoichForcingAmpl = self._parameters.get("traj.stoichForcing", 0.5)
         convergedVal = self._parameters.get("traj.targetScore", 0.95)
 
-        while self._t_cur <= end_time and ~self._has_converged:
+        while (
+            self._t_cur <= end_time
+            and not self._has_converged
+            and remainingTime >= 0.05 * walltime
+        ):
             self._t_cur = self._t_cur + self._dt
             self._fmodel.advance(self._dt, stoichForcingAmpl)
             score = self._fmodel.score()
@@ -72,15 +82,17 @@ class Trajectory:
             if score >= convergedVal:
                 self._has_converged = True
 
+            remainingTime = walltime - time.monotonic() + startTime
+
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
 
     @classmethod
     def restoreFromChk(
         cls,
-        chkPoint,
+        chkPoint: str,
         fmodel,
-        parameters=None,
+        parameters: dict = None,
     ):
         """Return a trajectory restored from an XML chkfile."""
         assert os.path.exists(chkPoint) is True
@@ -88,12 +100,14 @@ class Trajectory:
         tree = ET.parse(chkPoint)
         root = tree.getroot()
         paramsfromxml = xml_to_dict(root.find("parameters"))
-        if parameters is not None:
-            restTraj = Trajectory(fmodel=fmodel, parameters=parameters)
-        else:
-            restTraj = Trajectory(fmodel=fmodel, parameters=paramsfromxml)
-
         metadata = xml_to_dict(root.find("metadata"))
+        t_id = metadata["id"]
+
+        if parameters is not None:
+            restTraj = Trajectory(fmodel=fmodel, parameters=parameters, trajId=t_id)
+        else:
+            restTraj = Trajectory(fmodel=fmodel, parameters=paramsfromxml, trajId=t_id)
+
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
         restTraj._dt = metadata["dt"]
@@ -110,7 +124,7 @@ class Trajectory:
 
         return restTraj
 
-    def printT(self):
+    def printT(self) -> None:
         """Dump the trajectory to screen."""
         print("\n Trajectory: {} \n".format(self._tid))
         for k in range(len(self._time)):
@@ -135,14 +149,19 @@ class Trajectory:
         """
         # Check for empty trajectory
         if not traj._score:
-            restTraj = Trajectory(fmodel=traj._fmodel, parameters=traj._parameters)
+            restTraj = Trajectory(
+                fmodel=traj._fmodel, parameters=traj._parameters, trajId=traj._tid
+            )
+
             return restTraj
 
         high_score_idx = 0
         while traj._score[high_score_idx] < score:
             high_score_idx += 1
 
-        restTraj = Trajectory(fmodel=traj._fmodel, parameters=traj._parameters)
+        restTraj = Trajectory(
+            fmodel=traj._fmodel, parameters=traj._parameters, trajId=traj._tid
+        )
         for k in range(high_score_idx + 1):
             restTraj._score.append(traj._score[k])
             restTraj._time.append(traj._time[k])
@@ -154,11 +173,12 @@ class Trajectory:
 
         return restTraj
 
-    def store(self, traj_file):
+    def store(self, traj_file: str = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self._tid)
         root.append(dict_to_xml("parameters", self._parameters))
         mdata = ET.SubElement(root, "metadata")
+        mdata.append(new_element("id", self._tid))
         mdata.append(new_element("t_cur", self._t_cur))
         mdata.append(new_element("t_end", self._t_end))
         mdata.append(new_element("dt", self._dt))
@@ -171,7 +191,10 @@ class Trajectory:
                 make_xml_snapshot(k, self._time[k], self._score[k], self._state[k])
             )
         tree = ET.ElementTree(root)
-        tree.write(traj_file)
+        if traj_file is not None:
+            tree.write(traj_file)
+        else:
+            tree.write(self._checkFile)
 
     def ctime(self) -> float:
         """Return the current trajectory time."""
@@ -188,3 +211,7 @@ class Trajectory:
     def isConverged(self) -> bool:
         """Return True for converged trajectory."""
         return self._has_converged
+
+    def checkFile(self) -> str:
+        """Return the trajectory check file name."""
+        return self._checkFile
