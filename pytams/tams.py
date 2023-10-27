@@ -98,23 +98,20 @@ class TAMS:
             # Empty trajectories subfolder
             os.mkdir("{}/{}".format(self._nameDB, "trajectories"))
 
-    def appendTrajToDB(self, traj: Trajectory) -> None:
-        """Append an element to the trajectory pool file.
-
-        Args:
-            traj: a trajectory
-        """
+    def appendTrajsToDB(self) -> None:
+        """Append started trajectories to the pool file."""
         if self._saveDB:
             databaseFile = "{}/trajPool.xml".format(self._nameDB)
             tree = ET.parse(databaseFile)
             root = tree.getroot()
-            loc = traj.checkFile()
-            root.append(new_element(traj.id(), loc))
+            for T in self._trajs_db:
+                T_entry = root.find(T.id())
+                if T.hasStarted() and T_entry is not None:
+                    loc = T.checkFile()
+                    root.append(new_element(T.id(), loc))
+
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
-
-            # Actually write the trajectory to disk
-            traj.store()
 
     def restoreTrajDB(self):
         """Initialize TAMS from a stored trajectory database."""
@@ -165,10 +162,11 @@ class TAMS:
         """
         if self.remaining_walltime() > 0.05 * self._wallTime:
             traj.advance(walltime=self.remaining_walltime())
-            traj.setCheckFile(
-                "{}/{}/{}.xml".format(self._nameDB, "trajectories", traj.id())
-            )
-            self.appendTrajToDB(traj)
+            if self._saveDB:
+                traj.setCheckFile(
+                    "{}/{}/{}.xml".format(self._nameDB, "trajectories", traj.id())
+                )
+                traj.store()
 
         return traj
 
@@ -187,6 +185,9 @@ class TAMS:
                 tasks_p.append(lazy_result)
 
             self._trajs_db = list(dask.compute(*tasks_p))
+
+        # Update the trajectory database
+        self.appendTrajsToDB()
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_walltime()))
 
