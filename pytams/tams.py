@@ -12,6 +12,13 @@ from dask.distributed import Client
 from pytams.trajectory import Trajectory
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import new_element
+from pytams.xmlutils import xml_to_dict
+
+
+class TAMSError(Exception):
+    """Exception class for TAMS."""
+
+    pass
 
 
 class TAMS:
@@ -56,12 +63,16 @@ class TAMS:
             self.restoreTrajDB()
         else:
             self.initTrajDB()
+            self.init_trajectory_pool()
 
     def initTrajDB(self) -> None:
         """Initialize the trajectory database."""
         if self._saveDB:
-            if os.path.exists(self._nameDB):
-                rng = np.random.default_rng()
+            self.verbosePrint(
+                "Initializing the trajectories database {}".format(self._nameDB)
+            )
+            if os.path.exists(self._nameDB) and self._nameDB != self._restartDB:
+                rng = np.random.default_rng(12345)
                 random_int = rng.integers(0, 999999)
                 nameDB_rnd = "{}_{:06d}".format(self._nameDB, random_int)
 
@@ -79,9 +90,10 @@ class TAMS:
             # Header file with metadata
             headerFile = "{}/header.xml".format(self._nameDB)
             root = ET.Element("header")
-            root.append(new_element("pyTAMS_version", datetime.now()))
-            root.append(new_element("date", datetime.now()))
-            root.append(new_element("model", self._fmodel.name()))
+            mdata = ET.SubElement(root, "metadata")
+            mdata.append(new_element("pyTAMS_version", datetime.now()))
+            mdata.append(new_element("date", datetime.now()))
+            mdata.append(new_element("model", self._fmodel.name()))
             root.append(dict_to_xml("parameters", self.parameters))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
@@ -91,6 +103,7 @@ class TAMS:
             # Empty for now
             databaseFile = "{}/trajPool.xml".format(self._nameDB)
             root = ET.Element("trajectories")
+            root.append(new_element("nTraj", self._nTraj))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
@@ -101,28 +114,93 @@ class TAMS:
     def appendTrajsToDB(self) -> None:
         """Append started trajectories to the pool file."""
         if self._saveDB:
+            self.verbosePrint(
+                "Appending started trajectories to database {}".format(self._nameDB)
+            )
             databaseFile = "{}/trajPool.xml".format(self._nameDB)
             tree = ET.parse(databaseFile)
             root = tree.getroot()
             for T in self._trajs_db:
                 T_entry = root.find(T.id())
-                if T.hasStarted() and T_entry is not None:
+                if T.hasStarted() and T_entry is None:
                     loc = T.checkFile()
                     root.append(new_element(T.id(), loc))
 
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
 
-    def restoreTrajDB(self):
+    def restoreTrajDB(self) -> None:
         """Initialize TAMS from a stored trajectory database."""
-        pass
+        if os.path.exists(self._restartDB):
+            self.verbosePrint(
+                "Restoring from the trajectories database {}".format(self._restartDB)
+            )
+
+            self.check_database_consistency()
+
+            # Init trajectory pool and load trajectory stored
+            # in the database when available.
+            dbFile = "{}/trajPool.xml".format(self._restartDB)
+            tree = ET.parse(dbFile)
+            root = tree.getroot()
+            for n in range(self._nTraj):
+                trajId = "traj{:06}".format(n)
+                T_entry = root.find(trajId)
+                if T_entry is not None:
+                    chkFile = T_entry.text
+                    if os.path.exists(chkFile):
+                        self._trajs_db.append(
+                            Trajectory.restoreFromChk(
+                                chkFile,
+                                fmodel=self._fmodel,
+                            )
+                        )
+                    else:
+                        raise TAMSError(
+                            "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
+                                chkFile
+                            )
+                        )
+                else:
+                    self._trajs_db.append(
+                        Trajectory(
+                            fmodel=self._fmodel,
+                            parameters=self.parameters,
+                            trajId="traj{:06}".format(n),
+                        )
+                    )
+
+        else:
+            raise TAMSError(
+                "Could not find the {} TAMS database !".format(self._restartDB)
+            )
+
+    def check_database_consistency(self) -> None:
+        """Check the restart database consistency."""
+        # Open and load header
+        headerFile = "{}/header.xml".format(self._restartDB)
+        tree = ET.parse(headerFile)
+        root = tree.getroot()
+        headerfromxml = xml_to_dict(root.find("metadata"))
+        if self._fmodel.name() != headerfromxml["model"]:
+            raise TAMSError(
+                "Trying to restore a TAMS with {} model from database with {} model !".format(
+                    self._fmodel.name(), headerfromxml["model"]
+                )
+            )
+
+        # Parameters stored in the database override any
+        # newly modified params
+        # TODO: will need to relax this later on
+        paramsfromxml = xml_to_dict(root.find("parameters"))
+        self.parameters.update(paramsfromxml)
 
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
         if self.v:
             print("TAMS-[{}]".format(message))
 
-    def elapsed_walltime(self) -> float:
+    def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
 
         Since the initialization of TAMS [seconds].
@@ -138,9 +216,9 @@ class TAMS:
         [seconds]
 
         Returns:
-           TAMS remaining time.
+           TAMS remaining wall time.
         """
-        return self._wallTime - self.elapsed_walltime()
+        return self._wallTime - self.elapsed_time()
 
     def init_trajectory_pool(self):
         """Initialize the trajectory pool."""
@@ -176,8 +254,6 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        self.init_trajectory_pool()
-
         with Client(threads_per_worker=1, n_workers=self._nProc):
             tasks_p = []
             for T in self._trajs_db:
@@ -189,7 +265,7 @@ class TAMS:
         # Update the trajectory database
         self.appendTrajsToDB()
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_walltime()))
+        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
     def worker(
         self, t_end: float, min_idx_list: List[int], min_val: float
@@ -202,7 +278,7 @@ class TAMS:
                           the current splitting iteration
             min_val: the value of the score function to restart from
         """
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(12345)
         rest_idx = min_idx_list[0]
         while rest_idx in min_idx_list:
             rest_idx = rng.integers(0, len(self._trajs_db))
@@ -219,17 +295,6 @@ class TAMS:
 
         l_bias = []
         weights = [1]
-
-        # Check for early convergence
-        allConverged = True
-        for T in self._trajs_db:
-            if not T.isConverged():
-                allConverged = False
-                break
-
-        if allConverged:
-            self.verbosePrint("All trajectory converged prior to splitting !")
-            return l_bias, weights
 
         with Client(threads_per_worker=1, n_workers=self._nProc):
             for k in range(int(self._nSplitIter / self._nProc)):
@@ -286,10 +351,25 @@ class TAMS:
         Returns:
             the transition probability
         """
-        self.verbosePrint("Computing rare event probability using TAMS")
+        self.verbosePrint(
+            "Computing {} rare event probability using TAMS".format(self._fmodel.name())
+        )
 
+        # Generate the initial trajectory pool
         self.generate_trajectory_pool()
 
+        # Check for early convergence
+        allConverged = True
+        for T in self._trajs_db:
+            if not T.isConverged():
+                allConverged = False
+                break
+
+        if allConverged:
+            self.verbosePrint("All trajectory converged prior to splitting !")
+            return 1.0
+
+        # Perform multilevel splitting
         l_bias, weights = self.do_multilevel_splitting()
 
         W = self._nTraj * weights[-1]
@@ -304,7 +384,7 @@ class TAMS:
 
         trans_prob = successCount * weights[-1] / W
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_walltime()))
+        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
         return trans_prob
 
