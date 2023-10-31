@@ -1,4 +1,6 @@
 import xml.etree.ElementTree as ET
+from datetime import datetime
+import numpy as np
 
 
 class XMLUtilsError(Exception):
@@ -13,12 +15,19 @@ def manualCast(elem: ET.Element):
         return elem.tag, int(elem.text)
     elif elem.attrib["type"] == "float":
         return elem.tag, float(elem.text)
+    elif elem.attrib["type"] == "float64":
+        return elem.tag, np.float64(elem.text)
     elif elem.attrib["type"] == "complex":
         return elem.tag, complex(elem.text)
     elif elem.attrib["type"] == "bool":
         return elem.tag, bool(elem.text)
     elif elem.attrib["type"] == "str":
         return elem.tag, str(elem.text)
+    elif elem.attrib["type"] == "ndarray":
+        stripped_text = elem.text.replace("[", "").replace("]", "").replace("  ", " ")
+        return elem.tag, np.fromstring(stripped_text, sep=" ")
+    elif elem.attrib["type"] == "datetime":
+        return elem.tag, datetime.strptime(elem.text, "%Y-%m-%d %H:%M:%S.%f")
     else:
         raise XMLUtilsError(
             "Type {} not handled by manualCast !".format(elem.attrib["type"])
@@ -84,7 +93,8 @@ def make_xml_snapshot(idx: int, time: float, score: float, state) -> ET.Element:
     elem = ET.Element("Snap_{:07d}".format(idx))
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
-    elem.attrib["state"] = str(state)
+    elem.attrib["type"] = type(state).__name__
+    elem.text = str(state)
 
     return elem
 
@@ -97,6 +107,6 @@ def read_xml_snapshot(snap: ET.Element):
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    state = eval(snap.attrib["state"])
+    state = manualCast(snap)
 
     return time, score, state
