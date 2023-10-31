@@ -38,7 +38,7 @@ jobs:
           python -m pip install --upgrade pip setuptools
           python -m pip install .[dev,publishing]
       - name: Run unit tests
-        if: ${{!(runner.os == 'Windows' && ${{ matrix.python-version }} == 3.9)}}
+        if: ${{ ! runner.os == 'Windows' }}
         run: python -m pytest -v
       - name: Verify that we can build the package
         run: python setup.py sdist bdist_wheel
