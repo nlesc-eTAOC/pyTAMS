@@ -7,9 +7,9 @@ authors:
     family-names: Esclapez
     given-names: Lucas
     orcid: "https://orcid.org/0000-0002-2438-7292"
-date-released: 2023-10-19
-doi: <insert your DOI here>
-version: "0.0.0"
+date-released: 2023-10-31
+doi: 10.5281/zenodo.10057844
+version: "0.0.1"
 repository-code: "git@github.com:nlesc-eTAOC/pyTAMS"
 keywords:
   - Rare events probability
