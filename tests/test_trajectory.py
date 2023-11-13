@@ -9,7 +9,7 @@ from tests.models import SimpleFModel
 
 def test_initBlankTraj():
     """Test blank trajectory creation."""
-    fmodel = {}
+    fmodel = ForwardModel
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
     assert t_test.id() == "ttest"
@@ -19,7 +19,7 @@ def test_initBlankTraj():
 
 def test_initParametrizedTraj():
     """Test parametrized trajectory creation."""
-    fmodel = {}
+    fmodel = ForwardModel
     parameters = {
         "traj.end_time": 2.0,
         "traj.step_size": 0.01,
@@ -31,7 +31,7 @@ def test_initParametrizedTraj():
 
 def test_restartEmptyTraj():
     """Test (empty) trajectory restart."""
-    fmodel = {}
+    fmodel = ForwardModel
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
     rst_test = Trajectory.restartFromTraj(t_test, 0.1)
@@ -40,7 +40,7 @@ def test_restartEmptyTraj():
 
 def test_templateModelExceptions():
     """Test trajectory exception with template model."""
-    fmodel = ForwardModel()
+    fmodel = ForwardModel
     parameters = {
         "traj.end_time": 0.04,
         "traj.step_size": 0.001,
@@ -53,7 +53,7 @@ def test_templateModelExceptions():
 
 def test_simpleModelTraj():
     """Test trajectory with simple model."""
-    fmodel = SimpleFModel()
+    fmodel = SimpleFModel
     parameters = {
         "traj.end_time": 0.04,
         "traj.step_size": 0.001,
@@ -69,7 +69,7 @@ def test_simpleModelTraj():
 
 def test_storeAndRestoreSimpleTraj():
     """Test store and restoring trajectory with simple model."""
-    fmodel = SimpleFModel()
+    fmodel = SimpleFModel
     parameters = {
         "traj.end_time": 0.05,
         "traj.step_size": 0.001,
@@ -89,7 +89,7 @@ def test_storeAndRestoreSimpleTraj():
 
 def test_restartSimpleTraj():
     """Test trajectory restart."""
-    fmodel = SimpleFModel()
+    fmodel = SimpleFModel
     parameters = {
         "traj.end_time": 0.04,
         "traj.step_size": 0.001,
