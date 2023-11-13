@@ -18,7 +18,7 @@ class ForwardModel:
     if those functions are not overritten in actual model.
     """
 
-    def __init__(self):
+    def __init__(self, params : dict = None):
         """Might need something here."""
         pass
 
@@ -41,8 +41,13 @@ class ForwardModel:
 
     def score(self):
         """Return the model's current state score."""
-        raise TemplateCallError("Calling ForwardModel method !")
+        raise TemplateCallError("Calling score method !")
 
+    def clear(self):
+        """Destroy internal data."""
+        pass
+
+    @classmethod
     def name(self):
         """Return a the model name."""
         return "TemplateForwardModel"
