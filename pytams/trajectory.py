@@ -16,15 +16,15 @@ class Trajectory:
     score function along the way.
     """
 
-    def __init__(self, fmodel, parameters: dict, trajId: str) -> None:
+    def __init__(self, fmodel_t, parameters: dict, trajId: str) -> None:
         """Create a trajectory.
 
         Args:
-            fmodel: the forward model
+            fmodel_t: the forward model type
             parameters: a dictionary of input parameters
             trajId: a string for the trajectory id
         """
-        self._fmodel = fmodel
+        self._fmodel = fmodel_t(parameters)
         self._parameters = parameters
 
         self._t_cur = 0.0
@@ -87,11 +87,14 @@ class Trajectory:
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
 
+        if self._has_ended:
+            self._fmodel.clear()
+
     @classmethod
     def restoreFromChk(
         cls,
         chkPoint: str,
-        fmodel,
+        fmodel_t,
         parameters: dict = None,
     ):
         """Return a trajectory restored from an XML chkfile."""
@@ -104,9 +107,9 @@ class Trajectory:
         t_id = metadata["id"]
 
         if parameters is not None:
-            restTraj = Trajectory(fmodel=fmodel, parameters=parameters, trajId=t_id)
+            restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
         else:
-            restTraj = Trajectory(fmodel=fmodel, parameters=paramsfromxml, trajId=t_id)
+            restTraj = Trajectory(fmodel_t=fmodel_t, parameters=paramsfromxml, trajId=t_id)
 
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
@@ -142,7 +145,7 @@ class Trajectory:
         # Check for empty trajectory
         if not traj._score:
             restTraj = Trajectory(
-                fmodel=traj._fmodel, parameters=traj._parameters, trajId=traj._tid
+                fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=traj._tid
             )
 
             return restTraj
@@ -152,7 +155,7 @@ class Trajectory:
             high_score_idx += 1
 
         restTraj = Trajectory(
-            fmodel=traj._fmodel, parameters=traj._parameters, trajId=traj._tid
+            fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=traj._tid
         )
         for k in range(high_score_idx + 1):
             restTraj._score.append(traj._score[k])
@@ -183,6 +186,7 @@ class Trajectory:
                 make_xml_snapshot(k, self._time[k], self._score[k], self._state[k])
             )
         tree = ET.ElementTree(root)
+        ET.indent(tree, space="\t", level=0)
         if traj_file is not None:
             tree.write(traj_file)
         else:
