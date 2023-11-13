@@ -28,14 +28,14 @@ class TAMS:
     populate, explore and IO the database.
     """
 
-    def __init__(self, fmodel, parameters: dict) -> None:
+    def __init__(self, fmodel_t, parameters: dict) -> None:
         """Initialize a TAMS run.
 
         Args:
-            fmodel: the forward model
+            fmodel_t: the forward model type
             parameters: a dictionary of input parameters
         """
-        self._fmodel = fmodel
+        self._fmodel_t = fmodel_t
         self.parameters = parameters
 
         # Parse user-inputs
@@ -93,7 +93,7 @@ class TAMS:
             mdata = ET.SubElement(root, "metadata")
             mdata.append(new_element("pyTAMS_version", datetime.now()))
             mdata.append(new_element("date", datetime.now()))
-            mdata.append(new_element("model", self._fmodel.name()))
+            mdata.append(new_element("model_t", self._fmodel_t.name()))
             root.append(dict_to_xml("parameters", self.parameters))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
@@ -152,7 +152,7 @@ class TAMS:
                         self._trajs_db.append(
                             Trajectory.restoreFromChk(
                                 chkFile,
-                                fmodel=self._fmodel,
+                                fmodel_t=self._fmodel_t,
                             )
                         )
                     else:
@@ -164,7 +164,7 @@ class TAMS:
                 else:
                     self._trajs_db.append(
                         Trajectory(
-                            fmodel=self._fmodel,
+                            fmodel_t=self._fmodel_t,
                             parameters=self.parameters,
                             trajId="traj{:06}".format(n),
                         )
@@ -182,10 +182,10 @@ class TAMS:
         tree = ET.parse(headerFile)
         root = tree.getroot()
         headerfromxml = xml_to_dict(root.find("metadata"))
-        if self._fmodel.name() != headerfromxml["model"]:
+        if self._fmodel_t.name() != headerfromxml["model_t"]:
             raise TAMSError(
                 "Trying to restore a TAMS with {} model from database with {} model !".format(
-                    self._fmodel.name(), headerfromxml["model"]
+                    self._fmodel_t.name(), headerfromxml["model_t"]
                 )
             )
 
@@ -226,7 +226,7 @@ class TAMS:
         for n in range(self._nTraj):
             self._trajs_db.append(
                 Trajectory(
-                    fmodel=self._fmodel,
+                    fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
                     trajId="traj{:06}".format(n),
                 )
@@ -352,7 +352,7 @@ class TAMS:
             the transition probability
         """
         self.verbosePrint(
-            "Computing {} rare event probability using TAMS".format(self._fmodel.name())
+            "Computing {} rare event probability using TAMS".format(self._fmodel_t.name())
         )
 
         # Generate the initial trajectory pool
