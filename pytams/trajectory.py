@@ -109,7 +109,9 @@ class Trajectory:
         if parameters is not None:
             restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
         else:
-            restTraj = Trajectory(fmodel_t=fmodel_t, parameters=paramsfromxml, trajId=t_id)
+            restTraj = Trajectory(
+                fmodel_t=fmodel_t, parameters=paramsfromxml, trajId=t_id
+            )
 
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
@@ -145,7 +147,9 @@ class Trajectory:
         # Check for empty trajectory
         if not traj._score:
             restTraj = Trajectory(
-                fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=traj._tid
+                fmodel_t=type(traj._fmodel),
+                parameters=traj._parameters,
+                trajId=traj._tid,
             )
 
             return restTraj

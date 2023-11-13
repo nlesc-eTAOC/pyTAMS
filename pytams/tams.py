@@ -352,7 +352,9 @@ class TAMS:
             the transition probability
         """
         self.verbosePrint(
-            "Computing {} rare event probability using TAMS".format(self._fmodel_t.name())
+            "Computing {} rare event probability using TAMS".format(
+                self._fmodel_t.name()
+            )
         )
 
         # Generate the initial trajectory pool

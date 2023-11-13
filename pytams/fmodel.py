@@ -18,7 +18,7 @@ class ForwardModel:
     if those functions are not overritten in actual model.
     """
 
-    def __init__(self, params : dict = None):
+    def __init__(self, params: dict = None):
         """Might need something here."""
         pass
 

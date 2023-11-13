@@ -1,7 +1,7 @@
 """Tests for the pytams.tams class."""
 import os
-from pytams.tams import TAMS
 from pytams.fmodel import ForwardModel
+from pytams.tams import TAMS
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
 

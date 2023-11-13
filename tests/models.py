@@ -10,7 +10,7 @@ class SimpleFModel(ForwardModel):
     10 times the state, ceiled to 1.0
     """
 
-    def __init__(self, params : dict = None):
+    def __init__(self, params: dict = None):
         """Override the template."""
         self._state = 0.0
 
@@ -50,7 +50,7 @@ class DoubleWellModel(ForwardModel):
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
 
-    def __init__(self, params : dict = None):
+    def __init__(self, params: dict = None):
         """Override the template."""
         self._state = self.initCondition()
 
