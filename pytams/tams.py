@@ -4,15 +4,13 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List
-from typing import Tuple
-import dask
+from typing import List, Tuple
+
 import numpy as np
-from dask.distributed import Client
+
+from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
-from pytams.xmlutils import dict_to_xml
-from pytams.xmlutils import new_element
-from pytams.xmlutils import xml_to_dict
+from pytams.xmlutils import dict_to_xml, new_element, xml_to_dict
 
 
 class TAMSError(Exception):
@@ -254,13 +252,12 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with Client(threads_per_worker=1, n_workers=self._nProc):
+        with DaskRunner(n_daskTask=self._nProc) as runner:
             tasks_p = []
             for T in self._trajs_db:
-                lazy_result = dask.delayed(self.task_delayed)(T)
-                tasks_p.append(lazy_result)
+                tasks_p.append(runner.make_promise(self.task_delayed, T))
 
-            self._trajs_db = list(dask.compute(*tasks_p))
+            self._trajs_db = runner.execute_promises(tasks_p)
 
         # Update the trajectory database
         self.appendTrajsToDB()
@@ -296,7 +293,7 @@ class TAMS:
         l_bias = []
         weights = [1]
 
-        with Client(threads_per_worker=1, n_workers=self._nProc):
+        with DaskRunner(n_daskTask=self._nProc) as runner:
             for k in range(int(self._nSplitIter / self._nProc)):
                 # Gather max score from all trajectories
                 # and check for early convergence
@@ -333,12 +330,11 @@ class TAMS:
 
                 tasks_p = []
                 for i in range(len(min_idx_list)):
-                    lazy_result = dask.delayed(self.worker)(
-                        19, min_idx_list, min_vals[i]
+                    tasks_p.append(
+                        runner.make_promise(self.worker, 19, min_idx_list, min_vals[i])
                     )
-                    tasks_p.append(lazy_result)
 
-                restartedTrajs = dask.compute(*tasks_p)
+                restartedTrajs = runner.execute_promises(tasks_p)
 
                 for i in range(len(min_idx_list)):
                     self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])

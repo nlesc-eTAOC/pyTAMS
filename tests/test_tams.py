@@ -1,9 +1,9 @@
 """Tests for the pytams.tams class."""
 import os
+
 from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
-from tests.models import DoubleWellModel
-from tests.models import SimpleFModel
+from tests.models import DoubleWellModel, SimpleFModel
 
 
 def test_initTAMS():
