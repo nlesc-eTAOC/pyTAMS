@@ -46,7 +46,6 @@ class TAMS:
 
         self._nTraj = self.parameters.get("nTrajectories", 500)
         self._nSplitIter = self.parameters.get("nSplitIter", 2000)
-
         self._wallTime = self.parameters.get("wallTime", 600.0)
 
         # Data
@@ -293,7 +292,7 @@ class TAMS:
         weights = [1]
 
         with DaskRunner(self.parameters) as runner:
-            for k in range(int(self._nSplitIter / self._nProc)):
+            for k in range(int(self._nSplitIter / runner.dask_nworker)):
                 # Gather max score from all trajectories
                 # and check for early convergence
                 allConverged = True
@@ -320,8 +319,10 @@ class TAMS:
                     )
                     break
 
-                # Get the nProc lower scored trajectories
-                min_idx_list = np.argpartition(maxes, self._nProc)[: self._nProc]
+                # Get the nworker lower scored trajectories
+                min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
+                    : runner.dask_nworker
+                ]
                 min_vals = maxes[min_idx_list]
 
                 l_bias.append(len(min_idx_list))
