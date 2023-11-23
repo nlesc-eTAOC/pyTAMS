@@ -30,6 +30,24 @@ def test_simpleModelTAMS():
     assert transition_proba == 1.0
 
 
+def test_simpleModelTAMSSlurmFail():
+    """Test TAMS with simple model with Slurm dask backend"""
+    fmodel = SimpleFModel
+    parameters = {
+        "nTrajectories": 100,
+        "nSplitIter": 200,
+        "Verbose": False,
+        "dask.backend" : "slurm",
+        "dask.slurm_config_file" : "dummy.yaml",
+        "traj.end_time": 0.02,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.15,
+    }
+    tams = TAMS(fmodel_t=fmodel, parameters=parameters)
+    with pytest.raises(Exception):
+        transition_proba = tams.compute_probability()
+
+
 def test_simpleModelTwiceTAMS():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
