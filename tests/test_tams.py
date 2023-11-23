@@ -1,5 +1,6 @@
 """Tests for the pytams.tams class."""
 import os
+import pytest
 from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
@@ -31,7 +32,7 @@ def test_simpleModelTAMS():
 
 
 def test_simpleModelTAMSSlurmFail():
-    """Test TAMS with simple model with Slurm dask backend"""
+    """Test TAMS with simple model with Slurm dask backend."""
     fmodel = SimpleFModel
     parameters = {
         "nTrajectories": 100,
@@ -45,7 +46,7 @@ def test_simpleModelTAMSSlurmFail():
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
     with pytest.raises(Exception):
-        transition_proba = tams.compute_probability()
+        tams.compute_probability()
 
 
 def test_simpleModelTwiceTAMS():
