@@ -1,7 +1,5 @@
 import time
-
 import numpy as np
-
 from pytams.fmodel import ForwardModel
 
 

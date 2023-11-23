@@ -1,6 +1,5 @@
 """Tests for the pytams.xmlutils class."""
 import pytest
-
 import pytams.xmlutils as pxml
 
 

@@ -1,9 +1,11 @@
 import os
 import time
 import xml.etree.ElementTree as ET
-
-from pytams.xmlutils import (dict_to_xml, make_xml_snapshot, new_element,
-                             read_xml_snapshot, xml_to_dict)
+from pytams.xmlutils import dict_to_xml
+from pytams.xmlutils import make_xml_snapshot
+from pytams.xmlutils import new_element
+from pytams.xmlutils import read_xml_snapshot
+from pytams.xmlutils import xml_to_dict
 
 
 class Trajectory:

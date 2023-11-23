@@ -4,13 +4,14 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List, Tuple
-
+from typing import List
+from typing import Tuple
 import numpy as np
-
 from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
-from pytams.xmlutils import dict_to_xml, new_element, xml_to_dict
+from pytams.xmlutils import dict_to_xml
+from pytams.xmlutils import new_element
+from pytams.xmlutils import xml_to_dict
 
 
 class TAMSError(Exception):
