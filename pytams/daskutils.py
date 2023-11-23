@@ -1,24 +1,54 @@
+import os
+import shutil
 import dask
 from dask.distributed import Client
+from dask_jobqueue import SLURMCluster
+
+class DaskRunnerError(Exception):
+    """Exception class for the Dask runner."""
+
+    pass
 
 
 class DaskRunner:
     """A Dask wrapper handle cluster and promises."""
 
-    def __init__(self, n_daskTask : int =1):
+    def __init__(self, parameters : dict):
         """Start the Dask cluster and client.
 
         Args:
             n_daskTask: number of dask workers
         """
-        self.client = Client(threads_per_worker=1, n_workers=n_daskTask)
+        self.dask_backend = parameters.get("dask.backend", "local")
+        
+        if (self.dask_backend == "local"):
+            self.dask_nworker = parameters.get("dask.nworker", 1)
+            self.client = Client(threads_per_worker=1, n_workers=self.dask_nworker)
+        elif (self.dask_backend == "slurm"):
+            self.dask_nworker = parameters.get("dask.nworker", 1)
+            self.slurm_config_file = parameters.get("dask.slurm_config_file", None)
+            if self.slurm_config_file:
+                if not os.path.exists(self.slurm_config_file):
+                    raise DaskRunnerError("Specified slurm_config_file do not exists: {}".format(self.slurm_config_file))
+                
+                config_file = ntpath.basename(self.slurm_config_file)
+                shutil.move(self.slurm_config_file, "~/.config/dask/{}".format(config_file))
+            else:
+                self.dask_queue = parameters.get("dask.queue", "regular")
+                self.dask_nworker_ncore = parameters.get("dask.ncores_per_worker", 1)
+                cluster = SLURMCluster(queue=self.dask_queue,
+                                       cores = self.dask_nworker_ncore,
+                                       walltime = 
+            self.cluster.scale(jobs=self.dask_nworker)
+        else:
+            raise DaskRunnerError("Unknown dask.backend: {}".format(self.dask_backend))
 
     def __enter__(self):
         """To enable use of with."""
         return self
 
     def __exit__(self, *args):
-        """Executed leaving with."""
+        """Executed leaving with scope."""
         self.client.close()
 
     def make_promise(self, task, *args):

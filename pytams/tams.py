@@ -47,8 +47,6 @@ class TAMS:
         self._nTraj = self.parameters.get("nTrajectories", 500)
         self._nSplitIter = self.parameters.get("nSplitIter", 2000)
 
-        self._nProc = self.parameters.get("nProc", 1)
-
         self._wallTime = self.parameters.get("wallTime", 600.0)
 
         # Data
@@ -253,7 +251,7 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(n_daskTask=self._nProc) as runner:
+        with DaskRunner(self.parameters) as runner:
             tasks_p = []
             for T in self._trajs_db:
                 tasks_p.append(runner.make_promise(self.task_delayed, T))
@@ -294,7 +292,7 @@ class TAMS:
         l_bias = []
         weights = [1]
 
-        with DaskRunner(n_daskTask=self._nProc) as runner:
+        with DaskRunner(self.parameters) as runner:
             for k in range(int(self._nSplitIter / self._nProc)):
                 # Gather max score from all trajectories
                 # and check for early convergence
