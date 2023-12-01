@@ -73,8 +73,11 @@ class TAMS:
             )
             if os.path.exists(self._nameDB) and self._nameDB != self._restartDB:
                 rng = np.random.default_rng(12345)
-                random_int = rng.integers(0, 999999)
-                nameDB_rnd = "{}_{:06d}".format(self._nameDB, random_int)
+                copy_exists = True
+                while copy_exists:
+                    random_int = rng.integers(0, 999999)
+                    nameDB_rnd = "{}_{:06d}".format(self._nameDB, random_int)
+                    copy_exists = os.path.exists(nameDB_rnd)
 
                 print(
                     """
