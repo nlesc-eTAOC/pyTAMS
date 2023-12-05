@@ -6,9 +6,8 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List
 from typing import Tuple
-import dask
 import numpy as np
-from dask.distributed import Client
+from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import new_element
@@ -47,9 +46,6 @@ class TAMS:
 
         self._nTraj = self.parameters.get("nTrajectories", 500)
         self._nSplitIter = self.parameters.get("nSplitIter", 2000)
-
-        self._nProc = self.parameters.get("nProc", 1)
-
         self._wallTime = self.parameters.get("wallTime", 600.0)
 
         # Data
@@ -254,13 +250,12 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with Client(threads_per_worker=1, n_workers=self._nProc):
+        with DaskRunner(self.parameters) as runner:
             tasks_p = []
             for T in self._trajs_db:
-                lazy_result = dask.delayed(self.task_delayed)(T)
-                tasks_p.append(lazy_result)
+                tasks_p.append(runner.make_promise(self.task_delayed, T))
 
-            self._trajs_db = list(dask.compute(*tasks_p))
+            self._trajs_db = runner.execute_promises(tasks_p)
 
         # Update the trajectory database
         self.appendTrajsToDB()
@@ -296,8 +291,8 @@ class TAMS:
         l_bias = []
         weights = [1]
 
-        with Client(threads_per_worker=1, n_workers=self._nProc):
-            for k in range(int(self._nSplitIter / self._nProc)):
+        with DaskRunner(self.parameters) as runner:
+            for k in range(int(self._nSplitIter / runner.dask_nworker)):
                 # Gather max score from all trajectories
                 # and check for early convergence
                 allConverged = True
@@ -324,8 +319,10 @@ class TAMS:
                     )
                     break
 
-                # Get the nProc lower scored trajectories
-                min_idx_list = np.argpartition(maxes, self._nProc)[: self._nProc]
+                # Get the nworker lower scored trajectories
+                min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
+                    : runner.dask_nworker
+                ]
                 min_vals = maxes[min_idx_list]
 
                 l_bias.append(len(min_idx_list))
@@ -333,12 +330,11 @@ class TAMS:
 
                 tasks_p = []
                 for i in range(len(min_idx_list)):
-                    lazy_result = dask.delayed(self.worker)(
-                        19, min_idx_list, min_vals[i]
+                    tasks_p.append(
+                        runner.make_promise(self.worker, 19, min_idx_list, min_vals[i])
                     )
-                    tasks_p.append(lazy_result)
 
-                restartedTrajs = dask.compute(*tasks_p)
+                restartedTrajs = runner.execute_promises(tasks_p)
 
                 for i in range(len(min_idx_list)):
                     self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])

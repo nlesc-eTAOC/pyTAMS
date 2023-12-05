@@ -1,5 +1,6 @@
 """Tests for the pytams.tams class."""
 import os
+import pytest
 from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
@@ -21,7 +22,6 @@ def test_simpleModelTAMS():
         "nTrajectories": 100,
         "nSplitIter": 200,
         "Verbose": False,
-        "nProc": 1,
         "traj.end_time": 0.02,
         "traj.step_size": 0.001,
         "traj.targetScore": 0.15,
@@ -29,6 +29,24 @@ def test_simpleModelTAMS():
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
+
+
+def test_simpleModelTAMSSlurmFail():
+    """Test TAMS with simple model with Slurm dask backend."""
+    fmodel = SimpleFModel
+    parameters = {
+        "nTrajectories": 100,
+        "nSplitIter": 200,
+        "Verbose": False,
+        "dask.backend" : "slurm",
+        "dask.slurm_config_file" : "dummy.yaml",
+        "traj.end_time": 0.02,
+        "traj.step_size": 0.001,
+        "traj.targetScore": 0.15,
+    }
+    tams = TAMS(fmodel_t=fmodel, parameters=parameters)
+    with pytest.raises(Exception):
+        tams.compute_probability()
 
 
 def test_simpleModelTwiceTAMS():
@@ -40,7 +58,6 @@ def test_simpleModelTwiceTAMS():
         "Verbose": False,
         "DB_save": True,
         "DB_prefix": "simpleModelTest",
-        "nProc": 1,
         "traj.end_time": 0.02,
         "traj.step_size": 0.001,
         "traj.targetScore": 0.15,
@@ -66,7 +83,6 @@ def test_stallingSimpleModelTAMS():
         "nTrajectories": 100,
         "nSplitIter": 200,
         "Verbose": True,
-        "nProc": 1,
         "traj.end_time": 1.0,
         "traj.step_size": 0.01,
         "traj.targetScore": 1.1,
@@ -83,7 +99,6 @@ def test_doublewellModelTAMS():
         "nTrajectories": 100,
         "nSplitIter": 400,
         "Verbose": True,
-        "nProc": 1,
         "wallTime": 500.0,
         "traj.end_time": 10.0,
         "traj.step_size": 0.01,
@@ -102,7 +117,7 @@ def test_doublewellModel2WorkersTAMS():
         "nTrajectories": 100,
         "nSplitIter": 400,
         "Verbose": True,
-        "nProc": 2,
+        "dask.nworker": 2,
         "DB_save": True,
         "DB_prefix": "dwTest",
         "wallTime": 500.0,
@@ -123,7 +138,7 @@ def test_doublewellModel2WorkersRestoreTAMS():
         "nTrajectories": 100,
         "nSplitIter": 400,
         "Verbose": True,
-        "nProc": 2,
+        "dask.nworker": 2,
         "DB_save": True,
         "DB_prefix": "dwTest",
         "DB_restart": "dwTest.tdb",

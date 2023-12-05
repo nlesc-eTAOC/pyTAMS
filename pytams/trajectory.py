@@ -24,7 +24,7 @@ class Trajectory:
             parameters: a dictionary of input parameters
             trajId: a string for the trajectory id
         """
-        self._fmodel = fmodel_t(parameters)
+        self._fmodel = fmodel_t(parameters, trajId)
         self._parameters = parameters
 
         self._t_cur = 0.0
@@ -66,12 +66,12 @@ class Trajectory:
         convergedVal = self._parameters.get("traj.targetScore", 0.95)
 
         while (
-            self._t_cur <= end_time
+            self._t_cur < end_time
             and not self._has_converged
             and remainingTime >= 0.05 * walltime
         ):
-            self._t_cur = self._t_cur + self._dt
-            self._fmodel.advance(self._dt, stoichForcingAmpl)
+            dt = self._fmodel.advance(self._dt, stoichForcingAmpl)
+            self._t_cur = self._t_cur + dt
             score = self._fmodel.score()
             if score > self._score_max:
                 self._time.append(self._t_cur)
