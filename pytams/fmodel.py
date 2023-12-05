@@ -18,16 +18,18 @@ class ForwardModel:
     if those functions are not overritten in actual model.
     """
 
-    def __init__(self, params: dict = None):
+    def __init__(self, params: dict = None, ioprefix: str = None):
         """Might need something here."""
         pass
 
-    def advance(self, dt: float, forcingAmpl: float):
+    def advance(self, dt: float, forcingAmpl: float) -> float:
         """Advance function of the model.
 
         Args:
             dt: the time step size over which to advance
             forcingAmpl: stochastic multiplicator
+        Return:
+            Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
         raise TemplateCallError("Calling advance() method !")
 
