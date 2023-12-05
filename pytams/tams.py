@@ -265,7 +265,8 @@ class TAMS:
         with DaskRunner(self.parameters) as runner:
             tasks_p = []
             for T in self._trajs_db:
-                tasks_p.append(runner.make_promise(self.task_delayed, T))
+                if not T.hasEnded():
+                    tasks_p.append(runner.make_promise(self.task_delayed, T))
 
             self._trajs_db = runner.execute_promises(tasks_p)
 

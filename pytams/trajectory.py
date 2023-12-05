@@ -212,6 +212,10 @@ class Trajectory:
         """Return True for converged trajectory."""
         return self._has_converged
 
+    def hasEnded(self) -> bool:
+        """Return True for terminated trajectory."""
+        return self._has_ended
+
     def hasStarted(self) -> bool:
         """Return True if computation has started."""
         return self._t_cur > 0.0
