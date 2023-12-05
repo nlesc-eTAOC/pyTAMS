@@ -219,6 +219,15 @@ class TAMS:
         """
         return self._wallTime - self.elapsed_time()
 
+    def out_of_time(self) -> bool:
+        """Return true if insufficient walltime remains.
+
+        Returns:
+           boolean indicating wall time availability.
+        """
+        return self.remaining_walltime() < 0.05 * self._wallTime
+
+
     def init_trajectory_pool(self):
         """Initialize the trajectory pool."""
         self.hasEnded = np.full((self._nTraj), False)
@@ -237,7 +246,7 @@ class TAMS:
         Args:
             traj: a trajectory
         """
-        if self.remaining_walltime() > 0.05 * self._wallTime:
+        if not self.out_of_time():
             traj.advance(walltime=self.remaining_walltime())
             if self._saveDB:
                 traj.setCheckFile(
@@ -369,6 +378,10 @@ class TAMS:
         if allConverged:
             self.verbosePrint("All trajectory converged prior to splitting !")
             return 1.0
+
+        if self.out_of_time():
+            self.verbosePrint("Ran out of walltime ! Exciting now.")
+            return -1.0
 
         # Perform multilevel splitting
         l_bias, weights = self.do_multilevel_splitting()
