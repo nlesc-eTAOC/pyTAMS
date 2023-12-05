@@ -1,5 +1,6 @@
 """Tests for the pytams.tams class."""
 import os
+import pytest
 from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
@@ -72,8 +73,8 @@ def test_stallingSimpleModelTAMS():
         "traj.targetScore": 1.1,
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
-    transition_proba = tams.compute_probability()
-    assert transition_proba == 0.0
+    with pytest.raises(Exception):
+      transition_proba = tams.compute_probability()
 
 
 def test_doublewellModelTAMS():
