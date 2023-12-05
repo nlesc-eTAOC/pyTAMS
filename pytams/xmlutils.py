@@ -107,6 +107,6 @@ def read_xml_snapshot(snap: ET.Element):
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    state = manualCast(snap)
+    _, state = manualCast(snap)
 
     return time, score, state
