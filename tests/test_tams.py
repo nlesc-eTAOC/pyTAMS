@@ -88,8 +88,8 @@ def test_stallingSimpleModelTAMS():
         "traj.targetScore": 1.1,
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
-    transition_proba = tams.compute_probability()
-    assert transition_proba == 0.0
+    with pytest.raises(Exception):
+      tams.compute_probability()
 
 
 def test_doublewellModelTAMS():

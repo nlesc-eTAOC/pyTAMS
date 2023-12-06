@@ -133,6 +133,7 @@ class Trajectory:
     def restartFromTraj(
         cls,
         traj,
+        rstId: str,
         score: float,
     ):
         """Create a new trajectory.
@@ -141,7 +142,8 @@ class Trajectory:
         for all entries with score below a given score
 
         Args:
-            traj: an already existing trajectory
+            traj: an already existing trajectory to restart from
+            rstId: the id of the trajectory being restarted
             score: a threshold score
         """
         # Check for empty trajectory
@@ -149,9 +151,8 @@ class Trajectory:
             restTraj = Trajectory(
                 fmodel_t=type(traj._fmodel),
                 parameters=traj._parameters,
-                trajId=traj._tid,
+                trajId=rstId,
             )
-
             return restTraj
 
         high_score_idx = 0
@@ -159,7 +160,7 @@ class Trajectory:
             high_score_idx += 1
 
         restTraj = Trajectory(
-            fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=traj._tid
+            fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=rstId
         )
         for k in range(high_score_idx + 1):
             restTraj._score.append(traj._score[k])
@@ -211,6 +212,10 @@ class Trajectory:
     def isConverged(self) -> bool:
         """Return True for converged trajectory."""
         return self._has_converged
+
+    def hasEnded(self) -> bool:
+        """Return True for terminated trajectory."""
+        return self._has_ended
 
     def hasStarted(self) -> bool:
         """Return True if computation has started."""

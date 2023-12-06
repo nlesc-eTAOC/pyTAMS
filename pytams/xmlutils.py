@@ -20,7 +20,10 @@ def manualCast(elem: ET.Element):
     elif elem.attrib["type"] == "complex":
         return elem.tag, complex(elem.text)
     elif elem.attrib["type"] == "bool":
-        return elem.tag, bool(elem.text)
+        if (elem.text == "True"):
+            return elem.tag, True
+        else:
+            return elem.tag, False
     elif elem.attrib["type"] == "str":
         return elem.tag, str(elem.text)
     elif elem.attrib["type"] == "ndarray":
@@ -107,6 +110,6 @@ def read_xml_snapshot(snap: ET.Element):
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    state = manualCast(snap)
+    _, state = manualCast(snap)
 
     return time, score, state
