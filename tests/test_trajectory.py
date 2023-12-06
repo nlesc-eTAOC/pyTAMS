@@ -34,7 +34,7 @@ def test_restartEmptyTraj():
     fmodel = ForwardModel
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
-    rst_test = Trajectory.restartFromTraj(t_test, 0.1)
+    rst_test = Trajectory.restartFromTraj(t_test, "ttest", 0.1)
     assert rst_test.ctime() == 0.0
 
 
@@ -97,5 +97,5 @@ def test_restartSimpleTraj():
     }
     t_test = Trajectory(fmodel, parameters, "rstSimple")
     t_test.advance(0.01)
-    rst_test = Trajectory.restartFromTraj(t_test, 0.05)
+    rst_test = Trajectory.restartFromTraj(t_test, "testiD", 0.05)
     assert rst_test.ctime() == 0.005

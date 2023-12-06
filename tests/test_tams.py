@@ -89,7 +89,7 @@ def test_stallingSimpleModelTAMS():
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
     with pytest.raises(Exception):
-      transition_proba = tams.compute_probability()
+      tams.compute_probability()
 
 
 def test_doublewellModelTAMS():
