@@ -103,6 +103,9 @@ class TAMS:
             ET.indent(tree, space="\t", level=0)
             tree.write(headerFile)
 
+            # Initialialize splitting data file
+            self.saveSplittingData(self._nameDB)
+
             # Dynamically updated file with trajectory pool
             # Empty for now
             databaseFile = "{}/trajPool.xml".format(self._nameDB)
@@ -133,6 +136,29 @@ class TAMS:
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
 
+    def saveSplittingData(self, a_db: str) -> None:
+        """Write splitting data to XML file."""
+        # Splitting data file
+        splittingDataFile = "{}/splittingData.xml".format(a_db)
+        root = ET.Element("Splitting")
+        root.append(new_element("kSplit", self._kSplit))
+        root.append(new_element("bias", np.array(self._l_bias)))
+        root.append(new_element("weight", np.array(self._weights)))
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="\t", level=0)
+        tree.write(splittingDataFile)
+
+    def readSplittingData(self, a_db: str) -> None:
+        """Read splitting data from XML file."""
+        # Read data file
+        splittingDataFile = "{}/splittingData.xml".format(a_db)
+        tree = ET.parse(splittingDataFile)
+        root = tree.getroot()
+        datafromxml = xml_to_dict(root)
+        self._kSplit = datafromxml["kSplit"]
+        self._l_bias = datafromxml["bias"].tolist()
+        self._weights = datafromxml["weight"].tolist()
+
     def restoreTrajDB(self) -> None:
         """Initialize TAMS from a stored trajectory database."""
         if os.path.exists(self._restartDB):
@@ -140,7 +166,11 @@ class TAMS:
                 "Restoring from the trajectories database {}".format(self._restartDB)
             )
 
+            # Check the database parameters against current run
             self.check_database_consistency()
+
+            # Load splitting data
+            self.readSplittingData(self._restartDB)
 
             # Init trajectory pool and load trajectory stored
             # in the database when available.
@@ -382,8 +412,13 @@ class TAMS:
             )
         )
 
+        # Skip pool stage if splitting iterative
+        # process has started
+        skip_pool = self._kSplit > 0
+
         # Generate the initial trajectory pool
-        self.generate_trajectory_pool()
+        if not skip_pool:
+            self.generate_trajectory_pool()
 
         # Check for early convergence
         allConverged = True
@@ -392,7 +427,7 @@ class TAMS:
                 allConverged = False
                 break
 
-        if allConverged:
+        if not skip_pool and allConverged:
             self.verbosePrint("All trajectory converged prior to splitting !")
             return 1.0
 
