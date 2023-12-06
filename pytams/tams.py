@@ -281,7 +281,7 @@ class TAMS:
         Args:
             traj: a trajectory
         """
-        if not self.out_of_time():
+        if not self.out_of_time() and not traj.hasEnded():
             traj.advance(walltime=self.remaining_walltime())
             if self._saveDB:
                 traj.setCheckFile(
@@ -298,10 +298,11 @@ class TAMS:
         )
 
         with DaskRunner(self.parameters) as runner:
+            # Assemble a list of promises
+            # All the trajectories are added, even those already done
             tasks_p = []
             for T in self._trajs_db:
-                if not T.hasEnded():
-                    tasks_p.append(runner.make_promise(self.task_delayed, T))
+                tasks_p.append(runner.make_promise(self.task_delayed, T))
 
             self._trajs_db = runner.execute_promises(tasks_p)
 
