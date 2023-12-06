@@ -311,7 +311,10 @@ class TAMS:
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
     def worker(
-        self, t_end: float, min_idx_list: List[int], min_val: float
+        self, t_end: float,
+        min_idx_list: List[int],
+        rstId: str,
+        min_val: float
     ) -> Trajectory:
         """A worker to restart trajectories.
 
@@ -319,14 +322,15 @@ class TAMS:
             t_end: a final time
             min_idx_list: the list of trajectory restarted in
                           the current splitting iteration
+            rstId: Id of the trajectory being worked on
             min_val: the value of the score function to restart from
         """
-        rng = np.random.default_rng(12345)
+        rng = np.random.default_rng()
         rest_idx = min_idx_list[0]
         while rest_idx in min_idx_list:
             rest_idx = rng.integers(0, len(self._trajs_db))
 
-        traj = Trajectory.restartFromTraj(self._trajs_db[rest_idx], min_val)
+        traj = Trajectory.restartFromTraj(self._trajs_db[rest_idx], rstId, min_val)
 
         traj.advance(walltime=self.remaining_walltime())
 
@@ -389,7 +393,11 @@ class TAMS:
                 tasks_p = []
                 for i in range(len(min_idx_list)):
                     tasks_p.append(
-                        runner.make_promise(self.worker, 19, min_idx_list, min_vals[i])
+                        runner.make_promise(self.worker,
+                                            1.0e9,
+                                            min_idx_list,
+                                            self._trajs_db[min_idx_list[i]].id(),
+                                            min_vals[i])
                     )
 
                 restartedTrajs = runner.execute_promises(tasks_p)
@@ -399,6 +407,13 @@ class TAMS:
                 self._kSplit = k
                 for i in range(len(min_idx_list)):
                     self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])
+                    if self._saveDB:
+                        self.saveSplittingData(self._nameDB)
+                        tid = self._trajs_db[min_idx_list[i]].id()
+                        self._trajs_db[min_idx_list[i]].setCheckFile(
+                            "{}/{}/{}.xml".format(self._nameDB, "trajectories", tid)
+                        )
+                        self._trajs_db[min_idx_list[i]].store()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
