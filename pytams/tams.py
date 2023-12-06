@@ -48,10 +48,12 @@ class TAMS:
         self._nSplitIter = self.parameters.get("nSplitIter", 2000)
         self._wallTime = self.parameters.get("wallTime", 600.0)
 
-        # Data
+        # Trajectory Pool
         self._trajs_db = []
-        self._hasEnded = None
-        self._nameDB = "{}.tdb".format(self._prefixDB)
+
+        # Trajectory Database
+        if (self._saveDB):
+            self._nameDB = "{}.tdb".format(self._prefixDB)
 
         # Splitting data
         self._kSplit = 0
@@ -167,52 +169,70 @@ class TAMS:
             )
 
             # Check the database parameters against current run
-            self.check_database_consistency()
+            self.check_database_consistency(self._restartDB)
 
             # Load splitting data
             self.readSplittingData(self._restartDB)
 
-            # Init trajectory pool and load trajectory stored
-            # in the database when available.
+            # Load trajectories stored in the database when available.
             dbFile = "{}/trajPool.xml".format(self._restartDB)
-            tree = ET.parse(dbFile)
-            root = tree.getroot()
-            for n in range(self._nTraj):
-                trajId = "traj{:06}".format(n)
-                T_entry = root.find(trajId)
-                if T_entry is not None:
-                    chkFile = T_entry.text
-                    if os.path.exists(chkFile):
-                        self._trajs_db.append(
-                            Trajectory.restoreFromChk(
-                                chkFile,
-                                fmodel_t=self._fmodel_t,
-                            )
-                        )
-                    else:
-                        raise TAMSError(
-                            "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
-                                chkFile
-                            )
-                        )
-                else:
-                    self._trajs_db.append(
-                        Trajectory(
-                            fmodel_t=self._fmodel_t,
-                            parameters=self.parameters,
-                            trajId="traj{:06}".format(n),
-                        )
-                    )
+            nTrajRestored = self.loadTrajectoryDB(dbFile)
 
+            self.verbosePrint(
+                "--> {} trajectories restored from the database".format(nTrajRestored)
+            )
         else:
             raise TAMSError(
                 "Could not find the {} TAMS database !".format(self._restartDB)
             )
 
-    def check_database_consistency(self) -> None:
+    def loadTrajectoryDB(self, dbFile : str) -> int:
+        """Load trajectories stored into the database.
+
+        Args:
+            the database file
+
+        return:
+            number of trajectories loaded
+        """
+        # Counter for number of trajectory loaded
+        nTrajRestored = 0
+
+        tree = ET.parse(dbFile)
+        root = tree.getroot()
+        for n in range(self._nTraj):
+            trajId = "traj{:06}".format(n)
+            T_entry = root.find(trajId)
+            if T_entry is not None:
+                chkFile = T_entry.text
+                if os.path.exists(chkFile):
+                    nTrajRestored += 1
+                    self._trajs_db.append(
+                        Trajectory.restoreFromChk(
+                            chkFile,
+                            fmodel_t=self._fmodel_t,
+                        )
+                    )
+                else:
+                    raise TAMSError(
+                        "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
+                            chkFile
+                        )
+                    )
+            else:
+                self._trajs_db.append(
+                    Trajectory(
+                        fmodel_t=self._fmodel_t,
+                        parameters=self.parameters,
+                        trajId="traj{:06}".format(n),
+                    )
+                )
+        return nTrajRestored
+
+    def check_database_consistency(self, a_db: str) -> None:
         """Check the restart database consistency."""
         # Open and load header
-        headerFile = "{}/header.xml".format(self._restartDB)
+        headerFile = "{}/header.xml".format(a_db)
         tree = ET.parse(headerFile)
         root = tree.getroot()
         headerfromxml = xml_to_dict(root.find("metadata"))
