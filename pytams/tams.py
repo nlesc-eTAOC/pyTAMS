@@ -5,7 +5,6 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List
-from typing import Tuple
 import numpy as np
 from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
@@ -186,13 +185,13 @@ class TAMS:
                 "Could not find the {} TAMS database !".format(self._restartDB)
             )
 
-    def loadTrajectoryDB(self, dbFile : str) -> int:
+    def loadTrajectoryDB(self, dbFile: str) -> int:
         """Load trajectories stored into the database.
 
         Args:
-            the database file
+            dbFile: the database file
 
-        return:
+        Return:
             number of trajectories loaded
         """
         # Counter for number of trajectory loaded
@@ -394,12 +393,10 @@ class TAMS:
 
                 # Exit if splitting is stalled
                 if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-                    self.verbosePrint(
+                    raise TAMSError(
                         "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                            np.amax(maxes)
-                        )
+                            np.amax(maxes))
                     )
-                    break
 
                 # Get the nworker lower scored trajectories
                 min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
