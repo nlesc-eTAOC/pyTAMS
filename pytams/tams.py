@@ -53,6 +53,11 @@ class TAMS:
         self._hasEnded = None
         self._nameDB = "{}.tdb".format(self._prefixDB)
 
+        # Splitting data
+        self._kSplit = 0
+        self._l_bias = []
+        self._weights = [1]
+
         # Initialize
         self._startTime = time.monotonic()
         if self._restartDB is not None:
@@ -297,15 +302,24 @@ class TAMS:
 
         return traj
 
-    def do_multilevel_splitting(self) -> Tuple[List[float], List[float]]:
+    def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
 
-        l_bias = []
-        weights = [1]
+        # Initialize splitting iterations counter
+        k = self._kSplit
 
         with DaskRunner(self.parameters) as runner:
-            for k in range(int(self._nSplitIter / runner.dask_nworker)):
+            while k <= self._nSplitIter:
+                # Check for walltime
+                if self.out_of_time():
+                    self.verbosePrint(
+                        "Ran out of time after {} splitting iterations".format(
+                            k
+                        )
+                    )
+                    break
+
                 # Gather max score from all trajectories
                 # and check for early convergence
                 allConverged = True
@@ -338,9 +352,10 @@ class TAMS:
                 ]
                 min_vals = maxes[min_idx_list]
 
-                l_bias.append(len(min_idx_list))
-                weights.append(weights[-1] * (1 - l_bias[-1] / self._nTraj))
+                self._l_bias.append(len(min_idx_list))
+                self._weights.append(self._weights[-1] * (1 - self._l_bias[-1] / self._nTraj))
 
+                # Assemble a list of promises
                 tasks_p = []
                 for i in range(len(min_idx_list)):
                     tasks_p.append(
@@ -349,10 +364,11 @@ class TAMS:
 
                 restartedTrajs = runner.execute_promises(tasks_p)
 
+                # Update the trajectory pool and database
+                k += runner.dask_nworker
+                self._kSplit = k
                 for i in range(len(min_idx_list)):
                     self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])
-
-        return l_bias, weights
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -381,15 +397,15 @@ class TAMS:
             return 1.0
 
         if self.out_of_time():
-            self.verbosePrint("Ran out of walltime ! Exciting now.")
+            self.verbosePrint("Ran out of walltime ! Exiting now.")
             return -1.0
 
         # Perform multilevel splitting
-        l_bias, weights = self.do_multilevel_splitting()
+        self.do_multilevel_splitting()
 
-        W = self._nTraj * weights[-1]
-        for i in range(len(l_bias)):
-            W += l_bias[i] * weights[i]
+        W = self._nTraj * self._weights[-1]
+        for i in range(len(self._l_bias)):
+            W += self._l_bias[i] * self._weights[i]
 
         # Compute how many traj. converged to the vicinity of B
         successCount = 0
@@ -397,7 +413,7 @@ class TAMS:
             if T.isConverged():
                 successCount += 1
 
-        trans_prob = successCount * weights[-1] / W
+        trans_prob = successCount * self._weights[-1] / W
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
