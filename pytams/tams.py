@@ -251,7 +251,7 @@ class TAMS:
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
         if self.v:
-            print("TAMS-[{}]".format(message))
+            print("TAMS-[{}]".format(message), flush=True)
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
@@ -301,6 +301,7 @@ class TAMS:
             traj: a trajectory
         """
         if not self.out_of_time() and not traj.hasEnded():
+            self.verbosePrint("Advancing {}".format(traj.id()))
             traj.advance(walltime=self.remaining_walltime())
             if self._saveDB:
                 traj.setCheckFile(
@@ -350,6 +351,8 @@ class TAMS:
         while rest_idx in min_idx_list:
             rest_idx = rng.integers(0, len(self._trajs_db))
 
+        self.verbosePrint("Restarting {} from {} at score {}".format(rstId, rest_idx, min_val))
+
         traj = Trajectory.restartFromTraj(self._trajs_db[rest_idx], rstId, min_val)
 
         traj.advance(walltime=self.remaining_walltime())
@@ -365,6 +368,7 @@ class TAMS:
 
         with DaskRunner(self.parameters) as runner:
             while k <= self._nSplitIter:
+                self.verbosePrint("Performing {} spliting iteration".format(k))
                 # Check for walltime
                 if self.out_of_time():
                     self.verbosePrint(
