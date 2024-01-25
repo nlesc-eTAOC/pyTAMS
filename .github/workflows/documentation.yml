@@ -37,8 +37,11 @@ jobs:
       - name: Install pandoc using apt
         run: sudo apt install pandoc        
       - name: Build documentation
-        run: make coverage doctest html
         working-directory: docs
+        run: |
+          make coverage doctest html
+          ls ${{runner.workspace}}
+          ls ${{runner.workspace}}/docs
       - name: deploy
         uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
