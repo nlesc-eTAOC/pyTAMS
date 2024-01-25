@@ -43,6 +43,7 @@ jobs:
       - name: deploy
         uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: ${{runner.workspace}}/pyTAMS/docs/_build/html
           single-commit: true
