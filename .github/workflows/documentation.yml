@@ -40,12 +40,9 @@ jobs:
         working-directory: docs
         run: |
           make coverage doctest html
-          ls ${{runner.workspace}}
-          ls ${{runner.workspace}}/pyTAMS
-          ls ${{runner.workspace}}/pyTAMS/docs
       - name: deploy
         uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
           branch: gh-pages
-          folder: ${{runner.workspace}}/docs/_build/html
+          folder: ${{runner.workspace}}/pyTAMS/docs/_build/html
           single-commit: true
