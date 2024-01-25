@@ -40,9 +40,8 @@ jobs:
         run: make coverage doctest html
         working-directory: docs
       - name: deploy
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@releases/v4
         with:
-          BRANCH: gh-pages
-          FOLDER: ${{runner.workspace}}/docs/html
-          SINGLE_COMMIT: true
+          branch: gh-pages
+          folder: ${{runner.workspace}}/docs/_build/html
+          single-commit: true
