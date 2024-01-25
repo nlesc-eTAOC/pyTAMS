@@ -80,6 +80,7 @@ exclude = [
     "venv",
     ".venv",
     "scripts",
+    "docs",
 ]
 per-file-ignores = {}
 
