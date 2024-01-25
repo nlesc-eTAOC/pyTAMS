@@ -1,0 +1,57 @@
+:py:mod:`pytams.daskutils`
+==========================
+
+.. py:module:: pytams.daskutils
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   pytams.daskutils.DaskRunner
+
+
+
+
+.. py:exception:: DaskRunnerError
+
+
+   Bases: :py:obj:`Exception`
+
+   Exception class for the Dask runner.
+
+
+.. py:class:: DaskRunner(parameters: dict)
+
+
+   A Dask wrapper handle cluster and promises.
+
+   .. py:method:: __enter__()
+
+      To enable use of with.
+
+
+   .. py:method:: __exit__(*args)
+
+      Executed leaving with scope.
+
+
+   .. py:method:: make_promise(task, *args)
+
+      Return a promise for a task.
+
+
+   .. py:method:: execute_promises(list_of_p: list)
+
+      Execute a list of promises.
+
+      :param list_of_p: a list of dask promises
+
+      :returns: A list with the return argument of each promised task.
+
+
+

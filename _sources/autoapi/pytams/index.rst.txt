@@ -1,0 +1,42 @@
+:py:mod:`pytams`
+================
+
+.. py:module:: pytams
+
+.. autoapi-nested-parse::
+
+   Documentation about pyTAMS.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   daskutils/index.rst
+   fmodel/index.rst
+   tams/index.rst
+   trajectory/index.rst
+   xmlutils/index.rst
+
+
+Package Contents
+----------------
+
+.. py:data:: __author__
+   :value: 'Lucas Esclapez'
+
+   
+
+.. py:data:: __email__
+   :value: 'l.esclapez@esciencecenter.nl'
+
+   
+
+.. py:data:: __version__
+   :value: '0.0.1'
+
+   
+

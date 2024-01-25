@@ -1,0 +1,78 @@
+:py:mod:`pytams.xmlutils`
+=========================
+
+.. py:module:: pytams.xmlutils
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   pytams.xmlutils.manualCast
+   pytams.xmlutils.dict_to_xml
+   pytams.xmlutils.xml_to_dict
+   pytams.xmlutils.new_element
+   pytams.xmlutils.make_xml_snapshot
+   pytams.xmlutils.read_xml_snapshot
+
+
+
+.. py:exception:: XMLUtilsError
+
+
+   Bases: :py:obj:`Exception`
+
+   Exception class for the xmlutils.
+
+
+.. py:function:: manualCast(elem: xml.etree.ElementTree.Element)
+
+   Manually cast XML elements reads.
+
+
+.. py:function:: dict_to_xml(tag: str, d) -> xml.etree.ElementTree.Element
+
+   Return an Element from a dictionnary.
+
+   :param tag: a root tag
+   :param d: a dictionary
+
+
+.. py:function:: xml_to_dict(elem: xml.etree.ElementTree.Element) -> dict
+
+   Return an dictionnary an Element.
+
+   :param tag: a root tag
+   :param elem: an etree element
+
+
+.. py:function:: new_element(key: str, val) -> xml.etree.ElementTree.Element
+
+   Return an Element from two args.
+
+   :param key: the element key
+   :param val: the element value
+
+
+.. py:function:: make_xml_snapshot(idx: int, time: float, score: float, state) -> xml.etree.ElementTree.Element
+
+   Return a snapshot in XML elemt format.
+
+   :param idx: snapshot index
+   :param time: the time stamp
+   :param score: the snapshot score function
+   :param state: the associated state
+
+
+.. py:function:: read_xml_snapshot(snap: xml.etree.ElementTree.Element)
+
+   Return snapshot data from an XML snapshot elemt.
+
+   :param snap: an XML snapshot elemt
+
+

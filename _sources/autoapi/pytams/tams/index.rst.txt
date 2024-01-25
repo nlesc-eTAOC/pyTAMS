@@ -1,0 +1,150 @@
+:py:mod:`pytams.tams`
+=====================
+
+.. py:module:: pytams.tams
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   pytams.tams.TAMS
+
+
+
+
+.. py:exception:: TAMSError
+
+
+   Bases: :py:obj:`Exception`
+
+   Exception class for TAMS.
+
+
+.. py:class:: TAMS(fmodel_t, parameters: dict)
+
+
+   A class implementing TAMS.
+
+   Hold a Trajectory database and mechanisms to
+   populate, explore and IO the database.
+
+   .. py:method:: initTrajDB() -> None
+
+      Initialize the trajectory database.
+
+
+   .. py:method:: appendTrajsToDB() -> None
+
+      Append started trajectories to the pool file.
+
+
+   .. py:method:: saveSplittingData(a_db: str) -> None
+
+      Write splitting data to XML file.
+
+
+   .. py:method:: readSplittingData(a_db: str) -> None
+
+      Read splitting data from XML file.
+
+
+   .. py:method:: restoreTrajDB() -> None
+
+      Initialize TAMS from a stored trajectory database.
+
+
+   .. py:method:: loadTrajectoryDB(dbFile: str) -> int
+
+      Load trajectories stored into the database.
+
+      :param dbFile: the database file
+
+      :returns: number of trajectories loaded
+
+
+   .. py:method:: check_database_consistency(a_db: str) -> None
+
+      Check the restart database consistency.
+
+
+   .. py:method:: verbosePrint(message: str) -> None
+
+      Print only in verbose mode.
+
+
+   .. py:method:: elapsed_time() -> float
+
+      Return the elapsed wallclock time.
+
+      Since the initialization of TAMS [seconds].
+
+      :returns: TAMS elapse time.
+
+
+   .. py:method:: remaining_walltime() -> float
+
+      Return the remaining wallclock time.
+
+      [seconds]
+
+      :returns: TAMS remaining wall time.
+
+
+   .. py:method:: out_of_time() -> bool
+
+      Return true if insufficient walltime remains.
+
+      :returns: boolean indicating wall time availability.
+
+
+   .. py:method:: init_trajectory_pool()
+
+      Initialize the trajectory pool.
+
+
+   .. py:method:: task_delayed(traj: pytams.trajectory.Trajectory) -> pytams.trajectory.Trajectory
+
+      A worker to generate each initial trajectory.
+
+      :param traj: a trajectory
+
+
+   .. py:method:: generate_trajectory_pool() -> None
+
+      Schedule the generation of a pool of stochastic trajectories.
+
+
+   .. py:method:: worker(t_end: float, min_idx_list: List[int], rstId: str, min_val: float) -> pytams.trajectory.Trajectory
+
+      A worker to restart trajectories.
+
+      :param t_end: a final time
+      :param min_idx_list: the list of trajectory restarted in
+                           the current splitting iteration
+      :param rstId: Id of the trajectory being worked on
+      :param min_val: the value of the score function to restart from
+
+
+   .. py:method:: do_multilevel_splitting() -> None
+
+      Schedule splitting of the initial pool of stochastic trajectories.
+
+
+   .. py:method:: compute_probability() -> float
+
+      Compute the probability using TAMS.
+
+      :returns: the transition probability
+
+
+   .. py:method:: nTraj() -> int
+
+      Return the number of trajectory used for TAMS.
+
+
+

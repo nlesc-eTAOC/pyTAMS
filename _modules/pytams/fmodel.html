@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.fmodel &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.fmodel</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.fmodel</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="ForwardModelError">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelError">[docs]</a>
+<span></span><span class="k">class</span> <span class="nc">ForwardModelError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception class for the forward model.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="TemplateCallError">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.TemplateCallError">[docs]</a>
+<span class="k">class</span> <span class="nc">TemplateCallError</span><span class="p">(</span><span class="n">ForwardModelError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Template ForwardModel method called !&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="ForwardModel">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel">[docs]</a>
+<span class="k">class</span> <span class="nc">ForwardModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A template class for the stochastic forward model.</span>
+
+<span class="sd">    Implement the core methods required of the forward</span>
+<span class="sd">    model within the TAMS context. Exception are thrown</span>
+<span class="sd">    if those functions are not overritten in actual model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ioprefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Might need something here.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="ForwardModel.advance">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.advance">[docs]</a>
+    <span class="k">def</span> <span class="nf">advance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">forcingAmpl</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Advance function of the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dt: the time step size over which to advance</span>
+<span class="sd">            forcingAmpl: stochastic multiplicator</span>
+<span class="sd">        Return:</span>
+<span class="sd">            Some model will not do exactly dt (e.g. sub-stepping) return the actual dt</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">TemplateCallError</span><span class="p">(</span><span class="s2">&quot;Calling advance() method !&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ForwardModel.getCurState">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.getCurState">[docs]</a>
+    <span class="k">def</span> <span class="nf">getCurState</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the current state of the model.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">TemplateCallError</span><span class="p">(</span><span class="s2">&quot;Calling getCurState() method !&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ForwardModel.setCurState">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.setCurState">[docs]</a>
+    <span class="k">def</span> <span class="nf">setCurState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the current state of the model.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">TemplateCallError</span><span class="p">(</span><span class="s2">&quot;Calling setCurState method !&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ForwardModel.score">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.score">[docs]</a>
+    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the model&#39;s current state score.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">TemplateCallError</span><span class="p">(</span><span class="s2">&quot;Calling score method !&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ForwardModel.clear">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.clear">[docs]</a>
+    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Destroy internal data.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="ForwardModel.name">
+<a class="viewcode-back" href="../../autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModel.name">[docs]</a>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a the model name.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;TemplateForwardModel&quot;</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

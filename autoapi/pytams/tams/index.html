@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.tams &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/theme.css?v=df66b05f" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="pytams.trajectory" href="../trajectory/index.html" />
+    <link rel="prev" title="pytams.fmodel" href="../fmodel/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+              <div class="version">
+                0.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams</span></code></a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../daskutils/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.daskutils</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../fmodel/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.fmodel</span></code></a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.tams</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../trajectory/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.trajectory</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../xmlutils/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.xmlutils</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams</span></code></a></li>
+      <li class="breadcrumb-item active"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.tams</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/pytams/tams/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pytams.tams">
+<span id="pytams-tams"></span><h1><a class="reference internal" href="#module-pytams.tams" title="pytams.tams"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pytams.tams</span></code></a><a class="headerlink" href="#module-pytams.tams" title="Link to this heading"></a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.tams.TAMS" title="pytams.tams.TAMS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TAMS</span></code></a></p></td>
+<td><p>A class implementing TAMS.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py exception">
+<dt class="sig sig-object py" id="pytams.tams.TAMSError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.tams.</span></span><span class="sig-name descname"><span class="pre">TAMSError</span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMSError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMSError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.12)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Exception class for TAMS.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.tams.TAMS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.tams.</span></span><span class="sig-name descname"><span class="pre">TAMS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmodel_t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.12)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS" title="Link to this definition"></a></dt>
+<dd><p>A class implementing TAMS.</p>
+<p>Hold a Trajectory database and mechanisms to
+populate, explore and IO the database.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.initTrajDB">
+<span class="sig-name descname"><span class="pre">initTrajDB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.initTrajDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.initTrajDB" title="Link to this definition"></a></dt>
+<dd><p>Initialize the trajectory database.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.appendTrajsToDB">
+<span class="sig-name descname"><span class="pre">appendTrajsToDB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.appendTrajsToDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.appendTrajsToDB" title="Link to this definition"></a></dt>
+<dd><p>Append started trajectories to the pool file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.saveSplittingData">
+<span class="sig-name descname"><span class="pre">saveSplittingData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.saveSplittingData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.saveSplittingData" title="Link to this definition"></a></dt>
+<dd><p>Write splitting data to XML file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.readSplittingData">
+<span class="sig-name descname"><span class="pre">readSplittingData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.readSplittingData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.readSplittingData" title="Link to this definition"></a></dt>
+<dd><p>Read splitting data from XML file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.restoreTrajDB">
+<span class="sig-name descname"><span class="pre">restoreTrajDB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.restoreTrajDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.restoreTrajDB" title="Link to this definition"></a></dt>
+<dd><p>Initialize TAMS from a stored trajectory database.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.loadTrajectoryDB">
+<span class="sig-name descname"><span class="pre">loadTrajectoryDB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dbFile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.loadTrajectoryDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.loadTrajectoryDB" title="Link to this definition"></a></dt>
+<dd><p>Load trajectories stored into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dbFile</strong> – the database file</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number of trajectories loaded</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.check_database_consistency">
+<span class="sig-name descname"><span class="pre">check_database_consistency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.check_database_consistency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.check_database_consistency" title="Link to this definition"></a></dt>
+<dd><p>Check the restart database consistency.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.verbosePrint">
+<span class="sig-name descname"><span class="pre">verbosePrint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.verbosePrint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.verbosePrint" title="Link to this definition"></a></dt>
+<dd><p>Print only in verbose mode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.elapsed_time">
+<span class="sig-name descname"><span class="pre">elapsed_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.elapsed_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.elapsed_time" title="Link to this definition"></a></dt>
+<dd><p>Return the elapsed wallclock time.</p>
+<p>Since the initialization of TAMS [seconds].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TAMS elapse time.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.remaining_walltime">
+<span class="sig-name descname"><span class="pre">remaining_walltime</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.remaining_walltime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.remaining_walltime" title="Link to this definition"></a></dt>
+<dd><p>Return the remaining wallclock time.</p>
+<p>[seconds]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TAMS remaining wall time.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.out_of_time">
+<span class="sig-name descname"><span class="pre">out_of_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.out_of_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.out_of_time" title="Link to this definition"></a></dt>
+<dd><p>Return true if insufficient walltime remains.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>boolean indicating wall time availability.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.init_trajectory_pool">
+<span class="sig-name descname"><span class="pre">init_trajectory_pool</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.init_trajectory_pool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.init_trajectory_pool" title="Link to this definition"></a></dt>
+<dd><p>Initialize the trajectory pool.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.task_delayed">
+<span class="sig-name descname"><span class="pre">task_delayed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.task_delayed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.task_delayed" title="Link to this definition"></a></dt>
+<dd><p>A worker to generate each initial trajectory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>traj</strong> – a trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.generate_trajectory_pool">
+<span class="sig-name descname"><span class="pre">generate_trajectory_pool</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.generate_trajectory_pool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.generate_trajectory_pool" title="Link to this definition"></a></dt>
+<dd><p>Schedule the generation of a pool of stochastic trajectories.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.worker">
+<span class="sig-name descname"><span class="pre">worker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t_end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_idx_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rstId</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.worker" title="Link to this definition"></a></dt>
+<dd><p>A worker to restart trajectories.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t_end</strong> – a final time</p></li>
+<li><p><strong>min_idx_list</strong> – the list of trajectory restarted in
+the current splitting iteration</p></li>
+<li><p><strong>rstId</strong> – Id of the trajectory being worked on</p></li>
+<li><p><strong>min_val</strong> – the value of the score function to restart from</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.do_multilevel_splitting">
+<span class="sig-name descname"><span class="pre">do_multilevel_splitting</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.do_multilevel_splitting"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.do_multilevel_splitting" title="Link to this definition"></a></dt>
+<dd><p>Schedule splitting of the initial pool of stochastic trajectories.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.compute_probability">
+<span class="sig-name descname"><span class="pre">compute_probability</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.compute_probability"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.compute_probability" title="Link to this definition"></a></dt>
+<dd><p>Compute the probability using TAMS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the transition probability</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.tams.TAMS.nTraj">
+<span class="sig-name descname"><span class="pre">nTraj</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/tams.html#TAMS.nTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.tams.TAMS.nTraj" title="Link to this definition"></a></dt>
+<dd><p>Return the number of trajectory used for TAMS.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../fmodel/index.html" class="btn btn-neutral float-left" title="pytams.fmodel" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../trajectory/index.html" class="btn btn-neutral float-right" title="pytams.trajectory" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

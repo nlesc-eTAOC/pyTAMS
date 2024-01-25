@@ -1,0 +1,106 @@
+:py:mod:`pytams.trajectory`
+===========================
+
+.. py:module:: pytams.trajectory
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   pytams.trajectory.Trajectory
+
+
+
+
+.. py:class:: Trajectory(fmodel_t, parameters: dict, trajId: str)
+
+
+   A class defining a stochastic trajectory.
+
+   Includes an instance of the forward model, current and end times, and
+   a list of the model snapshots for each new maximum of the
+   score function along the way.
+
+   .. py:method:: setCheckFile(file: str) -> None
+
+      Setter of the trajectory checkFile.
+
+
+   .. py:method:: id() -> str
+
+      Return trajectory Id.
+
+
+   .. py:method:: advance(t_end: float = 1000000000000.0, walltime: float = 1000000000000.0) -> None
+
+      Advance the trajectory to a prescribed end time.
+
+      :param t_end: the end time of the advance
+      :param walltime: a walltime limit to advance the model to t_end
+
+
+   .. py:method:: restoreFromChk(chkPoint: str, fmodel_t, parameters: dict = None)
+      :classmethod:
+
+      Return a trajectory restored from an XML chkfile.
+
+
+   .. py:method:: restartFromTraj(traj, rstId: str, score: float)
+      :classmethod:
+
+      Create a new trajectory.
+
+      Loading the beginning of a provided trajectory
+      for all entries with score below a given score
+
+      :param traj: an already existing trajectory to restart from
+      :param rstId: the id of the trajectory being restarted
+      :param score: a threshold score
+
+
+   .. py:method:: store(traj_file: str = None) -> None
+
+      Store the trajectory to an XML chkfile.
+
+
+   .. py:method:: ctime() -> float
+
+      Return the current trajectory time.
+
+
+   .. py:method:: stepSize() -> float
+
+      Return the time step size.
+
+
+   .. py:method:: scoreMax() -> float
+
+      Return the maximum of the score function.
+
+
+   .. py:method:: isConverged() -> bool
+
+      Return True for converged trajectory.
+
+
+   .. py:method:: hasEnded() -> bool
+
+      Return True for terminated trajectory.
+
+
+   .. py:method:: hasStarted() -> bool
+
+      Return True if computation has started.
+
+
+   .. py:method:: checkFile() -> str
+
+      Return the trajectory check file name.
+
+
+

@@ -1,0 +1,81 @@
+:py:mod:`pytams.fmodel`
+=======================
+
+.. py:module:: pytams.fmodel
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   pytams.fmodel.ForwardModel
+
+
+
+
+.. py:exception:: ForwardModelError
+
+
+   Bases: :py:obj:`Exception`
+
+   Exception class for the forward model.
+
+
+.. py:exception:: TemplateCallError
+
+
+   Bases: :py:obj:`ForwardModelError`
+
+   Template ForwardModel method called !
+
+
+.. py:class:: ForwardModel(params: dict = None, ioprefix: str = None)
+
+
+   A template class for the stochastic forward model.
+
+   Implement the core methods required of the forward
+   model within the TAMS context. Exception are thrown
+   if those functions are not overritten in actual model.
+
+   .. py:method:: advance(dt: float, forcingAmpl: float) -> float
+
+      Advance function of the model.
+
+      :param dt: the time step size over which to advance
+      :param forcingAmpl: stochastic multiplicator
+
+      :returns: Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+
+
+   .. py:method:: getCurState()
+
+      Return the current state of the model.
+
+
+   .. py:method:: setCurState(state)
+
+      Set the current state of the model.
+
+
+   .. py:method:: score()
+
+      Return the model's current state score.
+
+
+   .. py:method:: clear()
+
+      Destroy internal data.
+
+
+   .. py:method:: name()
+      :classmethod:
+
+      Return a the model name.
+
+
+
