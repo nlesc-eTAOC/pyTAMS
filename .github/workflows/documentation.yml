@@ -42,6 +42,7 @@ jobs:
       - name: deploy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@releases/v4
+        with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
           FOLDER: ${{runner.workspace}}/docs/html
