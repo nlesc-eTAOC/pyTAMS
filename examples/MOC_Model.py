@@ -256,10 +256,6 @@ class MOCModel(ForwardModel):
         """
         Computes the differential equations at each timestep.
         """
-
-        sleepTime = float(0.001 * np.random.rand(1).item())
-        time.sleep(sleepTime)
-
         if not self.temp:
             S_t, S_ts, S_n, S_s, S_d, self.D = state
         else:
