@@ -19,7 +19,7 @@ class MOCModel(ForwardModel):
         # seed = 0
         # self.rng = np.random.Generator(seed)
 
-        datafolder="/Users/Valerian/Desktop/MOC_model/"
+        datafolder="./MOC_files/"
 
         self.convention = ['S_t', 'S_ts', 'S_n', 'S_s', 'S_d', 'D',
                            'T_t', 'T_ts', 'T_n', 'T_s', 'T_d']
