@@ -4,7 +4,6 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List
 import numpy as np
 from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
@@ -330,32 +329,6 @@ class TAMS:
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
-    def worker(
-        self, t_end: float,
-        min_idx_list: List[int],
-        rstId: str,
-        min_val: float
-    ) -> Trajectory:
-        """A worker to restart trajectories.
-
-        Args:
-            t_end: a final time
-            min_idx_list: the list of trajectory restarted in
-                          the current splitting iteration
-            rstId: Id of the trajectory being worked on
-            min_val: the value of the score function to restart from
-        """
-        rng = np.random.default_rng()
-        rest_idx = min_idx_list[0]
-        while rest_idx in min_idx_list:
-            rest_idx = rng.integers(0, len(self._trajs_db))
-
-        traj = Trajectory.restartFromTraj(self._trajs_db[rest_idx], rstId, min_val)
-
-        traj.advance(walltime=self.remaining_walltime())
-
-        return traj
-
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
@@ -404,6 +377,14 @@ class TAMS:
                 ]
                 min_vals = maxes[min_idx_list]
 
+                # Randomly select trajectory to branch from
+                rng = np.random.default_rng()
+                rest_idx = [-1] * len(min_idx_list)
+                for i in range(len(min_idx_list)):
+                    rest_idx[i] = min_idx_list[0]
+                    while rest_idx[i] in min_idx_list:
+                        rest_idx[i] = rng.integers(0, len(self._trajs_db))
+
                 self._l_bias.append(len(min_idx_list))
                 self._weights.append(self._weights[-1] * (1 - self._l_bias[-1] / self._nTraj))
 
@@ -411,13 +392,13 @@ class TAMS:
                 tasks_p = []
                 for i in range(len(min_idx_list)):
                     tasks_p.append(
-                        runner.make_promise(self.worker,
+                        runner.make_promise(worker,
                                             1.0e9,
-                                            min_idx_list,
+                                            self._trajs_db[rest_idx[i]],
                                             self._trajs_db[min_idx_list[i]].id(),
-                                            min_vals[i])
+                                            min_vals[i],
+                                            self.remaining_walltime())
                     )
-
                 restartedTrajs = runner.execute_promises(tasks_p)
 
                 # Update the trajectory pool and database
@@ -490,3 +471,26 @@ class TAMS:
     def nTraj(self) -> int:
         """Return the number of trajectory used for TAMS."""
         return self._nTraj
+
+
+def worker(
+    t_end: float,
+    fromTraj: Trajectory,
+    rstId: str,
+    min_val: float,
+    wall_time:float,
+) -> Trajectory:
+    """A worker to restart trajectories.
+
+    Args:
+        t_end: a final time
+        fromTraj: a trajectory to restart from
+        rstId: Id of the trajectory being worked on
+        min_val: the value of the score function to restart from
+        wall_time: a time limit to advance the trajectory
+    """
+    traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+
+    traj.advance(walltime=wall_time)
+
+    return traj
