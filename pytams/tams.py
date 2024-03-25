@@ -4,7 +4,6 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import List
 import numpy as np
 from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
