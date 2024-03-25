@@ -69,6 +69,10 @@ class DaskRunner:
         """Return a promise for a task."""
         return dask.delayed(task)(*args)
 
+    def just_delay(self, obj):
+        """Delay an object."""
+        return dask.delayed(obj)
+
     def execute_promises(self, list_of_p: list):
         """Execute a list of promises.
 
