@@ -48,10 +48,25 @@ class DaskRunner:
                 self.cluster = SLURMCluster(
                     queue=self.dask_queue,
                     cores=self.dask_nworker_ncore,
-                    walltime="00:30:00",
+                    memory='144GB',
+                    walltime="01:00:00",
+                    processes=1,
+                    interface='ib0',
+                    job_script_prologue=[
+                        'source ~/.bashrc',
+                        'boot_eTAOC',
+                        'echo $SLURM_JOB_ID',
+                        '  ',
+                        'cat /slurm/$SLURM_JOB_ID/.ns',
+                        'export OMPI_MCA_rmaps_base_oversubscribe=true',
+                        '  ',
+                    ],
+                    job_extra_directives=["--ntasks=160","--tasks-per-node=160","--exclusive"],
+                    job_directives_skip=['--cpus-per-task=', '--mem'],
                 )
             self.cluster.scale(jobs=self.dask_nworker)
             self.client = Client(self.cluster)
+            print(self.cluster.job_script(), flush=True)
         else:
             raise DaskRunnerError("Unknown dask.backend: {}".format(self.dask_backend))
 
