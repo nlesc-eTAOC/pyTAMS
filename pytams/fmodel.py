@@ -45,6 +45,10 @@ class ForwardModel:
         """Return the model's current state score."""
         raise TemplateCallError("Calling score method !")
 
+    def noise(self):
+        """Return the model's latest noise increment."""
+        raise TemplateCallError("Calling noise method !")
+
     def clear(self):
         """Destroy internal data."""
         pass
