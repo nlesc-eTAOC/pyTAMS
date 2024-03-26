@@ -31,6 +31,10 @@ class SimpleFModel(ForwardModel):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
+    def noise(self):
+        """Override the template."""
+        return 0.0
+
     @classmethod
     def name(self):
         """Return the model name."""
@@ -63,7 +67,8 @@ class DoubleWellModel(ForwardModel):
 
     def __dW(self, dt):
         """Stochastic forcing."""
-        return np.sqrt(dt) * np.random.randn(2)
+        self._rand = np.random.randn(2)
+        return np.sqrt(dt) * self._rand
 
     def initCondition(self):
         """Return the initial conditions."""
@@ -95,6 +100,10 @@ class DoubleWellModel(ForwardModel):
         f1 = 0.5
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
+
+    def noise(self):
+        """Override the template."""
+        return self._rand
 
     @classmethod
     def name(self):
