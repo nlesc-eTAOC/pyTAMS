@@ -35,6 +35,7 @@ class Trajectory:
         self._time = []
         self._state = []
         self._score = []
+        self._noise = []
 
         self._score_max = 0.0
 
@@ -73,10 +74,11 @@ class Trajectory:
             dt = self._fmodel.advance(self._dt, stoichForcingAmpl)
             self._t_cur = self._t_cur + dt
             score = self._fmodel.score()
+            self._time.append(self._t_cur)
+            self._state.append(self._fmodel.getCurState())
+            self._score.append(score)
+            self._noise.append(self._fmodel.noise())
             if score > self._score_max:
-                self._time.append(self._t_cur)
-                self._state.append(self._fmodel.getCurState())
-                self._score.append(score)
                 self._score_max = score
 
             if score >= convergedVal:
@@ -122,9 +124,10 @@ class Trajectory:
 
         snapshots = root.find("snapshots")
         for snap in snapshots:
-            time, score, state = read_xml_snapshot(snap)
+            time, score, noise, state = read_xml_snapshot(snap)
             restTraj._time.append(time)
             restTraj._score.append(score)
+            restTraj._noise.append(noise)
             restTraj._state.append(state)
 
         return restTraj
@@ -165,6 +168,7 @@ class Trajectory:
         for k in range(high_score_idx + 1):
             restTraj._score.append(traj._score[k])
             restTraj._time.append(traj._time[k])
+            restTraj._noise.append(traj._noise[k])
             restTraj._state.append(traj._state[k])
 
         restTraj._fmodel.setCurState(restTraj._state[-1])
@@ -188,7 +192,11 @@ class Trajectory:
         snaps = ET.SubElement(root, "snapshots")
         for k in range(len(self._score)):
             snaps.append(
-                make_xml_snapshot(k, self._time[k], self._score[k], self._state[k])
+                make_xml_snapshot(k,
+                                  self._time[k],
+                                  self._score[k],
+                                  self._noise[k],
+                                  self._state[k])
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)

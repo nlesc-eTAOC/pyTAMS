@@ -9,31 +9,47 @@ class XMLUtilsError(Exception):
     pass
 
 
+def manualCastSnap(elem: ET.Element):
+    """Manually cast XML snapshot state."""
+    return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
+
+
+def manualCastSnapNoise(elem: ET.Element):
+    """Manually cast XML snapshot noise."""
+    return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
+
+
 def manualCast(elem: ET.Element):
     """Manually cast XML elements reads."""
-    if elem.attrib["type"] == "int":
-        return elem.tag, int(elem.text)
-    elif elem.attrib["type"] == "float":
-        return elem.tag, float(elem.text)
-    elif elem.attrib["type"] == "float64":
-        return elem.tag, np.float64(elem.text)
-    elif elem.attrib["type"] == "complex":
-        return elem.tag, complex(elem.text)
-    elif elem.attrib["type"] == "bool":
-        if (elem.text == "True"):
-            return elem.tag, True
+    return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
+
+
+def manualCastStr(type_str: str,
+                  elem_text: str):
+    """Manually cast from strings."""
+    if type_str == "int":
+        return int(elem_text)
+    elif type_str == "float":
+        return float(elem_text)
+    elif type_str == "float64":
+        return np.float64(elem_text)
+    elif type_str == "complex":
+        return complex(elem_text)
+    elif type_str == "bool":
+        if (elem_text == "True"):
+            return True
         else:
-            return elem.tag, False
-    elif elem.attrib["type"] == "str":
-        return elem.tag, str(elem.text)
-    elif elem.attrib["type"] == "ndarray":
-        stripped_text = elem.text.replace("[", "").replace("]", "").replace("  ", " ")
-        return elem.tag, np.fromstring(stripped_text, sep=" ")
-    elif elem.attrib["type"] == "datetime":
-        return elem.tag, datetime.strptime(elem.text, "%Y-%m-%d %H:%M:%S.%f")
+            return False
+    elif type_str == "str":
+        return str(elem_text)
+    elif type_str == "ndarray":
+        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+        return np.fromstring(stripped_text, sep=" ")
+    elif type_str == "datetime":
+        return datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
     else:
         raise XMLUtilsError(
-            "Type {} not handled by manualCast !".format(elem.attrib["type"])
+            "Type {} not handled by manualCast !".format(type_str)
         )
 
 
@@ -84,19 +100,26 @@ def new_element(key: str, val) -> ET.Element:
     return elem
 
 
-def make_xml_snapshot(idx: int, time: float, score: float, state) -> ET.Element:
+def make_xml_snapshot(idx: int,
+                      time: float,
+                      score: float,
+                      noise,
+                      state) -> ET.Element:
     """Return a snapshot in XML elemt format.
 
     Args:
         idx: snapshot index
         time: the time stamp
         score: the snapshot score function
+        noise: the stochastic noise
         state: the associated state
     """
     elem = ET.Element("Snap_{:07d}".format(idx))
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
-    elem.attrib["type"] = type(state).__name__
+    elem.attrib["noise_type"] = type(noise).__name__
+    elem.attrib["noise"] = str(noise)
+    elem.attrib["state_type"] = type(state).__name__
     elem.text = str(state)
 
     return elem
@@ -110,6 +133,7 @@ def read_xml_snapshot(snap: ET.Element):
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    _, state = manualCast(snap)
+    _, noise = manualCastSnapNoise(snap)
+    _, state = manualCastSnap(snap)
 
-    return time, score, state
+    return time, score, noise, state
