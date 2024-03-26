@@ -32,9 +32,9 @@ def manualCast(type_str: str,
         return complex(elem_text)
     elif type_str == "bool":
         if (elem_text == "True"):
-            True
+            return True
         else:
-            False
+            return False
     elif type_str == "str":
         return str(elem_text)
     elif type_str == "ndarray":
@@ -89,7 +89,7 @@ def new_element(key: str, val) -> ET.Element:
         val: the element value
     """
     elem = ET.Element(key)
-    elem.attrib["type"] = type(val).__name__
+    elem.attrib["state_type"] = type(val).__name__
     elem.text = str(val)
 
     return elem
