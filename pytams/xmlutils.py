@@ -9,18 +9,23 @@ class XMLUtilsError(Exception):
     pass
 
 
-def manualCastElem(elem: ET.Element):
+def manualCastSnap(elem: ET.Element):
+    """Manually cast XML snapshot state."""
+    return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
+
+
+def manualCastSnapNoise(elem: ET.Element):
+    """Manually cast XML snapshot noise."""
+    return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
+
+
+def manualCast(elem: ET.Element):
     """Manually cast XML elements reads."""
-    return elem.tag, manualCast(elem.attrib["state_type"], elem.text)
+    return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
 
 
-def manualCastNoise(elem: ET.Element):
-    """Manually cast XML elements noise data."""
-    return elem.tag, manualCast(elem.attrib["noise_type"], elem.attrib["noise"])
-
-
-def manualCast(type_str: str,
-               elem_text: str):
+def manualCastStr(type_str: str,
+                  elem_text: str):
     """Manually cast from strings."""
     if type_str == "int":
         return int(elem_text)
@@ -75,7 +80,7 @@ def xml_to_dict(elem: ET.Element) -> dict:
     """
     d = {}
     for child in elem:
-        tag, entry = manualCastElem(child)
+        tag, entry = manualCast(child)
         d[tag] = entry
 
     return d
@@ -89,7 +94,7 @@ def new_element(key: str, val) -> ET.Element:
         val: the element value
     """
     elem = ET.Element(key)
-    elem.attrib["state_type"] = type(val).__name__
+    elem.attrib["type"] = type(val).__name__
     elem.text = str(val)
 
     return elem
@@ -128,7 +133,7 @@ def read_xml_snapshot(snap: ET.Element):
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    _, noise = manualCastNoise(snap)
-    _, state = manualCastElem(snap)
+    _, noise = manualCastSnapNoise(snap)
+    _, state = manualCastSnap(snap)
 
     return time, score, noise, state
