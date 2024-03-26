@@ -14,7 +14,7 @@ class MOCModel(ForwardModel):
                     "ice_params" to give [f_ice, q_factor_min]
         """
         self.E_A = 0.25
-        self.noise = 0.1
+        self._noise = 0.1
         # self.forcing = None
         # seed = 0
         # self.rng = np.random.Generator(seed)
@@ -92,7 +92,7 @@ class MOCModel(ForwardModel):
 
     def set_noise(self, noise):
         """Sets the noise level."""
-        self.noise = noise
+        self._noise = noise
 
     def set_forcing(self, forcing_function, forcing_params, *fixed_args, **fixed_kwargs):
         """Sets the forcing function."""
@@ -217,8 +217,8 @@ class MOCModel(ForwardModel):
 
     def _dW(self, dt):
         """Stochastic forcing."""
-        return self.noise * self.E_A * self.S_0 *\
-               np.random.normal(scale=np.sqrt(dt * (100*365*86400)))
+        self._rand = np.random.normal()
+        return self._noise * self.E_A * self.S_0 * self._rand * np.sqrt(dt * (100*365*86400))
 
     def sea_ice(self, temp):
         """Returns the AMOC reduction factor for a given response function."""
@@ -377,7 +377,7 @@ class MOCModel(ForwardModel):
     #     self.init_var_params(init_state)
 
     #     # Initialize the trajectories, the noise is computed in advance
-    #     dW = self.noise * self.E_A * self.S_0 * \
+    #     dW = self._noise * self.E_A * self.S_0 * \
     #         self.rng.normal(scale=np.sqrt(self.delta_t * (100*365*86400)), size=(len(self.time)-1,N))
     #     traj = np.ma.masked_all((N, len(self.time), init_state.shape[-1]))
     #     traj[:,0] = init_state
@@ -446,7 +446,7 @@ class MOCModel(ForwardModel):
     #     self.init_var_params(init_state)
 
     #     # Initialize the trajectories, the noise is computed in advance
-    #     dW = self.noise * self.E_A * self.S_0 * \
+    #     dW = self._noise * self.E_A * self.S_0 * \
     #         self.rng.normal(scale=np.sqrt(self.delta_t * (100*365*86400)), size=(t_end-1,N))
     #     traj = np.ma.masked_all((N, t_end, init_state.shape[-1]))
     #     traj[:,0] = init_state
@@ -534,6 +534,9 @@ class MOCModel(ForwardModel):
         if on:
             return (self.q_N_on - q_N) / (self.q_N_on - z)
         return (self.q_N_off_full - q_N) / (self.q_N_off_full - self.q_N_on)
+
+    def noise(self):
+        return self._rand
 
 if __name__ == "__main__":
     parameters = {

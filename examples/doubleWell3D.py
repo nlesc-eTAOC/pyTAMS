@@ -21,18 +21,19 @@ class DoubleWellModel3D(ForwardModel):
     def __init__(self, params: dict = None, ioprefix: str = None):
         """Override the template."""
         self._state = self.initCondition()
+        self._rng = np.random.default_rng()
 
     def __RHS(self, state):
         """Double well RHS function."""
-        sleepTime = float(0.001 * np.random.rand(1).item())
-        time.sleep(sleepTime)
+        #sleepTime = float(0.001 * np.random.rand(1).item())
+        #time.sleep(sleepTime)
         return np.array([state[0] - state[0] ** 3,
                          -2 * state[1],
                          -4 * state[2] ** 3])
 
-    def __dW(self, dt):
+    def __dW(self, dt, rand):
         """Stochastic forcing."""
-        return np.sqrt(dt) * np.random.randn(3)
+        return np.sqrt(dt) * rand
 
     def initCondition(self):
         """Return the initial conditions."""
@@ -40,8 +41,9 @@ class DoubleWellModel3D(ForwardModel):
 
     def advance(self, dt: float, forcingAmpl: float) -> float:
         """Override the template."""
+        self._noise = self._rng.standard_normal(3)
         self._state = (
-            self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt)
+            self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt, self._noise)
         )
         return dt
 
@@ -65,6 +67,10 @@ class DoubleWellModel3D(ForwardModel):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
+    def noise(self):
+        """Override the template."""
+        return self._noise
+
     @classmethod
     def name(self):
         """Return the model name."""
@@ -74,11 +80,11 @@ if __name__ == "__main__":
     fmodel = DoubleWellModel3D
     parameters = {
         "nTrajectories": 100,
-        "nSplitIter": 400,
+        "nSplitIter": 1000,
         "Verbose": True,
         #"DB_save": True,
         #"DB_prefix": "DW_3DTest",
-        "DB_restart": "DW_3DTest.tdb_Final",
+        #"DB_restart": "DW_3DTest.tdb_Final",
         "dask.nworker": 1,
         "wallTime": 200.0,
         "traj.end_time": 10.0,
