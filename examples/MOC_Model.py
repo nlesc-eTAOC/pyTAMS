@@ -536,6 +536,7 @@ class MOCModel(ForwardModel):
         return (self.q_N_off_full - q_N) / (self.q_N_off_full - self.q_N_on)
 
     def noise(self):
+        """Return the random noise used in the last step."""
         return self._rand
 
 if __name__ == "__main__":
