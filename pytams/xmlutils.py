@@ -1,8 +1,7 @@
+import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import numpy as np
-import ast
-
 
 
 class XMLUtilsError(Exception):
