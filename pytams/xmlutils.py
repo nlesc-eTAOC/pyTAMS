@@ -1,3 +1,4 @@
+import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import numpy as np
@@ -40,13 +41,15 @@ def manualCastStr(type_str: str,
             return True
         else:
             return False
-    elif type_str == "str":
+    elif (type_str == "str" or type_str == "str_"):
         return str(elem_text)
     elif type_str == "ndarray":
         stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
         return np.fromstring(stripped_text, sep=" ")
     elif type_str == "datetime":
         return datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
+    elif type_str == "dict":
+        return ast.literal_eval(elem_text)
     else:
         raise XMLUtilsError(
             "Type {} not handled by manualCast !".format(type_str)
