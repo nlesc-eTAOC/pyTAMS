@@ -315,7 +315,8 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(self.parameters) as runner:
+        is_initTrajPool = True
+        with DaskRunner(self.parameters, is_initTrajPool) as runner:
             # Assemble a list of promises
             # All the trajectories are added, even those already done
             tasks_p = []
@@ -336,7 +337,8 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._kSplit
 
-        with DaskRunner(self.parameters) as runner:
+        is_initTrajPool = False
+        with DaskRunner(self.parameters, is_initTrajPool) as runner:
             while k <= self._nSplitIter:
                 # Check for walltime
                 if self.out_of_time():

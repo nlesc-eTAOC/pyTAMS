@@ -15,7 +15,7 @@ class DaskRunnerError(Exception):
 class DaskRunner:
     """A Dask wrapper handle cluster and promises."""
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict, is_init: bool = True):
         """Start the Dask cluster and client.
 
         Args:
@@ -23,11 +23,17 @@ class DaskRunner:
         """
         self.dask_backend = parameters.get("dask.backend", "local")
         if self.dask_backend == "local":
-            self.dask_nworker = parameters.get("dask.nworker", 1)
+            if (is_init):
+                self.dask_nworker = parameters.get("dask.nworker_init", 1)
+            else:
+                self.dask_nworker = parameters.get("dask.nworker_iter", 1)
             self.client = Client(threads_per_worker=1, n_workers=self.dask_nworker)
             self.cluster = None
         elif self.dask_backend == "slurm":
-            self.dask_nworker = parameters.get("dask.nworker", 1)
+            if (is_init):
+                self.dask_nworker = parameters.get("dask.nworker_init", 1)
+            else:
+                self.dask_nworker = parameters.get("dask.nworker_iter", 1)
             self.slurm_config_file = parameters.get("dask.slurm_config_file", None)
             if self.slurm_config_file:
                 if not os.path.exists(self.slurm_config_file):
