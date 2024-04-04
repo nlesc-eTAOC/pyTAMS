@@ -1,5 +1,6 @@
 """Tests for the pytams.tams class."""
 import os
+import shutil
 import pytest
 from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
@@ -72,6 +73,7 @@ def test_simpleModelTwiceTAMS():
     ndb = 0
     for folder in os.listdir("."):
         if "simpleModelTest" in str(folder):
+            shutil.rmtree(folder)
             ndb += 1
     assert ndb == 2
 
@@ -117,13 +119,14 @@ def test_doublewellModel2WorkersTAMS():
         "nTrajectories": 100,
         "nSplitIter": 400,
         "Verbose": True,
-        "dask.nworker": 2,
+        "dask.nworker_init": 2,
+        "dask.nworker_iter": 2,
         "DB_save": True,
         "DB_prefix": "dwTest",
         "wallTime": 500.0,
         "traj.end_time": 10.0,
         "traj.step_size": 0.01,
-        "traj.targetScore": 0.8,
+        "traj.targetScore": 0.7,
         "traj.stoichForcing": 0.8,
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
@@ -138,16 +141,18 @@ def test_doublewellModel2WorkersRestoreTAMS():
         "nTrajectories": 100,
         "nSplitIter": 400,
         "Verbose": True,
-        "dask.nworker": 2,
+        "dask.nworker_init": 2,
+        "dask.nworker_iter": 2,
         "DB_save": True,
         "DB_prefix": "dwTest",
         "DB_restart": "dwTest.tdb",
         "wallTime": 500.0,
         "traj.end_time": 10.0,
         "traj.step_size": 0.01,
-        "traj.targetScore": 0.8,
+        "traj.targetScore": 0.7,
         "traj.stoichForcing": 0.8,
     }
     tams = TAMS(fmodel_t=fmodel, parameters=parameters)
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
+    shutil.rmtree("dwTest.tdb")
