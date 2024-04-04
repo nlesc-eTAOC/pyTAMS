@@ -336,7 +336,7 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._kSplit
 
-        with DaskRunner(self.parameters, self.arameters.get("dask.nworker_iter", 1)) as runner:
+        with DaskRunner(self.parameters, self.parameters.get("dask.nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
                 # Check for walltime
                 if self.out_of_time():
