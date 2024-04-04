@@ -49,19 +49,18 @@ class DaskRunner:
                     queue=self.dask_queue,
                     cores=self.dask_nworker_ncore,
                     memory='144GB',
-                    walltime="01:00:00",
+                    walltime="04:00:00",
                     processes=1,
                     interface='ib0',
                     job_script_prologue=[
                         'source ~/.bashrc',
-                        'boot_eTAOC',
+                        'boot_eTAOC_2024',
                         'echo $SLURM_JOB_ID',
                         '  ',
-                        'cat /slurm/$SLURM_JOB_ID/.ns',
                         'export OMPI_MCA_rmaps_base_oversubscribe=true',
                         '  ',
                     ],
-                    job_extra_directives=["--ntasks=160","--tasks-per-node=160","--exclusive"],
+                    job_extra_directives=["--ntasks=129","--tasks-per-node=129","--exclusive"],
                     job_directives_skip=['--cpus-per-task=', '--mem'],
                 )
             self.cluster.scale(jobs=self.dask_nworker)
