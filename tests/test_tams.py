@@ -76,7 +76,6 @@ def test_simpleModelTwiceTAMS():
             shutil.rmtree(folder)
             ndb += 1
     assert ndb == 2
-    
 
 
 def test_stallingSimpleModelTAMS():
