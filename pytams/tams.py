@@ -316,7 +316,7 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(self.parameters) as runner:
+        with DaskRunner(self.parameters, self.parameters.get("dask.nworker_init", 1)) as runner:
             # Assemble a list of promises
             # All the trajectories are added, even those already done
             tasks_p = []
@@ -337,7 +337,7 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._kSplit
 
-        with DaskRunner(self.parameters) as runner:
+        with DaskRunner(self.parameters, self.parameters.get("dask.nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
                 self.verbosePrint("Performing {} spliting iteration".format(k))
                 # Check for walltime
