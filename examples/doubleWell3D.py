@@ -77,20 +77,6 @@ class DoubleWellModel3D(ForwardModel):
 
 if __name__ == "__main__":
     fmodel = DoubleWellModel3D
-    parameters = {
-        "nTrajectories": 100,
-        "nSplitIter": 1000,
-        "Verbose": True,
-        #"DB_save": True,
-        #"DB_prefix": "DW_3DTest",
-        #"DB_restart": "DW_3DTest.tdb_Final",
-        "dask.nworker": 1,
-        "wallTime": 200.0,
-        "traj.end_time": 10.0,
-        "traj.step_size": 0.01,
-        "traj.targetScore": 0.95,
-        "traj.stoichForcing": 0.4,
-    }
-    tams = TAMS(fmodel_t=fmodel, parameters=parameters)
+    tams = TAMS(fmodel_t=fmodel)
     transition_proba = tams.compute_probability()
     print("Transition probability: {}".format(transition_proba))

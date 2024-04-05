@@ -1,0 +1,22 @@
+[tams]
+ntrajectories = 100
+nsplititer = 1000
+verbose = 1
+
+[trajectory]
+end_time = 10.0
+step_size = 0.01
+targetscore = 0.95
+stoichforcing = 0.4
+
+[model]
+test_param = "toto"
+
+[dask]
+nworker_init=2
+nworker_iter=1
+
+[database]
+DB_save = true
+DB_prefix = "DW_3DTest"
+#DB_restart = "DW_3DTest.tdb"
