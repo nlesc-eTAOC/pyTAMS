@@ -18,7 +18,7 @@ class TAMSError(Exception):
 
     pass
 
-def parse_cl_args(a_args: list = None):
+def parse_cl_args(a_args: list = None) -> argparse.Namespace :
     """Parse provided list or default CL argv.
 
     Args:
@@ -32,6 +32,9 @@ def parse_cl_args(a_args: list = None):
         args = parser.parse_args()
     return args
 
+def formTrajID(n: int) -> str:
+    """Helper to assemble a trajectory ID string."""
+    return "traj{:06}".format(n)
 
 class TAMS:
     """A class implementing TAMS.
@@ -226,7 +229,7 @@ class TAMS:
         tree = ET.parse(dbFile)
         root = tree.getroot()
         for n in range(self._nTraj):
-            trajId = "traj{:06}".format(n)
+            trajId = formTrajID(n)
             T_entry = root.find(trajId)
             if T_entry is not None:
                 chkFile = T_entry.text
@@ -250,7 +253,7 @@ class TAMS:
                     Trajectory(
                         fmodel_t=self._fmodel_t,
                         parameters=self.parameters,
-                        trajId="traj{:06}".format(n),
+                        trajId=formTrajID(n),
                     )
                 )
         return nTrajRestored
@@ -317,7 +320,7 @@ class TAMS:
                 Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
-                    trajId="traj{:06}".format(n),
+                    trajId=formTrajID(n),
                 )
             )
 

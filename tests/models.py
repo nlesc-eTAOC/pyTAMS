@@ -36,7 +36,7 @@ class SimpleFModel(ForwardModel):
         return 0.0
 
     @classmethod
-    def name(self):
+    def name(cls):
         """Return the model name."""
         return "SimpleFModel"
 
@@ -106,6 +106,6 @@ class DoubleWellModel(ForwardModel):
         return self._rand
 
     @classmethod
-    def name(self):
+    def name(cls):
         """Return the model name."""
         return "DoubleWellModel"

@@ -54,6 +54,6 @@ class ForwardModel:
         pass
 
     @classmethod
-    def name(self):
+    def name(cls):
         """Return a the model name."""
         return "TemplateForwardModel"
