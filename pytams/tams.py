@@ -360,6 +360,52 @@ class TAMS:
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
+    def check_exit_splitting_loop(self, k: int) -> tuple[bool, np.ndarray]:
+        """Check for exit criterion of the splitting loop.
+
+        Args:
+            k: loop counter
+
+        Returns:
+            bool to trigger splitting loop break
+            array of maximas accros all trajectories
+        """
+        # Check for walltime
+        if self.out_of_time():
+            self.verbosePrint(
+                "Ran out of time after {} splitting iterations".format(
+                    k
+                )
+            )
+            return True, np.empty(1)
+
+        # Gather max score from all trajectories
+        # and check for early convergence
+        allConverged = True
+        maxes = np.zeros(len(self._trajs_db))
+        for i in range(len(self._trajs_db)):
+            maxes[i] = self._trajs_db[i].scoreMax()
+            allConverged = allConverged and self._trajs_db[i].isConverged()
+
+        # Exit if our work is done
+        if allConverged:
+            self.verbosePrint(
+                "All trajectory converged after {} splitting iterations".format(
+                    k
+                )
+            )
+            return True, np.empty(1)
+
+        # Exit if splitting is stalled
+        if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
+            raise TAMSError(
+                "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
+                    np.amax(maxes))
+            )
+
+        return False, maxes
+
+
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
@@ -369,38 +415,10 @@ class TAMS:
 
         with DaskRunner(self.parameters, self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
-                # Check for walltime
-                if self.out_of_time():
-                    self.verbosePrint(
-                        "Ran out of time after {} splitting iterations".format(
-                            k
-                        )
-                    )
+                # Check for early exit conditions
+                early_exit, maxes = self.check_exit_splitting_loop(k)
+                if early_exit:
                     break
-
-                # Gather max score from all trajectories
-                # and check for early convergence
-                allConverged = True
-                maxes = np.zeros(len(self._trajs_db))
-                for i in range(len(self._trajs_db)):
-                    maxes[i] = self._trajs_db[i].scoreMax()
-                    allConverged = allConverged and self._trajs_db[i].isConverged()
-
-                # Exit if our work is done
-                if allConverged:
-                    self.verbosePrint(
-                        "All trajectory converged after {} splitting iterations".format(
-                            k
-                        )
-                    )
-                    break
-
-                # Exit if splitting is stalled
-                if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-                    raise TAMSError(
-                        "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                            np.amax(maxes))
-                    )
 
                 # Get the nworker lower scored trajectories
                 min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
