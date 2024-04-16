@@ -79,6 +79,8 @@ class TAMS:
         # Trajectory Database
         if (self._saveDB):
             self._nameDB = "{}.tdb".format(self._prefixDB)
+        else:
+            self._nameDB = None
 
         # Splitting data
         self._kSplit = 0
