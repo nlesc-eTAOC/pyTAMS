@@ -518,6 +518,9 @@ def task_delayed(traj: Trajectory,
 
     Args:
         traj: a trajectory
+        wall_time: a time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of the database
     """
     if not (wall_time < 0.0) and not traj.hasEnded():
         print("Advancing {}".format(traj.id()), flush=True)
