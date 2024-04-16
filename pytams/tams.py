@@ -281,7 +281,7 @@ class TAMS:
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
         if self.v:
-            print("TAMS-[{}]".format(message))
+            print("TAMS-[{}]".format(message), flush=True)
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
@@ -331,6 +331,7 @@ class TAMS:
             traj: a trajectory
         """
         if not self.out_of_time() and not traj.hasEnded():
+            self.verbosePrint("Advancing {}".format(traj.id()))
             traj.advance(walltime=self.remaining_walltime())
             if self._saveDB:
                 traj.setCheckFile(

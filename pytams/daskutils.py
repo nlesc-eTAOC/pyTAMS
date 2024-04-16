@@ -46,11 +46,22 @@ class DaskRunner:
                 self.cluster = SLURMCluster()
             else:
                 self.dask_queue = parameters.get("dask",{}).get("queue", "regular")
+                self.dask_ntasks = parameters.get("dask",{}).get("ntasks_per_job", 1)
                 self.dask_nworker_ncore = parameters.get("dask",{}).get("ncores_per_worker", 1)
+                self.dask_prologue = parameters.get("dask",{}).get("job_prologue", [])
+                self.dask_walltime = parameters.get("dask",{}).get("worker_walltime", "04:00:00")
                 self.cluster = SLURMCluster(
                     queue=self.dask_queue,
                     cores=self.dask_nworker_ncore,
-                    walltime="00:30:00",
+                    memory='144GB',
+                    walltime=self.dask_walltime,
+                    processes=1,
+                    interface='ib0',
+                    job_script_prologue=self.dask_prologue,
+                    job_extra_directives=["--ntasks={}".format(self.dask_ntasks),
+                                          "--tasks-per-node={}".format(self.dask_ntasks),
+                                          "--exclusive"],
+                    job_directives_skip=['--cpus-per-task=', '--mem'],
                 )
             self.cluster.scale(jobs=self.dask_nworker)
             self.client = Client(self.cluster)
