@@ -540,24 +540,8 @@ class MOCModel(ForwardModel):
         return self._rand
 
 if __name__ == "__main__":
-    parameters = {
-        "nTrajectories": 100,
-        "nSplitIter": 1000,
-        "Verbose": True,
-        #"DB_save": True,
-        #"DB_prefix": "MOCTest",
-        #"DB_restart": "MOCTest.tdb_Final",
-        "dask.nworker": 6,
-        "wallTime": 2000.0,
-        "traj.end_time": 100*365*86400,
-        "traj.step_size": 86400,
-        "traj.targetScore": 1,
-        "traj.stoichForcing": 0,
-    }
-
     fmodel = MOCModel
-
-    tams = TAMS(fmodel_t=fmodel, parameters=parameters)
+    tams = TAMS(fmodel_t=fmodel)
     transition_proba = tams.compute_probability()
     print("Transition probability: {}".format(transition_proba))
 

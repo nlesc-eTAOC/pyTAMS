@@ -16,7 +16,9 @@ class Trajectory:
     score function along the way.
     """
 
-    def __init__(self, fmodel_t, parameters: dict, trajId: str) -> None:
+    def __init__(self, fmodel_t,
+                 parameters: dict,
+                 trajId: str) -> None:
         """Create a trajectory.
 
         Args:
@@ -28,8 +30,10 @@ class Trajectory:
         self._parameters = parameters
 
         self._t_cur = 0.0
-        self._t_end = self._parameters.get("traj.end_time", 1.0)
-        self._dt = self._parameters.get("traj.step_size", 0.1)
+        self._t_end = parameters.get("trajectory",{}).get("end_time", 1.0)
+        self._dt = parameters.get("trajectory",{}).get("step_size", 0.1)
+        self._stoichForcingAmpl = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
+        self._convergedVal = parameters.get("trajectory",{}).get("targetscore", 0.95)
 
         # List of new maximums
         self._time = []
@@ -63,15 +67,13 @@ class Trajectory:
         startTime = time.monotonic()
         remainingTime = walltime - time.monotonic() + startTime
         end_time = min(t_end, self._t_end)
-        stoichForcingAmpl = self._parameters.get("traj.stoichForcing", 0.5)
-        convergedVal = self._parameters.get("traj.targetScore", 0.95)
 
         while (
             self._t_cur < end_time
             and not self._has_converged
             and remainingTime >= 0.05 * walltime
         ):
-            dt = self._fmodel.advance(self._dt, stoichForcingAmpl)
+            dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
             self._t_cur = self._t_cur + dt
             score = self._fmodel.score()
             self._time.append(self._t_cur)
@@ -81,7 +83,7 @@ class Trajectory:
             if score > self._score_max:
                 self._score_max = score
 
-            if score >= convergedVal:
+            if score >= self._convergedVal:
                 self._has_converged = True
 
             remainingTime = walltime - time.monotonic() + startTime
@@ -97,23 +99,18 @@ class Trajectory:
         cls,
         chkPoint: str,
         fmodel_t,
-        parameters: dict = None,
+        parameters: dict,
     ):
         """Return a trajectory restored from an XML chkfile."""
         assert os.path.exists(chkPoint) is True
 
+        # Read in trajectory metadata
         tree = ET.parse(chkPoint)
         root = tree.getroot()
-        paramsfromxml = xml_to_dict(root.find("parameters"))
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        if parameters is not None:
-            restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
-        else:
-            restTraj = Trajectory(
-                fmodel_t=fmodel_t, parameters=paramsfromxml, trajId=t_id
-            )
+        restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
 
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
@@ -180,7 +177,7 @@ class Trajectory:
     def store(self, traj_file: str = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self._tid)
-        root.append(dict_to_xml("parameters", self._parameters))
+        root.append(dict_to_xml("params", self._parameters["trajectory"]))
         mdata = ET.SubElement(root, "metadata")
         mdata.append(new_element("id", self._tid))
         mdata.append(new_element("t_cur", self._t_cur))

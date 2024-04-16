@@ -1,3 +1,4 @@
+import argparse
 import copy
 import os
 import shutil
@@ -5,9 +6,9 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import numpy as np
+import toml
 from pytams.daskutils import DaskRunner
 from pytams.trajectory import Trajectory
-from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -17,6 +18,23 @@ class TAMSError(Exception):
 
     pass
 
+def parse_cl_args(a_args: list = None) -> argparse.Namespace :
+    """Parse provided list or default CL argv.
+
+    Args:
+        a_args: optional list of options
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input", help="pyTAMS input .toml file", default="input.toml")
+    if a_args is not False:
+        args = parser.parse_args(a_args)
+    else:
+        args = parser.parse_args()
+    return args
+
+def formTrajID(n: int) -> str:
+    """Helper to assemble a trajectory ID string."""
+    return "traj{:06}".format(n)
 
 class TAMS:
     """A class implementing TAMS.
@@ -25,26 +43,35 @@ class TAMS:
     populate, explore and IO the database.
     """
 
-    def __init__(self, fmodel_t, parameters: dict) -> None:
+    def __init__(self,
+                 fmodel_t,
+                 a_args: list = None) -> None:
         """Initialize a TAMS run.
 
         Args:
             fmodel_t: the forward model type
-            parameters: a dictionary of input parameters
+            a_args: optional list of options
         """
         self._fmodel_t = fmodel_t
-        self.parameters = parameters
+
+        input_file = vars(parse_cl_args(a_args=a_args))["input"]
+        if (not os.path.exists(input_file)):
+            raise TAMSError(
+                "Could not find the {} TAMS input file !".format(input_file)
+            )
+
+        with open(input_file, 'r') as f:
+            self.parameters = toml.load(f)
 
         # Parse user-inputs
-        self.v = parameters.get("Verbose", False)
+        self.v = self.parameters["tams"].get("verbose", False)
+        self._nTraj = self.parameters["tams"].get("ntrajectories", 500)
+        self._nSplitIter = self.parameters["tams"].get("nsplititer", 2000)
+        self._wallTime = self.parameters["tams"].get("walltime", 24.0*3600.0)
 
-        self._saveDB = self.parameters.get("DB_save", False)
-        self._prefixDB = self.parameters.get("DB_prefix", "TAMS")
-        self._restartDB = self.parameters.get("DB_restart", None)
-
-        self._nTraj = self.parameters.get("nTrajectories", 500)
-        self._nSplitIter = self.parameters.get("nSplitIter", 2000)
-        self._wallTime = self.parameters.get("wallTime", 600.0)
+        self._saveDB = self.parameters.get("database",{}).get("DB_save", False)
+        self._prefixDB = self.parameters.get("database",{}).get("DB_prefix", "TAMS")
+        self._restartDB = self.parameters.get("database",{}).get("DB_restart", None)
 
         # Trajectory Pool
         self._trajs_db = []
@@ -91,6 +118,9 @@ class TAMS:
 
             os.mkdir(self._nameDB)
 
+            with open("{}/input_params.toml".format(self._nameDB), 'w') as f:
+                toml.dump(self.parameters, f)
+
             # Header file with metadata
             headerFile = "{}/header.xml".format(self._nameDB)
             root = ET.Element("header")
@@ -98,7 +128,6 @@ class TAMS:
             mdata.append(new_element("pyTAMS_version", datetime.now()))
             mdata.append(new_element("date", datetime.now()))
             mdata.append(new_element("model_t", self._fmodel_t.name()))
-            root.append(dict_to_xml("parameters", self.parameters))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(headerFile)
@@ -147,6 +176,7 @@ class TAMS:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
         tree.write(splittingDataFile)
+
 
     def readSplittingData(self, a_db: str) -> None:
         """Read splitting data from XML file."""
@@ -199,7 +229,7 @@ class TAMS:
         tree = ET.parse(dbFile)
         root = tree.getroot()
         for n in range(self._nTraj):
-            trajId = "traj{:06}".format(n)
+            trajId = formTrajID(n)
             T_entry = root.find(trajId)
             if T_entry is not None:
                 chkFile = T_entry.text
@@ -209,6 +239,7 @@ class TAMS:
                         Trajectory.restoreFromChk(
                             chkFile,
                             fmodel_t=self._fmodel_t,
+                            parameters=self.parameters
                         )
                     )
                 else:
@@ -222,7 +253,7 @@ class TAMS:
                     Trajectory(
                         fmodel_t=self._fmodel_t,
                         parameters=self.parameters,
-                        trajId="traj{:06}".format(n),
+                        trajId=formTrajID(n),
                     )
                 )
         return nTrajRestored
@@ -241,11 +272,11 @@ class TAMS:
                 )
             )
 
-        # Parameters stored in the database override any
-        # newly modified params
-        # TODO: will need to relax this later on
-        paramsfromxml = xml_to_dict(root.find("parameters"))
-        self.parameters.update(paramsfromxml)
+        # Parameters stored in the DB override
+        # newly provided parameters.
+        with open("{}/input_params.toml".format(a_db), 'r') as f:
+            readInParams = toml.load(f)
+        self.parameters.update(readInParams)
 
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
@@ -289,7 +320,7 @@ class TAMS:
                 Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
-                    trajId="traj{:06}".format(n),
+                    trajId=formTrajID(n),
                 )
             )
 
@@ -316,7 +347,7 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(self.parameters, self.parameters.get("dask.nworker_init", 1)) as runner:
+        with DaskRunner(self.parameters, self.parameters.get("dask",{}).get("nworker_init", 1)) as runner:
             # Assemble a list of promises
             # All the trajectories are added, even those already done
             tasks_p = []
@@ -330,6 +361,52 @@ class TAMS:
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
+    def check_exit_splitting_loop(self, k: int) -> tuple[bool, np.ndarray]:
+        """Check for exit criterion of the splitting loop.
+
+        Args:
+            k: loop counter
+
+        Returns:
+            bool to trigger splitting loop break
+            array of maximas accros all trajectories
+        """
+        # Check for walltime
+        if self.out_of_time():
+            self.verbosePrint(
+                "Ran out of time after {} splitting iterations".format(
+                    k
+                )
+            )
+            return True, np.empty(1)
+
+        # Gather max score from all trajectories
+        # and check for early convergence
+        allConverged = True
+        maxes = np.zeros(len(self._trajs_db))
+        for i in range(len(self._trajs_db)):
+            maxes[i] = self._trajs_db[i].scoreMax()
+            allConverged = allConverged and self._trajs_db[i].isConverged()
+
+        # Exit if our work is done
+        if allConverged:
+            self.verbosePrint(
+                "All trajectory converged after {} splitting iterations".format(
+                    k
+                )
+            )
+            return True, np.empty(1)
+
+        # Exit if splitting is stalled
+        if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
+            raise TAMSError(
+                "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
+                    np.amax(maxes))
+            )
+
+        return False, maxes
+
+
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
@@ -337,41 +414,12 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._kSplit
 
-        with DaskRunner(self.parameters, self.parameters.get("dask.nworker_iter", 1)) as runner:
+        with DaskRunner(self.parameters, self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
-                self.verbosePrint("Performing {} spliting iteration".format(k))
-                # Check for walltime
-                if self.out_of_time():
-                    self.verbosePrint(
-                        "Ran out of time after {} splitting iterations".format(
-                            k
-                        )
-                    )
+                # Check for early exit conditions
+                early_exit, maxes = self.check_exit_splitting_loop(k)
+                if early_exit:
                     break
-
-                # Gather max score from all trajectories
-                # and check for early convergence
-                allConverged = True
-                maxes = np.zeros(len(self._trajs_db))
-                for i in range(len(self._trajs_db)):
-                    maxes[i] = self._trajs_db[i].scoreMax()
-                    allConverged = allConverged and self._trajs_db[i].isConverged()
-
-                # Exit if our work is done
-                if allConverged:
-                    self.verbosePrint(
-                        "All trajectory converged after {} splitting iterations".format(
-                            k
-                        )
-                    )
-                    break
-
-                # Exit if splitting is stalled
-                if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-                    raise TAMSError(
-                        "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                            np.amax(maxes))
-                    )
 
                 # Get the nworker lower scored trajectories
                 min_idx_list = np.argpartition(maxes, runner.dask_nworker)[

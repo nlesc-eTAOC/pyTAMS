@@ -15,21 +15,22 @@ class DaskRunnerError(Exception):
 class DaskRunner:
     """A Dask wrapper handle cluster and promises."""
 
-    def __init__(self, parameters: dict, n_workers: int = 1):
+    def __init__(self, parameters: dict,
+                 n_workers: int = 1):
         """Start the Dask cluster and client.
 
         Args:
             parameters: a dictionary with parameters
             n_workers: number of workers
         """
-        self.dask_backend = parameters.get("dask.backend", "local")
+        self.dask_backend = parameters.get("dask",{}).get("backend", "local")
         if self.dask_backend == "local":
             self.dask_nworker = n_workers
             self.client = Client(threads_per_worker=1, n_workers=self.dask_nworker)
             self.cluster = None
         elif self.dask_backend == "slurm":
             self.dask_nworker = n_workers
-            self.slurm_config_file = parameters.get("dask.slurm_config_file", None)
+            self.slurm_config_file = parameters.get("dask",{}).get("slurm_config_file", None)
             if self.slurm_config_file:
                 if not os.path.exists(self.slurm_config_file):
                     raise DaskRunnerError(
@@ -44,8 +45,8 @@ class DaskRunner:
                 )
                 self.cluster = SLURMCluster()
             else:
-                self.dask_queue = parameters.get("dask.queue", "regular")
-                self.dask_nworker_ncore = parameters.get("dask.ncores_per_worker", 1)
+                self.dask_queue = parameters.get("dask",{}).get("queue", "regular")
+                self.dask_nworker_ncore = parameters.get("dask",{}).get("ncores_per_worker", 1)
                 self.cluster = SLURMCluster(
                     queue=self.dask_queue,
                     cores=self.dask_nworker_ncore,
@@ -68,7 +69,7 @@ class DaskRunner:
             self.client = Client(self.cluster)
             print(self.cluster.job_script(), flush=True)
         else:
-            raise DaskRunnerError("Unknown dask.backend: {}".format(self.dask_backend))
+            raise DaskRunnerError("Unknown [dask] backend: {}".format(self.dask_backend))
 
     def __enter__(self):
         """To enable use of with."""

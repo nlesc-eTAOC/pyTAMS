@@ -56,7 +56,7 @@ def manualCastStr(type_str: str,
         )
 
 
-def dict_to_xml(tag: str, d) -> ET.Element:
+def dict_to_xml(tag: str, d: dict) -> ET.Element:
     """Return an Element from a dictionnary.
 
     Args:
