@@ -65,7 +65,6 @@ class DaskRunner:
                 )
             self.cluster.scale(jobs=self.dask_nworker)
             self.client = Client(self.cluster)
-            print(self.cluster.job_script(), flush=True)
         else:
             raise DaskRunnerError("Unknown [dask] backend: {}".format(self.dask_backend))
 
