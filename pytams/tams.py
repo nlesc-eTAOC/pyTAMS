@@ -79,6 +79,8 @@ class TAMS:
         # Trajectory Database
         if (self._saveDB):
             self._nameDB = "{}.tdb".format(self._prefixDB)
+        else:
+            self._nameDB = None
 
         # Splitting data
         self._kSplit = 0
@@ -324,23 +326,6 @@ class TAMS:
                 )
             )
 
-    def task_delayed(self, traj: Trajectory) -> Trajectory:
-        """A worker to generate each initial trajectory.
-
-        Args:
-            traj: a trajectory
-        """
-        if not self.out_of_time() and not traj.hasEnded():
-            self.verbosePrint("Advancing {}".format(traj.id()))
-            traj.advance(walltime=self.remaining_walltime())
-            if self._saveDB:
-                traj.setCheckFile(
-                    "{}/{}/{}.xml".format(self._nameDB, "trajectories", traj.id())
-                )
-                traj.store()
-
-        return traj
-
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories."""
         self.verbosePrint(
@@ -352,7 +337,11 @@ class TAMS:
             # All the trajectories are added, even those already done
             tasks_p = []
             for T in self._trajs_db:
-                tasks_p.append(runner.make_promise(self.task_delayed, T))
+                tasks_p.append(runner.make_promise(task_delayed,
+                                                   T,
+                                                   self.remaining_walltime(),
+                                                   self._saveDB,
+                                                   self._nameDB))
 
             self._trajs_db = runner.execute_promises(tasks_p)
 
@@ -523,12 +512,36 @@ class TAMS:
         return self._nTraj
 
 
+def task_delayed(traj: Trajectory,
+                 wall_time: float,
+                 saveDB: bool,
+                 nameDB: str) -> Trajectory:
+    """A worker to generate each initial trajectory.
+
+    Args:
+        traj: a trajectory
+        wall_time: a time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of the database
+    """
+    if wall_time > 0.0 and not traj.hasEnded():
+        print("Advancing {}".format(traj.id()), flush=True)
+        traj.advance(walltime=wall_time)
+        if saveDB:
+            traj.setCheckFile(
+                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
+            )
+            traj.store()
+
+    return traj
+
+
 def worker(
     t_end: float,
     fromTraj: Trajectory,
     rstId: str,
     min_val: float,
-    wall_time:float,
+    wall_time: float,
 ) -> Trajectory:
     """A worker to restart trajectories.
 
