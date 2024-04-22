@@ -60,6 +60,7 @@ class TAMS:
         self._nTraj = self.parameters["tams"].get("ntrajectories", 500)
         self._nSplitIter = self.parameters["tams"].get("nsplititer", 2000)
         self._wallTime = self.parameters["tams"].get("walltime", 24.0*3600.0)
+        self._plot_diags = self.parameters["tams"].get("diagnostics", False)
 
         # Database
         self._tdb = Database(fmodel_t,
@@ -204,6 +205,11 @@ class TAMS:
                 early_exit, maxes = self.check_exit_splitting_loop(k)
                 if early_exit:
                     break
+
+                # Plot trajectory database scores
+                if self._plot_diags:
+                    pltfile = "Score_k{:05}.png".format(k)
+                    self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
                 min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
