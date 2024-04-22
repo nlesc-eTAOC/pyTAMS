@@ -1,12 +1,10 @@
 """Tests for the pytams.database class."""
 import os
 import shutil
-import pytest
 import toml
-from pytams.tams import TAMS
 from pytams.database import Database
+from pytams.tams import TAMS
 from tests.models import DoubleWellModel
-from tests.models import SimpleFModel
 
 
 def test_generateAndLoadTDB():
@@ -19,15 +17,16 @@ def test_generateAndLoadTDB():
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    tams.compute_probability()
 
-    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}} 
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
+    assert tdb
 
 def test_exploreTDB():
     """Test generation of TDB and loading the TDB."""
     fmodel = DoubleWellModel
-    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}} 
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
 
     tdb = Database(fmodel, params_load_db)
     tdb.info()
