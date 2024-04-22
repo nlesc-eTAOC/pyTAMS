@@ -178,7 +178,7 @@ class Database:
         # Splitting data file
         if self._format == "XML":
             splittingDataFile = "{}/splittingData.xml".format(self._name)
-            root = ET.Element("Splitting")
+            root = ET.Element("splitting")
             root.append(new_element("nsplititer", self._nsplititer))
             root.append(new_element("ksplit", self._ksplit))
             root.append(new_element("bias", np.array(self._l_bias)))
@@ -359,17 +359,59 @@ class Database:
         """Set splitting iteration counter."""
         self._ksplit = ksplit
 
+    def countEndedTraj(self) -> int:
+        """Return the number of trajectories that ended."""
+        count = 0
+        for T in self._trajs_db:
+            if T.hasEnded():
+                count = count + 1
+        return count
+
+    def countConvergedTraj(self) -> int:
+        """Return the number of trajectories that converged."""
+        count = 0
+        for T in self._trajs_db:
+            if T.isConverged():
+                count = count + 1
+        return count
+
+    def getTransitionProbability(self) -> float:
+        """Return the transition probability."""
+        if self.countEndedTraj() < self._ntraj:
+            print("TAMS initialization still ongoing, probability estimate not available yet")
+            return 0.0
+        else:
+            W = self._ntraj * self._weights[-1]
+            for i in range(len(self._l_bias)):
+                W += self._l_bias[i] * self._weights[i]
+
+            trans_prob = self.countConvergedTraj() * self._weights[-1] / W
+            return trans_prob
+
+
     def info(self):
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
-        print("########################################")
-        print("# TAMS v{:5s} trajectory database      #".format(version))
-        print("# Date: {:30s} #".format(str(db_date)))
-        print("# Model: {:29s} #".format(db_model))
-        print("########################################")
+        print("################################################")
+        print("# TAMS v{:13s} trajectory database      #".format(version))
+        print("# Date: {:38s} #".format(str(db_date)))
+        print("# Model: {:37s} #".format(db_model))
+        print("################################################")
+        print("# Requested # of traj: {:23} #".format(self._ntraj))
+        print("# Requested # of splitting iter: {:13} #".format(self._nsplititer))
+        print("# Number of 'Ended' trajectories: {:12} #".format(self.countEndedTraj()))
+        print("# Number of 'Converged' trajectories: {:8} #".format(self.countConvergedTraj()))
+        print("# Current splitting iter counter: {:12} #".format(self._ksplit))
+        if self.countEndedTraj() < self._ntraj:
+            print("# Transition probability: {:24} #".format(self.getTransitionProbability()))
+        print("################################################")
 
-    def plotScoreFunctions(self):
+    def plotScoreFunctions(self, fname: str = None) -> None:
         """Plot the score as function of time for all trajectories."""
+        if not fname:
+            pltfile = Path(self._name).stem + "_scores.png"
+        else:
+            pltfile = fname
         plt.figure(figsize=(10, 6))
         for T in self._trajs_db:
             plt.plot(T.getTimeArr(), T.getScoreArr(), linewidth=0.8)
@@ -381,5 +423,5 @@ class Database:
         plt.yticks(fontsize="x-large")
         plt.grid(linestyle='dotted')
         plt.tight_layout() # to fit everything in the prescribed area
-        plt.savefig("test.png", dpi=300)
-        #plt.savefig("test.pdf")
+        plt.savefig(fname, dpi=300)
+        plt.clf()
