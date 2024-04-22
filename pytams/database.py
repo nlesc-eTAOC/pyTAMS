@@ -3,6 +3,7 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
@@ -412,6 +413,7 @@ class Database:
             pltfile = Path(self._name).stem + "_scores.png"
         else:
             pltfile = fname
+
         plt.figure(figsize=(10, 6))
         for T in self._trajs_db:
             plt.plot(T.getTimeArr(), T.getScoreArr(), linewidth=0.8)
@@ -423,5 +425,5 @@ class Database:
         plt.yticks(fontsize="x-large")
         plt.grid(linestyle='dotted')
         plt.tight_layout() # to fit everything in the prescribed area
-        plt.savefig(fname, dpi=300)
+        plt.savefig(pltfile, dpi=300)
         plt.clf()
