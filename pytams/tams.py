@@ -1,16 +1,12 @@
 import argparse
-import copy
 import os
-import shutil
 import time
-import xml.etree.ElementTree as ET
-from datetime import datetime
 import numpy as np
 import toml
 from pytams.daskutils import DaskRunner
+from pytams.database import Database
+from pytams.database import formTrajID
 from pytams.trajectory import Trajectory
-from pytams.xmlutils import new_element
-from pytams.xmlutils import xml_to_dict
 
 
 class TAMSError(Exception):
@@ -31,10 +27,6 @@ def parse_cl_args(a_args: list = None) -> argparse.Namespace :
     else:
         args = parser.parse_args()
     return args
-
-def formTrajID(n: int) -> str:
-    """Helper to assemble a trajectory ID string."""
-    return "traj{:06}".format(n)
 
 class TAMS:
     """A class implementing TAMS.
@@ -68,217 +60,19 @@ class TAMS:
         self._nTraj = self.parameters["tams"].get("ntrajectories", 500)
         self._nSplitIter = self.parameters["tams"].get("nsplititer", 2000)
         self._wallTime = self.parameters["tams"].get("walltime", 24.0*3600.0)
+        self._plot_diags = self.parameters["tams"].get("diagnostics", False)
 
-        self._saveDB = self.parameters.get("database",{}).get("DB_save", False)
-        self._prefixDB = self.parameters.get("database",{}).get("DB_prefix", "TAMS")
-        self._restartDB = self.parameters.get("database",{}).get("DB_restart", None)
-
-        # Trajectory Pool
-        self._trajs_db = []
-
-        # Trajectory Database
-        if (self._saveDB):
-            self._nameDB = "{}.tdb".format(self._prefixDB)
-        else:
-            self._nameDB = None
-
-        # Splitting data
-        self._kSplit = 0
-        self._l_bias = []
-        self._weights = [1]
+        # Database
+        self._tdb = Database(fmodel_t,
+                             self.parameters,
+                             self._nTraj,
+                             self._nSplitIter)
 
         # Initialize
         self._startTime = time.monotonic()
-        if self._restartDB is not None:
-            self.restoreTrajDB()
-        else:
-            self.initTrajDB()
+        if self._tdb.isEmpty():
             self.init_trajectory_pool()
 
-    def initTrajDB(self) -> None:
-        """Initialize the trajectory database."""
-        if self._saveDB:
-            self.verbosePrint(
-                "Initializing the trajectories database {}".format(self._nameDB)
-            )
-            if os.path.exists(self._nameDB) and self._nameDB != self._restartDB:
-                rng = np.random.default_rng(12345)
-                copy_exists = True
-                while copy_exists:
-                    random_int = rng.integers(0, 999999)
-                    nameDB_rnd = "{}_{:06d}".format(self._nameDB, random_int)
-                    copy_exists = os.path.exists(nameDB_rnd)
-
-                print(
-                    """
-                    TAMS database {} already present but not specified as restart.
-                    It will be copied to {}.""".format(
-                        self._nameDB, nameDB_rnd
-                    )
-                )
-                shutil.move(self._nameDB, nameDB_rnd)
-
-            os.mkdir(self._nameDB)
-
-            with open("{}/input_params.toml".format(self._nameDB), 'w') as f:
-                toml.dump(self.parameters, f)
-
-            # Header file with metadata
-            headerFile = "{}/header.xml".format(self._nameDB)
-            root = ET.Element("header")
-            mdata = ET.SubElement(root, "metadata")
-            mdata.append(new_element("pyTAMS_version", datetime.now()))
-            mdata.append(new_element("date", datetime.now()))
-            mdata.append(new_element("model_t", self._fmodel_t.name()))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(headerFile)
-
-            # Initialialize splitting data file
-            self.saveSplittingData(self._nameDB)
-
-            # Dynamically updated file with trajectory pool
-            # Empty for now
-            databaseFile = "{}/trajPool.xml".format(self._nameDB)
-            root = ET.Element("trajectories")
-            root.append(new_element("nTraj", self._nTraj))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
-
-            # Empty trajectories subfolder
-            os.mkdir("{}/{}".format(self._nameDB, "trajectories"))
-
-    def appendTrajsToDB(self) -> None:
-        """Append started trajectories to the pool file."""
-        if self._saveDB:
-            self.verbosePrint(
-                "Appending started trajectories to database {}".format(self._nameDB)
-            )
-            databaseFile = "{}/trajPool.xml".format(self._nameDB)
-            tree = ET.parse(databaseFile)
-            root = tree.getroot()
-            for T in self._trajs_db:
-                T_entry = root.find(T.id())
-                if T.hasStarted() and T_entry is None:
-                    loc = T.checkFile()
-                    root.append(new_element(T.id(), loc))
-
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
-
-    def saveSplittingData(self, a_db: str) -> None:
-        """Write splitting data to XML file."""
-        # Splitting data file
-        splittingDataFile = "{}/splittingData.xml".format(a_db)
-        root = ET.Element("Splitting")
-        root.append(new_element("kSplit", self._kSplit))
-        root.append(new_element("bias", np.array(self._l_bias)))
-        root.append(new_element("weight", np.array(self._weights)))
-        tree = ET.ElementTree(root)
-        ET.indent(tree, space="\t", level=0)
-        tree.write(splittingDataFile)
-
-
-    def readSplittingData(self, a_db: str) -> None:
-        """Read splitting data from XML file."""
-        # Read data file
-        splittingDataFile = "{}/splittingData.xml".format(a_db)
-        tree = ET.parse(splittingDataFile)
-        root = tree.getroot()
-        datafromxml = xml_to_dict(root)
-        self._kSplit = datafromxml["kSplit"]
-        self._l_bias = datafromxml["bias"].tolist()
-        self._weights = datafromxml["weight"].tolist()
-
-    def restoreTrajDB(self) -> None:
-        """Initialize TAMS from a stored trajectory database."""
-        if os.path.exists(self._restartDB):
-            self.verbosePrint(
-                "Restoring from the trajectories database {}".format(self._restartDB)
-            )
-
-            # Check the database parameters against current run
-            self.check_database_consistency(self._restartDB)
-
-            # Load splitting data
-            self.readSplittingData(self._restartDB)
-
-            # Load trajectories stored in the database when available.
-            dbFile = "{}/trajPool.xml".format(self._restartDB)
-            nTrajRestored = self.loadTrajectoryDB(dbFile)
-
-            self.verbosePrint(
-                "--> {} trajectories restored from the database".format(nTrajRestored)
-            )
-        else:
-            raise TAMSError(
-                "Could not find the {} TAMS database !".format(self._restartDB)
-            )
-
-    def loadTrajectoryDB(self, dbFile: str) -> int:
-        """Load trajectories stored into the database.
-
-        Args:
-            dbFile: the database file
-
-        Return:
-            number of trajectories loaded
-        """
-        # Counter for number of trajectory loaded
-        nTrajRestored = 0
-
-        tree = ET.parse(dbFile)
-        root = tree.getroot()
-        for n in range(self._nTraj):
-            trajId = formTrajID(n)
-            T_entry = root.find(trajId)
-            if T_entry is not None:
-                chkFile = T_entry.text
-                if os.path.exists(chkFile):
-                    nTrajRestored += 1
-                    self._trajs_db.append(
-                        Trajectory.restoreFromChk(
-                            chkFile,
-                            fmodel_t=self._fmodel_t,
-                            parameters=self.parameters
-                        )
-                    )
-                else:
-                    raise TAMSError(
-                        "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
-                            chkFile
-                        )
-                    )
-            else:
-                self._trajs_db.append(
-                    Trajectory(
-                        fmodel_t=self._fmodel_t,
-                        parameters=self.parameters,
-                        trajId=formTrajID(n),
-                    )
-                )
-        return nTrajRestored
-
-    def check_database_consistency(self, a_db: str) -> None:
-        """Check the restart database consistency."""
-        # Open and load header
-        headerFile = "{}/header.xml".format(a_db)
-        tree = ET.parse(headerFile)
-        root = tree.getroot()
-        headerfromxml = xml_to_dict(root.find("metadata"))
-        if self._fmodel_t.name() != headerfromxml["model_t"]:
-            raise TAMSError(
-                "Trying to restore a TAMS with {} model from database with {} model !".format(
-                    self._fmodel_t.name(), headerfromxml["model_t"]
-                )
-            )
-
-        # Parameters stored in the DB override
-        # newly provided parameters.
-        with open("{}/input_params.toml".format(a_db), 'r') as f:
-            readInParams = toml.load(f)
-        self.parameters.update(readInParams)
 
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
@@ -318,7 +112,7 @@ class TAMS:
         """Initialize the trajectory pool."""
         self.hasEnded = np.full((self._nTraj), False)
         for n in range(self._nTraj):
-            self._trajs_db.append(
+            self._tdb.appendTraj(
                 Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
@@ -332,21 +126,22 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(self.parameters, self.parameters.get("dask",{}).get("nworker_init", 1)) as runner:
+        with DaskRunner(self.parameters,
+                        self.parameters.get("dask",{}).get("nworker_init", 1)) as runner:
             # Assemble a list of promises
             # All the trajectories are added, even those already done
             tasks_p = []
-            for T in self._trajs_db:
+            for T in self._tdb.trajList():
                 tasks_p.append(runner.make_promise(task_delayed,
                                                    T,
                                                    self.remaining_walltime(),
-                                                   self._saveDB,
-                                                   self._nameDB))
+                                                   self._tdb._save,
+                                                   self._tdb._name))
 
-            self._trajs_db = runner.execute_promises(tasks_p)
+            self._tdb.updateTrajList(runner.execute_promises(tasks_p))
 
-        # Update the trajectory database
-        self.appendTrajsToDB()
+        # Update the trajectory stored database
+        self._tdb.updateDiskData()
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
@@ -372,10 +167,10 @@ class TAMS:
         # Gather max score from all trajectories
         # and check for early convergence
         allConverged = True
-        maxes = np.zeros(len(self._trajs_db))
-        for i in range(len(self._trajs_db)):
-            maxes[i] = self._trajs_db[i].scoreMax()
-            allConverged = allConverged and self._trajs_db[i].isConverged()
+        maxes = np.zeros(self._tdb.trajListLen())
+        for i in range(self._tdb.trajListLen()):
+            maxes[i] = self._tdb.getTraj(i).scoreMax()
+            allConverged = allConverged and self._tdb.getTraj(i).isConverged()
 
         # Exit if our work is done
         if allConverged:
@@ -401,14 +196,20 @@ class TAMS:
         self.verbosePrint("Using multi-level splitting to get the probability")
 
         # Initialize splitting iterations counter
-        k = self._kSplit
+        k = self._tdb.kSplit()
 
-        with DaskRunner(self.parameters, self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
+        with DaskRunner(self.parameters,
+                        self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
                 # Check for early exit conditions
                 early_exit, maxes = self.check_exit_splitting_loop(k)
                 if early_exit:
                     break
+
+                # Plot trajectory database scores
+                if self._plot_diags:
+                    pltfile = "Score_k{:05}.png".format(k)
+                    self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
                 min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
@@ -422,10 +223,10 @@ class TAMS:
                 for i in range(len(min_idx_list)):
                     rest_idx[i] = min_idx_list[0]
                     while rest_idx[i] in min_idx_list:
-                        rest_idx[i] = rng.integers(0, len(self._trajs_db))
+                        rest_idx[i] = rng.integers(0, self._tdb.trajListLen())
 
-                self._l_bias.append(len(min_idx_list))
-                self._weights.append(self._weights[-1] * (1 - self._l_bias[-1] / self._nTraj))
+                self._tdb.appendBias(len(min_idx_list))
+                self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._nTraj))
 
                 # Assemble a list of promises
                 tasks_p = []
@@ -433,25 +234,20 @@ class TAMS:
                     tasks_p.append(
                         runner.make_promise(worker,
                                             1.0e9,
-                                            self._trajs_db[rest_idx[i]],
-                                            self._trajs_db[min_idx_list[i]].id(),
+                                            self._tdb.getTraj(rest_idx[i]),
+                                            self._tdb.getTraj(min_idx_list[i]).id(),
                                             min_vals[i],
                                             self.remaining_walltime())
                     )
                 restartedTrajs = runner.execute_promises(tasks_p)
 
                 # Update the trajectory pool and database
-                k += runner.dask_nworker
-                self._kSplit = k
+                k = k + runner.dask_nworker
+                self._tdb.setKSplit(k)
                 for i in range(len(min_idx_list)):
-                    self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])
-                    if self._saveDB:
-                        self.saveSplittingData(self._nameDB)
-                        tid = self._trajs_db[min_idx_list[i]].id()
-                        self._trajs_db[min_idx_list[i]].setCheckFile(
-                            "{}/{}/{}.xml".format(self._nameDB, "trajectories", tid)
-                        )
-                        self._trajs_db[min_idx_list[i]].store()
+                    self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
+
+                self._tdb.saveSplittingData()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -467,7 +263,7 @@ class TAMS:
 
         # Skip pool stage if splitting iterative
         # process has started
-        skip_pool = self._kSplit > 0
+        skip_pool = self._tdb.kSplit() > 0
 
         # Generate the initial trajectory pool
         if not skip_pool:
@@ -475,7 +271,7 @@ class TAMS:
 
         # Check for early convergence
         allConverged = True
-        for T in self._trajs_db:
+        for T in self._tdb.trajList():
             if not T.isConverged():
                 allConverged = False
                 break
@@ -491,17 +287,17 @@ class TAMS:
         # Perform multilevel splitting
         self.do_multilevel_splitting()
 
-        W = self._nTraj * self._weights[-1]
-        for i in range(len(self._l_bias)):
-            W += self._l_bias[i] * self._weights[i]
+        W = self._nTraj * self._tdb.weights()[-1]
+        for i in range(len(self._tdb.biases())):
+            W += self._tdb.biases()[i] * self._tdb.weights()[i]
 
-        # Compute how many traj. converged to the vicinity of B
+        # Compute how many traj. converged
         successCount = 0
-        for T in self._trajs_db:
+        for T in self._tdb.trajList():
             if T.isConverged():
                 successCount += 1
 
-        trans_prob = successCount * self._weights[-1] / W
+        trans_prob = successCount * self._tdb.weights()[-1] / W
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 

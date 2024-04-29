@@ -89,3 +89,16 @@ def test_restartSimpleTraj():
     t_test.advance(0.01)
     rst_test = Trajectory.restartFromTraj(t_test, "testiD", 0.05)
     assert rst_test.ctime() == 0.005
+
+
+def test_accessDataSimpleTraj():
+    """Test trajectory data access."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.04,
+                                  "step_size": 0.001,
+                                  "targetscore": 0.25}}
+    t_test = Trajectory(fmodel, parameters, "Simple")
+    t_test.advance(0.01)
+    assert t_test.getLength() == 10
+    assert isclose(t_test.getTimeArr()[-1], 0.01, abs_tol=1e-9)
+    assert isclose(t_test.getScoreArr()[-1], 0.1, abs_tol=1e-9)

@@ -1,6 +1,7 @@
 import os
 import time
 import xml.etree.ElementTree as ET
+import numpy as np
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
 from pytams.xmlutils import new_element
@@ -229,3 +230,19 @@ class Trajectory:
     def checkFile(self) -> str:
         """Return the trajectory check file name."""
         return self._checkFile
+
+    def getTimeArr(self) -> np.array:
+        """Return the trajectory time instants."""
+        return np.array(self._time)
+
+    def getScoreArr(self) -> np.array:
+        """Return the trajectory scores."""
+        return np.array(self._score)
+
+    def getNoiseArr(self) -> np.array:
+        """Return the trajectory noises."""
+        return np.array(self._noise)
+
+    def getLength(self) -> int:
+        """Return the trajectory length."""
+        return len(self._time)

@@ -78,8 +78,10 @@ def xml_to_dict(elem: ET.Element) -> dict:
     """Return an dictionnary an Element.
 
     Args:
-        tag: a root tag
         elem: an etree element
+
+    Return:
+        a dictionary containing the element entries
     """
     d = {}
     for child in elem:
