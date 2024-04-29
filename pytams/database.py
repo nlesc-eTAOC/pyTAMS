@@ -112,7 +112,7 @@ class Database:
     def _writeMetadata(self) -> None:
         """Write the database Metadata to disk."""
         if self._format == "XML":
-            headerFile = "{}/header.xml".format(self._name)
+            headerFile = self.headerFile()
             root = ET.Element("header")
             mdata = ET.SubElement(root, "metadata")
             mdata.append(new_element("pyTAMS_version", datetime.now()))
@@ -127,7 +127,7 @@ class Database:
 
             # Dynamically updated file with trajectory pool
             # Empty for now
-            databaseFile = "{}/trajPool.xml".format(self._name)
+            databaseFile = self.poolFile()
             root = ET.Element("trajectories")
             root.append(new_element("ntraj", self._ntraj))
             tree = ET.ElementTree(root)
@@ -140,8 +140,7 @@ class Database:
 
     def _readHeader(self) -> tuple[str, datetime, str]:
         if self._load:
-            headerFile = "{}/header.xml".format(self._name)
-            tree = ET.parse(headerFile)
+            tree = ET.parse(self.headerFile())
             root = tree.getroot()
             mdata = root.find("metadata")
             datafromxml = xml_to_dict(mdata)
@@ -159,7 +158,7 @@ class Database:
             print(
                 "Appending started trajectories to database {}".format(self._name)
             )
-            databaseFile = "{}/trajPool.xml".format(self._name)
+            databaseFile = self.poolFile()
             tree = ET.parse(databaseFile)
             root = tree.getroot()
             for T in self._trajs_db:
@@ -221,7 +220,7 @@ class Database:
             self._readSplittingData()
 
             # Load trajectories stored in the database when available.
-            dbFile = "{}/trajPool.xml".format(self._load)
+            dbFile = self.poolFile()
             nTrajRestored = self.loadTrajectoryDB(dbFile)
 
             print("{} trajectories loaded".format(nTrajRestored))
@@ -280,8 +279,7 @@ class Database:
     def _check_database_consistency(self) -> None:
         """Check the restart database consistency."""
         # Open and load header
-        headerFile = "{}/header.xml".format(self._name)
-        tree = ET.parse(headerFile)
+        tree = ET.parse(self.headerFile())
         root = tree.getroot()
         headerfromxml = xml_to_dict(root.find("metadata"))
         if self._fmodel_t.name() != headerfromxml["model_t"]:
@@ -319,6 +317,14 @@ class Database:
             tid = self._trajs_db[idx].id()
             self._trajs_db[idx].setCheckFile("{}/{}/{}.xml".format(self._name, "trajectories", tid))
             self._trajs_db[idx].store()
+
+    def headerFile(self) -> str:
+        """Helper returning the DB header file."""
+        return "{}/header.xml".format(self._name)
+
+    def poolFile(self) -> str:
+        """Helper returning the DB trajectory pool file."""
+        return "{}/trajPool.xml".format(self._name)
 
     def isEmpty(self) -> bool:
         """Check if database is empty."""
@@ -393,11 +399,12 @@ class Database:
     def info(self):
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
-        print("################################################")
+        prettyLine = "################################################"
+        print(prettyLine)
         print("# TAMS v{:13s} trajectory database      #".format(version))
         print("# Date: {:38s} #".format(str(db_date)))
         print("# Model: {:37s} #".format(db_model))
-        print("################################################")
+        print(prettyLine)
         print("# Requested # of traj: {:23} #".format(self._ntraj))
         print("# Requested # of splitting iter: {:13} #".format(self._nsplititer))
         print("# Number of 'Ended' trajectories: {:12} #".format(self.countEndedTraj()))
@@ -405,7 +412,7 @@ class Database:
         print("# Current splitting iter counter: {:12} #".format(self._ksplit))
         if self.countEndedTraj() < self._ntraj:
             print("# Transition probability: {:24} #".format(self.getTransitionProbability()))
-        print("################################################")
+        print(prettyLine)
 
     def plotScoreFunctions(self, fname: str = None) -> None:
         """Plot the score as function of time for all trajectories."""
