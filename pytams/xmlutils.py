@@ -54,11 +54,11 @@ def manualCastStr(type_str: str,
                 castedElem = False
         elif type_str == "ndarray[float]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-            castedElem = np.fromstring(stripped_text, sep=" ")
+            castedElem = np.fromstring(stripped_text, dtype=float, sep=" ")
         elif type_str == "ndarray[int]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
             castedElem = np.fromstring(stripped_text, dtype=int, sep=" ")
-        elif type_str == "ndarray":     # Default ndarray to float
+        elif type_str == "ndarray":     # Default ndarray to float (backward comp.)
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
             castedElem = np.fromstring(stripped_text, sep=" ")
         elif type_str == "datetime":
