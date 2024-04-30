@@ -1,6 +1,7 @@
 import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from typing import Any
 import numpy as np
 
 
@@ -10,23 +11,23 @@ class XMLUtilsError(Exception):
     pass
 
 
-def manualCastSnap(elem: ET.Element):
+def manualCastSnap(elem: ET.Element) -> Any:
     """Manually cast XML snapshot state."""
     return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
 
 
-def manualCastSnapNoise(elem: ET.Element):
+def manualCastSnapNoise(elem: ET.Element) -> Any:
     """Manually cast XML snapshot noise."""
     return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
 
 
-def manualCast(elem: ET.Element):
+def manualCast(elem: ET.Element) -> Any:
     """Manually cast XML elements reads."""
     return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
 
 
 def manualCastStr(type_str: str,
-                  elem_text: str):
+                  elem_text: str) -> Any:
     """Manually cast from strings."""
     if type_str == "int":
         return int(elem_text)
@@ -43,7 +44,13 @@ def manualCastStr(type_str: str,
             return False
     elif (type_str == "str" or type_str == "str_"):
         return str(elem_text)
-    elif type_str == "ndarray":
+    elif type_str == "ndarray[float]":
+        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+        return np.fromstring(stripped_text, sep=" ")
+    elif type_str == "ndarray[int]":
+        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+        return np.fromstring(stripped_text, dtype=int, sep=" ")
+    elif type_str == "ndarray":     # Default ndarray to float
         stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
         return np.fromstring(stripped_text, sep=" ")
     elif type_str == "datetime":
@@ -67,7 +74,7 @@ def dict_to_xml(tag: str, d: dict) -> ET.Element:
     for key, val in d.items():
         # Append an Element
         child = ET.Element(key)
-        child.attrib["type"] = type(val).__name__
+        child.attrib["type"] = get_val_type(val)
         child.text = str(val)
         elem.append(child)
 
@@ -90,16 +97,38 @@ def xml_to_dict(elem: ET.Element) -> dict:
 
     return d
 
+def get_val_type(val: Any) -> str:
+    """Return the type of val.
 
-def new_element(key: str, val) -> ET.Element:
+    Args:
+        val: a value
+
+    Return:
+        val type
+    """
+    base_type = type(val).__name__
+    if base_type == "ndarray":
+        if val.dtype == "float64":
+            base_type = base_type + "[float]"
+        elif val.dtype == "int64":
+            base_type = base_type + "[int]"
+        return base_type
+    else:
+        return base_type
+
+
+def new_element(key: str, val: Any) -> ET.Element:
     """Return an Element from two args.
 
     Args:
         key: the element key
         val: the element value
+
+    Return:
+        an ElementTree element
     """
     elem = ET.Element(key)
-    elem.attrib["type"] = type(val).__name__
+    elem.attrib["type"] = get_val_type(val)
     elem.text = str(val)
 
     return elem
@@ -108,8 +137,8 @@ def new_element(key: str, val) -> ET.Element:
 def make_xml_snapshot(idx: int,
                       time: float,
                       score: float,
-                      noise,
-                      state) -> ET.Element:
+                      noise: Any,
+                      state: Any) -> ET.Element:
     """Return a snapshot in XML elemt format.
 
     Args:
@@ -122,9 +151,9 @@ def make_xml_snapshot(idx: int,
     elem = ET.Element("Snap_{:07d}".format(idx))
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
-    elem.attrib["noise_type"] = type(noise).__name__
+    elem.attrib["noise_type"] = get_val_type(noise)
     elem.attrib["noise"] = str(noise)
-    elem.attrib["state_type"] = type(state).__name__
+    elem.attrib["state_type"] = get_val_type(state)
     elem.text = str(state)
 
     return elem
