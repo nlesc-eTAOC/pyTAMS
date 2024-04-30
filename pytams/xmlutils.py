@@ -2,7 +2,6 @@ import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any
-from typing import Optional
 import numpy as np
 
 

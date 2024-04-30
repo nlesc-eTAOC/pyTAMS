@@ -1,10 +1,45 @@
 """Tests for the pytams.database class."""
 import os
 import shutil
+import pytest
 import toml
 from pytams.database import Database
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
+
+
+def test_failedDBInitNoNTraj():
+    """Test init of TDB from scratch."""
+    fmodel = DoubleWellModel
+    params_load_db = {}
+    with pytest.raises(Exception):
+        Database(fmodel, params_load_db)
+
+
+def test_failedDBInitNoSplit():
+    """Test init of TDB from scratch."""
+    fmodel = DoubleWellModel
+    params_load_db = {}
+    with pytest.raises(Exception):
+        Database(fmodel, params_load_db, ntraj=10)
+
+
+def test_wrongFormat():
+    """Test database with unsupported format."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_format": "WRONG"}}
+    tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    tdb._readHeader()
+    with pytest.raises(Exception):
+        tdb._writeMetadata()
+
+
+def test_emptyDB():
+    """Test database access on empty database."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_format": "WRONG"}}
+    tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    assert tdb.getTransitionProbability() == 0.0
 
 
 def test_generateAndLoadTDB():

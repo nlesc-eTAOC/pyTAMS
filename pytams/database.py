@@ -53,7 +53,6 @@ class Database:
         self._verbose = False
         self._save = False
         self._load : Union[str,None] = None
-        self._format = "XML"
         self._parameters = params
 
         # Trajectory Pool
@@ -68,6 +67,7 @@ class Database:
         self._save = params.get("database", {}).get("DB_save", False)
         self._prefix = params.get("database", {}).get("DB_prefix", "TAMS")
         self._load = params.get("database", {}).get("DB_restart", None)
+        self._format = params.get("database", {}).get("DB_format", "XML")
         self._name = "{}.tdb".format(self._prefix)
 
         if self._load:
