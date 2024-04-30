@@ -6,7 +6,9 @@ import toml
 from pytams.daskutils import DaskRunner
 from pytams.database import Database
 from pytams.database import formTrajID
+from pytams.database import getIndexFromID
 from pytams.trajectory import Trajectory
+from pytams.trajectory import WallTimeLimit
 
 
 class TAMSError(Exception):
@@ -134,9 +136,9 @@ class TAMS:
             for T in self._tdb.trajList():
                 tasks_p.append(runner.make_promise(task_delayed,
                                                    T,
-                                                   self.remaining_walltime(),
-                                                   self._tdb._save,
-                                                   self._tdb._name))
+                                                   self._startTime + self._wallTime,
+                                                   self._tdb.save(),
+                                                   self._tdb.name()))
 
             self._tdb.updateTrajList(runner.execute_promises(tasks_p))
 
@@ -195,6 +197,34 @@ class TAMS:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
 
+        # Check the database for unfinished splitting iteration when restarting.
+        # At this point, branching has been done, but advancing to final
+        # time is still ongoing.
+        if self._tdb.get_ongoing():
+            print("Unfinished splitting iteration detected, traj {} need(s) finishing".format(self._tdb.get_ongoing()))
+            with DaskRunner(self.parameters,
+                            self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
+                tasks_p = []
+                for i in self._tdb.get_ongoing():
+                    T = self._tdb.getTraj(i)
+                    if not T.hasEnded():
+                        tasks_p.append(runner.make_promise(task_delayed,
+                                                           T,
+                                                           self._startTime + self._wallTime,
+                                                           self._tdb.save(),
+                                                           self._tdb.name()))
+                finished_traj = runner.execute_promises(tasks_p)
+
+                for T in finished_traj:
+                    self._tdb.overwriteTraj(getIndexFromID(T.id()), T)
+
+                # Clear list of ongoing branches
+                self._tdb.reset_ongoing()
+
+                # increment splitting index
+                k = self._tdb.kSplit() + runner.dask_nworker
+                self._tdb.setKSplit(k)
+
         # Initialize splitting iterations counter
         k = self._tdb.kSplit()
 
@@ -237,17 +267,29 @@ class TAMS:
                                             self._tdb.getTraj(rest_idx[i]),
                                             self._tdb.getTraj(min_idx_list[i]).id(),
                                             min_vals[i],
-                                            self.remaining_walltime())
+                                            self._startTime + self._wallTime,
+                                            self._tdb.save(),
+                                            self._tdb.name())
                     )
                 restartedTrajs = runner.execute_promises(tasks_p)
 
-                # Update the trajectory pool and database
-                k = k + runner.dask_nworker
-                self._tdb.setKSplit(k)
-                for i in range(len(min_idx_list)):
-                    self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
+                if self.out_of_time():
+                    # Update the trajectory database
+                    for i in range(len(min_idx_list)):
+                        self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
 
-                self._tdb.saveSplittingData()
+                    # Save splitting data with ongoing trajectories
+                    # but do not increment splitting index yet
+                    self._tdb.saveSplittingData(min_idx_list)
+
+                else:
+                    # Update the trajectory database, increment splitting index
+                    k = k + runner.dask_nworker
+                    self._tdb.setKSplit(k)
+                    for i in range(len(min_idx_list)):
+                        self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
+
+                    self._tdb.saveSplittingData()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -309,25 +351,35 @@ class TAMS:
 
 
 def task_delayed(traj: Trajectory,
-                 wall_time: float,
+                 wall_time_info: float,
                  saveDB: bool,
                  nameDB: str) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
         traj: a trajectory
-        wall_time: a time limit to advance the trajectory
+        wall_time_info: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of the database
     """
+    wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
-        print("Advancing {}".format(traj.id()), flush=True)
-        traj.advance(walltime=wall_time)
+        print("Advancing {} [time left: {}]".format(traj.id(), wall_time, ))
         if saveDB:
             traj.setCheckFile(
                 "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
             )
-            traj.store()
+        try:
+            traj.advance(walltime=wall_time)
+        except WallTimeLimit:
+            print("Trajectory advance ran out of time !")
+            if saveDB:
+                traj.store()
+        except Exception:
+            print("Advance ran into an error !")
+        else:
+            if saveDB:
+                traj.store()
 
     return traj
 
@@ -337,7 +389,9 @@ def worker(
     fromTraj: Trajectory,
     rstId: str,
     min_val: float,
-    wall_time: float,
+    wall_time_info: float,
+    saveDB: bool,
+    nameDB: str,
 ) -> Trajectory:
     """A worker to restart trajectories.
 
@@ -346,10 +400,28 @@ def worker(
         fromTraj: a trajectory to restart from
         rstId: Id of the trajectory being worked on
         min_val: the value of the score function to restart from
-        wall_time: a time limit to advance the trajectory
+        wall_time_info: the time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of DB to save the traj in (Opt)
     """
+    print("Restarting {} from {}".format(rstId, fromTraj.id(), ))
+    wall_time = wall_time_info - time.monotonic()
     traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+    if saveDB:
+        traj.setCheckFile(
+            "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
+        )
 
-    traj.advance(walltime=wall_time)
+    try:
+        traj.advance(walltime=wall_time)
+    except WallTimeLimit:
+        print("Trajectory advance ran out of time !")
+        if saveDB:
+            traj.store()
+    except Exception:
+        print("Advance ran into an error !")
+    else:
+        if saveDB:
+            traj.store()
 
     return traj
