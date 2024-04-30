@@ -77,6 +77,9 @@ class TAMS:
         if self._tdb.isEmpty():
             self.init_trajectory_pool()
 
+    def nTraj(self) -> int:
+        """Return the number of trajectory used for TAMS."""
+        return self._nTraj
 
     def verbosePrint(self, message: str) -> None:
         """Print only in verbose mode."""
@@ -194,11 +197,8 @@ class TAMS:
 
         return False, maxes
 
-
-    def do_multilevel_splitting(self) -> None:
-        """Schedule splitting of the initial pool of stochastic trajectories."""
-        self.verbosePrint("Using multi-level splitting to get the probability")
-
+    def finished_ongoing_splitting(self) -> None:
+        """Check and finish unfinished splitting iterations."""
         # Check the database for unfinished splitting iteration when restarting.
         # At this point, branching has been done, but advancing to final
         # time is still ongoing.
@@ -227,6 +227,14 @@ class TAMS:
                 # increment splitting index
                 k = self._tdb.kSplit() + runner.dask_nworker
                 self._tdb.setKSplit(k)
+
+
+    def do_multilevel_splitting(self) -> None:
+        """Schedule splitting of the initial pool of stochastic trajectories."""
+        self.verbosePrint("Using multi-level splitting to get the probability")
+
+        # Finish any unfinished splitting iteration
+        self.finished_ongoing_splitting()
 
         # Initialize splitting iterations counter
         k = self._tdb.kSplit()
@@ -351,11 +359,6 @@ class TAMS:
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
 
         return trans_prob
-
-    def nTraj(self) -> int:
-        """Return the number of trajectory used for TAMS."""
-        return self._nTraj
-
 
 def task_delayed(traj: Trajectory,
                  wall_time_info: float,
