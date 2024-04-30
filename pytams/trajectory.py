@@ -9,6 +9,12 @@ from pytams.xmlutils import read_xml_snapshot
 from pytams.xmlutils import xml_to_dict
 
 
+class WallTimeLimit(Exception):
+    """Exception for running into wall time limit."""
+
+    pass
+
+
 class Trajectory:
     """A class defining a stochastic trajectory.
 
@@ -94,6 +100,10 @@ class Trajectory:
 
         if self._has_ended:
             self._fmodel.clear()
+
+        if remainingTime < 0.05 * walltime:
+            raise WallTimeLimit("{} ran out of time in advance()".format(self._tid))
+
 
     @classmethod
     def restoreFromChk(
