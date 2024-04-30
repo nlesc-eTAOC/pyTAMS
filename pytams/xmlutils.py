@@ -85,7 +85,7 @@ def dict_to_xml(tag: str, d: dict) -> ET.Element:
     return elem
 
 
-def xml_to_dict(elem: Optional[ET.Element] = None) -> dict:
+def xml_to_dict(elem: ET.Element) -> dict:
     """Return an dictionnary an Element.
 
     Args:
