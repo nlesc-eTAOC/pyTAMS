@@ -23,6 +23,55 @@ def test_generateAndLoadTDB():
     tdb = Database(fmodel, params_load_db)
     assert tdb
 
+def test_accessPoolLength():
+    """Test accessing database trajectory pool length."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    assert tdb.isEmpty() is False
+
+
+def test_accessEndedCount():
+    """Test accessing database trajectory metadata."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    assert tdb.countEndedTraj() == 100
+
+
+def test_accessConvergedCount():
+    """Test accessing database trajectory metadata."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    assert tdb.countConvergedTraj() == 100
+
+
+def test_replaceTrajInDB():
+    """Test replacing a trajectory in the database."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+
+    traj_zero = tdb.getTraj(0)
+    tdb.overwriteTraj(1,traj_zero)
+    assert tdb.getTraj(1).id() == "traj000000"
+
+
+def test_accessTrajDataInDB():
+    """Test accessing a trajectory in the database."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+
+    traj = tdb.getTraj(0)
+    times = traj.getTimeArr()
+    scores = traj.getScoreArr()
+    noises = traj.getNoiseArr()
+    assert times.size > 0
+    assert scores.size > 0
+    assert noises.size > 0
+
 def test_exploreTDB():
     """Test generation of TDB and loading the TDB."""
     fmodel = DoubleWellModel
@@ -31,7 +80,6 @@ def test_exploreTDB():
     tdb = Database(fmodel, params_load_db)
     tdb.info()
     tdb.plotScoreFunctions("test.png")
-    assert tdb.countEndedTraj() == 100
     assert tdb.getTransitionProbability() > 0.2
     shutil.rmtree("dwTest.tdb")
     os.remove("test.png")
