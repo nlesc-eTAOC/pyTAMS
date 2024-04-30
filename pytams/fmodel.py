@@ -1,3 +1,7 @@
+from typing import Any
+from typing import Optional
+
+
 class ForwardModelError(Exception):
     """Exception class for the forward model."""
 
@@ -18,7 +22,9 @@ class ForwardModel:
     if those functions are not overritten in actual model.
     """
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
+    def __init__(self,
+                 params: Optional[dict] = None,
+                 ioprefix: Optional[str] = None):
         """Might need something here."""
         pass
 
@@ -33,27 +39,27 @@ class ForwardModel:
         """
         raise TemplateCallError("Calling advance() method !")
 
-    def getCurState(self):
+    def getCurState(self) -> Any:
         """Return the current state of the model."""
         raise TemplateCallError("Calling getCurState() method !")
 
-    def setCurState(self, state):
+    def setCurState(self, state : Any) -> Any:
         """Set the current state of the model."""
         raise TemplateCallError("Calling setCurState method !")
 
-    def score(self):
+    def score(self) -> Any:
         """Return the model's current state score."""
         raise TemplateCallError("Calling score method !")
 
-    def noise(self):
+    def noise(self) -> Any:
         """Return the model's latest noise increment."""
         raise TemplateCallError("Calling noise method !")
 
-    def clear(self):
+    def clear(self) -> None:
         """Destroy internal data."""
         pass
 
     @classmethod
-    def name(cls):
+    def name(cls) -> str:
         """Return a the model name."""
         return "TemplateForwardModel"

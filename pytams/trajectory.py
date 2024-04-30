@@ -1,12 +1,22 @@
+from __future__ import annotations
 import os
 import time
 import xml.etree.ElementTree as ET
+from typing import Any
+from typing import Optional
 import numpy as np
+import numpy.typing as npt
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
 from pytams.xmlutils import new_element
 from pytams.xmlutils import read_xml_snapshot
 from pytams.xmlutils import xml_to_dict
+
+
+class WallTimeLimit(Exception):
+    """Exception for running into wall time limit."""
+
+    pass
 
 
 class Trajectory:
@@ -17,7 +27,8 @@ class Trajectory:
     score function along the way.
     """
 
-    def __init__(self, fmodel_t,
+    def __init__(self,
+                 fmodel_t: Any,
                  parameters: dict,
                  trajId: str) -> None:
         """Create a trajectory.
@@ -30,17 +41,17 @@ class Trajectory:
         self._fmodel = fmodel_t(parameters, trajId)
         self._parameters = parameters
 
-        self._t_cur = 0.0
-        self._t_end = parameters.get("trajectory",{}).get("end_time", 1.0)
-        self._dt = parameters.get("trajectory",{}).get("step_size", 0.1)
+        self._t_cur : float = 0.0
+        self._t_end : float = parameters.get("trajectory",{}).get("end_time", 1.0)
+        self._dt : float = parameters.get("trajectory",{}).get("step_size", 0.1)
         self._stoichForcingAmpl = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
         self._convergedVal = parameters.get("trajectory",{}).get("targetscore", 0.95)
 
         # List of new maximums
-        self._time = []
-        self._state = []
-        self._score = []
-        self._noise = []
+        self._time : list[float] = []
+        self._state : list[Any] = []
+        self._score : list[float] = []
+        self._noise : list [Any] = []
 
         self._score_max = 0.0
 
@@ -95,13 +106,17 @@ class Trajectory:
         if self._has_ended:
             self._fmodel.clear()
 
+        if remainingTime < 0.05 * walltime:
+            raise WallTimeLimit("{} ran out of time in advance()".format(self._tid))
+
+
     @classmethod
     def restoreFromChk(
         cls,
         chkPoint: str,
-        fmodel_t,
+        fmodel_t: Any,
         parameters: dict,
-    ):
+    ) -> Trajectory:
         """Return a trajectory restored from an XML chkfile."""
         assert os.path.exists(chkPoint) is True
 
@@ -121,22 +136,23 @@ class Trajectory:
         restTraj._has_converged = metadata["converged"]
 
         snapshots = root.find("snapshots")
-        for snap in snapshots:
-            time, score, noise, state = read_xml_snapshot(snap)
-            restTraj._time.append(time)
-            restTraj._score.append(score)
-            restTraj._noise.append(noise)
-            restTraj._state.append(state)
+        if snapshots is not None:
+            for snap in snapshots:
+                time, score, noise, state = read_xml_snapshot(snap)
+                restTraj._time.append(time)
+                restTraj._score.append(score)
+                restTraj._noise.append(noise)
+                restTraj._state.append(state)
 
         return restTraj
 
     @classmethod
     def restartFromTraj(
         cls,
-        traj,
+        traj: Trajectory,
         rstId: str,
         score: float,
-    ):
+    ) -> Trajectory:
         """Create a new trajectory.
 
         Loading the beginning of a provided trajectory
@@ -175,7 +191,7 @@ class Trajectory:
 
         return restTraj
 
-    def store(self, traj_file: str = None) -> None:
+    def store(self, traj_file: Optional[str] = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self._tid)
         root.append(dict_to_xml("params", self._parameters["trajectory"]))
@@ -231,15 +247,15 @@ class Trajectory:
         """Return the trajectory check file name."""
         return self._checkFile
 
-    def getTimeArr(self) -> np.array:
+    def getTimeArr(self) -> npt.NDArray[np.float64]:
         """Return the trajectory time instants."""
         return np.array(self._time)
 
-    def getScoreArr(self) -> np.array:
+    def getScoreArr(self) -> npt.NDArray[np.float64]:
         """Return the trajectory scores."""
         return np.array(self._score)
 
-    def getNoiseArr(self) -> np.array:
+    def getNoiseArr(self) -> npt.NDArray[Any]:
         """Return the trajectory noises."""
         return np.array(self._noise)
 

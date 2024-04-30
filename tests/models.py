@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 import numpy as np
 from pytams.fmodel import ForwardModel
 
@@ -10,7 +11,9 @@ class SimpleFModel(ForwardModel):
     10 times the state, ceiled to 1.0
     """
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
+    def __init__(self,
+                 params: Optional[dict] = None,
+                 ioprefix: Optional[str] = None):
         """Override the template."""
         self._state = 0.0
 
@@ -55,13 +58,16 @@ class DoubleWellModel(ForwardModel):
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
+    def __init__(self,
+                 params: Optional[dict] = None,
+                 ioprefix: Optional[str] = None):
         """Override the template."""
         self._state = self.initCondition()
+        self._slow_factor = params.get("model",{}).get("slow_factor",0.00001)
 
     def __RHS(self, state):
         """Double well RHS function."""
-        sleepTime = float(0.00001 * np.random.rand(1).item())
+        sleepTime = float(self._slow_factor * np.random.rand(1).item())
         time.sleep(sleepTime)
         return np.array([state[0] - state[0] ** 3, -2 * state[1]])
 

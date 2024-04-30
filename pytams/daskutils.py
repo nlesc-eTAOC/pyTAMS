@@ -1,6 +1,8 @@
+from __future__ import annotations
 import ntpath
 import os
 import shutil
+from typing import Any
 import dask
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
@@ -68,25 +70,25 @@ class DaskRunner:
         else:
             raise DaskRunnerError("Unknown [dask] backend: {}".format(self.dask_backend))
 
-    def __enter__(self):
+    def __enter__(self) -> DaskRunner:
         """To enable use of with."""
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args : list[str]) -> None:
         """Executed leaving with scope."""
         if self.cluster:
             self.cluster.close()
         self.client.close()
 
-    def make_promise(self, task, *args):
+    def make_promise(self, task : Any, *args : Any) -> Any:
         """Return a promise for a task."""
         return dask.delayed(task)(*args)
 
-    def just_delay(self, obj):
+    def just_delay(self, obj : Any) -> Any:
         """Delay an object."""
         return dask.delayed(obj)
 
-    def execute_promises(self, list_of_p: list):
+    def execute_promises(self, list_of_p: list) -> Any:
         """Execute a list of promises.
 
         Args:
