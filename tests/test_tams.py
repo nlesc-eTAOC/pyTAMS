@@ -114,3 +114,35 @@ def test_doublewellModel2WorkersRestoreTAMS():
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
     shutil.rmtree("dwTest.tdb")
+
+def test_doublewellSlowTAMS():
+    """Test TAMS run out of time with a slow doublewell."""
+    fmodel = DoubleWellModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 20.0},
+                   "database": {"DB_save": True, "DB_prefix": "dwTest"},
+                   "dask": {"nworker_init": 1, "nworker_iter": 1},
+                   "trajectory": {"end_time": 10.0, "step_size": 0.01,
+                                  "targetscore": 0.7, "stoichforcing" : 0.1},
+                   "model": {"slow_factor": 0.005}}
+                  , f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba <= 0.0
+
+def test_doublewellSlowRestoreTAMS():
+    """Test TAMS restarting a slow doublewell."""
+    fmodel = DoubleWellModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 10.0},
+                   "database": {"DB_save": True, "DB_prefix": "dwTest",
+                                "DB_restart": "dwTest.tdb"},
+                   "dask": {"nworker_init": 1, "nworker_iter": 1},
+                   "trajectory": {"end_time": 10.0, "step_size": 0.01,
+                                  "targetscore": 0.7, "stoichforcing" : 0.1},
+                   "model": {"slow_factor": 0.005}}
+                  , f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba <= 0.0
+    shutil.rmtree("dwTest.tdb")

@@ -332,6 +332,10 @@ class TAMS:
         # Perform multilevel splitting
         self.do_multilevel_splitting()
 
+        if self.out_of_time():
+            self.verbosePrint("Ran out of walltime ! Exiting now.")
+            return -1.0
+
         W = self._nTraj * self._tdb.weights()[-1]
         for i in range(len(self._tdb.biases())):
             W += self._tdb.biases()[i] * self._tdb.weights()[i]
