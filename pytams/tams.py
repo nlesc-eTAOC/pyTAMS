@@ -229,6 +229,17 @@ class TAMS:
                 self._tdb.setKSplit(k)
 
 
+    def get_restart_at_random(self, min_idx_list : list[int]) -> list[int]:
+        """Get a list of trajectory index to restart from at random."""
+        rng = np.random.default_rng()
+        rest_idx = [-1] * len(min_idx_list)
+        for i in range(len(min_idx_list)):
+            rest_idx[i] = min_idx_list[0]
+            while rest_idx[i] in min_idx_list:
+                rest_idx[i] = rng.integers(0, self._tdb.trajListLen())
+        return rest_idx
+
+
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
         self.verbosePrint("Using multi-level splitting to get the probability")
@@ -259,12 +270,7 @@ class TAMS:
                 min_vals = maxes[min_idx_list]
 
                 # Randomly select trajectory to branch from
-                rng = np.random.default_rng()
-                rest_idx = [-1] * len(min_idx_list)
-                for i in range(len(min_idx_list)):
-                    rest_idx[i] = min_idx_list[0]
-                    while rest_idx[i] in min_idx_list:
-                        rest_idx[i] = rng.integers(0, self._tdb.trajListLen())
+                rest_idx = self.get_restart_at_random(min_idx_list)
 
                 self._tdb.appendBias(len(min_idx_list))
                 self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._nTraj))
@@ -284,11 +290,11 @@ class TAMS:
                     )
                 restartedTrajs = runner.execute_promises(tasks_p)
 
-                if self.out_of_time():
-                    # Update the trajectory database
-                    for i in range(len(min_idx_list)):
-                        self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
+                # Update the trajectory database
+                for i in range(len(min_idx_list)):
+                    self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
 
+                if self.out_of_time():
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
                     self._tdb.saveSplittingData(min_idx_list.tolist())
@@ -297,9 +303,6 @@ class TAMS:
                     # Update the trajectory database, increment splitting index
                     k = k + runner.dask_nworker
                     self._tdb.setKSplit(k)
-                    for i in range(len(min_idx_list)):
-                        self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
-
                     self._tdb.saveSplittingData()
 
     def compute_probability(self) -> float:
