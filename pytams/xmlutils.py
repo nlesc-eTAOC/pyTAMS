@@ -29,41 +29,45 @@ def manualCast(elem: ET.Element) -> Any:
     return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
 
 
+# Plain old data type cast in map
+POD_cast_dict = {
+        "int": int,
+        "float": float,
+        "float64": np.float64,
+        "complex": complex,
+        "str": str,
+        "str_": str,
+        "dict": ast.literal_eval,
+        }
+
+
 def manualCastStr(type_str: str,
                   elem_text: str) -> Any:
     """Manually cast from strings."""
-    if type_str == "int":
-        return int(elem_text)
-    elif type_str == "float":
-        return float(elem_text)
-    elif type_str == "float64":
-        return np.float64(elem_text)
-    elif type_str == "complex":
-        return complex(elem_text)
-    elif type_str == "bool":
-        if (elem_text == "True"):
-            return True
+    try:
+        castedElem = POD_cast_dict[type_str](elem_text)
+    except KeyError:
+        if type_str == "bool":
+            if (elem_text == "True"):
+                castedElem = True
+            else:
+                castedElem = False
+        elif type_str == "ndarray[float]":
+            stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+            castedElem = np.fromstring(stripped_text, sep=" ")
+        elif type_str == "ndarray[int]":
+            stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+            castedElem = np.fromstring(stripped_text, dtype=int, sep=" ")
+        elif type_str == "ndarray":     # Default ndarray to float
+            stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
+            castedElem = np.fromstring(stripped_text, sep=" ")
+        elif type_str == "datetime":
+            castedElem = datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
         else:
-            return False
-    elif (type_str == "str" or type_str == "str_"):
-        return str(elem_text)
-    elif type_str == "ndarray[float]":
-        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-        return np.fromstring(stripped_text, sep=" ")
-    elif type_str == "ndarray[int]":
-        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-        return np.fromstring(stripped_text, dtype=int, sep=" ")
-    elif type_str == "ndarray":     # Default ndarray to float
-        stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-        return np.fromstring(stripped_text, sep=" ")
-    elif type_str == "datetime":
-        return datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
-    elif type_str == "dict":
-        return ast.literal_eval(elem_text)
-    else:
-        raise XMLUtilsError(
-            "Type {} not handled by manualCast !".format(type_str)
-        )
+            raise XMLUtilsError(
+                "Type {} not handled by manualCast !".format(type_str)
+            )
+    return castedElem
 
 
 def dict_to_xml(tag: str, d: dict) -> ET.Element:
