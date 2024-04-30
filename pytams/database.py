@@ -23,6 +23,11 @@ def formTrajID(n: int) -> str:
     return "traj{:06}".format(n)
 
 
+def getIndexFromID(identity: str) -> int:
+    """Helper to get trajectory index from ID string."""
+    return int(identity[-6:])
+
+
 class Database:
     """A database class for TAMS."""
 
@@ -56,6 +61,7 @@ class Database:
         self._ksplit = 0
         self._l_bias = []
         self._weights = [1.0]
+        self._ongoing = None
 
         self._save = params.get("database", {}).get("DB_save", False)
         self._prefix = params.get("database", {}).get("DB_prefix", "TAMS")
@@ -99,7 +105,7 @@ class Database:
 
             os.mkdir(self._name)
 
-            # TODO: remove this, mixed format is weird
+            # Save the runtime options
             with open("{}/input_params.toml".format(self._name), 'w') as f:
                 toml.dump(self._parameters, f)
 
@@ -170,7 +176,8 @@ class Database:
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
 
-    def saveSplittingData(self) -> None:
+    def saveSplittingData(self,
+                          ongoing_trajs: list[int] = None) -> None:
         """Write splitting data."""
         if not self._save:
             return
@@ -181,8 +188,10 @@ class Database:
             root = ET.Element("splitting")
             root.append(new_element("nsplititer", self._nsplititer))
             root.append(new_element("ksplit", self._ksplit))
-            root.append(new_element("bias", np.array(self._l_bias)))
-            root.append(new_element("weight", np.array(self._weights)))
+            root.append(new_element("bias", np.array(self._l_bias, dtype=int)))
+            root.append(new_element("weight", np.array(self._weights, dtype=float)))
+            if ongoing_trajs:
+                root.append(new_element("ongoing", np.array(ongoing_trajs)))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(splittingDataFile)
@@ -203,6 +212,8 @@ class Database:
             self._ksplit = datafromxml["ksplit"]
             self._l_bias = datafromxml["bias"].tolist()
             self._weights = datafromxml["weight"].tolist()
+            if "ongoing" in datafromxml:
+                self._ongoing = datafromxml["ongoing"].tolist()
         else:
             raise DatabaseError(
                     "Unsupported TAMS database format: {} !".format(self._format)
@@ -295,6 +306,14 @@ class Database:
             readInParams = toml.load(f)
         self._parameters.update(readInParams)
 
+    def name(self) -> str:
+        """Accessor to DB name."""
+        return self._name
+
+    def save(self) -> bool:
+        """Accessor to DB save bool."""
+        return self._save
+
     def appendTraj(self, a_traj: Trajectory) -> None:
         """Append a Trajectory to the internal list."""
         self._trajs_db.append(a_traj)
@@ -313,10 +332,6 @@ class Database:
                       traj: Trajectory) -> None:
         """Deep copy a trajectory into internal list."""
         self._trajs_db[idx] = copy.deepcopy(traj)
-        if self._save:
-            tid = self._trajs_db[idx].id()
-            self._trajs_db[idx].setCheckFile("{}/{}/{}.xml".format(self._name, "trajectories", tid))
-            self._trajs_db[idx].store()
 
     def headerFile(self) -> str:
         """Helper returning the DB header file."""
@@ -361,6 +376,14 @@ class Database:
     def kSplit(self) -> int:
         """Splitting iteration counter."""
         return self._ksplit
+
+    def reset_ongoing(self) -> None:
+        """Reset the list of trajectories undergoing branching."""
+        self._ongoing = None
+
+    def get_ongoing(self) -> list[int] | None:
+        """Return the list of trajectories undergoing branching or None."""
+        return self._ongoing
 
     def setKSplit(self, ksplit: int) -> None:
         """Set splitting iteration counter."""
