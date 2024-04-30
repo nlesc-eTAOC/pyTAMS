@@ -95,3 +95,15 @@ line-length = 120
 known-first-party = ["pytams"]
 force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_untyped_calls = false
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["toml","dask_jobqueue"]
+ignore_missing_imports = true

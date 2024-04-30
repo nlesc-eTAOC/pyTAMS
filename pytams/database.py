@@ -4,6 +4,9 @@ import shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+from typing import Optional
+from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
@@ -32,10 +35,10 @@ class Database:
     """A database class for TAMS."""
 
     def __init__(self,
-                 fmodel_t,
+                 fmodel_t: Any,
                  params: dict,
-                 ntraj: int = None,
-                 nsplititer: int = None) -> None:
+                 ntraj: Optional[int] = None,
+                 nsplititer: Optional[int] = None) -> None:
         """Init a TAMS database.
 
         Args:
@@ -47,20 +50,19 @@ class Database:
         self._fmodel_t = fmodel_t
 
         # Metadata
-        self._name = None
         self._verbose = False
         self._save = False
-        self._load = None
+        self._load : Union[str,None] = None
         self._format = "XML"
         self._parameters = params
 
         # Trajectory Pool
-        self._trajs_db = []
+        self._trajs_db : list[Trajectory] = []
 
         # Splitting data
         self._ksplit = 0
-        self._l_bias = []
-        self._weights = [1.0]
+        self._l_bias : list[int] = []
+        self._weights : list[float] = [1.0]
         self._ongoing = None
 
         self._save = params.get("database", {}).get("DB_save", False)
@@ -145,17 +147,23 @@ class Database:
             )
 
     def _readHeader(self) -> tuple[str, datetime, str]:
+        """Read the database Metadata to header."""
         if self._load:
-            tree = ET.parse(self.headerFile())
-            root = tree.getroot()
-            mdata = root.find("metadata")
-            datafromxml = xml_to_dict(mdata)
-            pyTAMS_version = datafromxml["pyTAMS_version"]
-            db_date = datafromxml["date"]
-            db_model = datafromxml["model_t"]
-            return pyTAMS_version, db_date, db_model
+            if self._format == "XML":
+                tree = ET.parse(self.headerFile())
+                root = tree.getroot()
+                mdata = root.find("metadata")
+                datafromxml = xml_to_dict(mdata)
+                pyTAMS_version = datafromxml["pyTAMS_version"]
+                db_date = datafromxml["date"]
+                db_model = datafromxml["model_t"]
+                return pyTAMS_version, db_date, db_model
+            else:
+                raise DatabaseError(
+                        "Unsupported TAMS database format: {} !".format(self._format)
+                )
         else:
-            return None, None, None
+            return "Error", datetime.min, "Error"
 
 
     def appendTrajsToDB(self) -> None:
@@ -177,7 +185,7 @@ class Database:
             tree.write(databaseFile)
 
     def saveSplittingData(self,
-                          ongoing_trajs: list[int] = None) -> None:
+                          ongoing_trajs: Optional[list[int]] = None) -> None:
         """Write splitting data."""
         if not self._save:
             return
@@ -221,6 +229,7 @@ class Database:
 
     def _restoreTrajDB(self) -> None:
         """Initialize TAMS from a stored trajectory database."""
+        assert(self._load is not None)
         if os.path.exists(self._load):
             print("Load TAMS database: {}".format(self._load))
 
@@ -261,6 +270,7 @@ class Database:
             T_entry = root.find(trajId)
             if T_entry is not None:
                 chkFile = T_entry.text
+                assert(chkFile is not None)
                 if os.path.exists(chkFile):
                     nTrajRestored += 1
                     self._trajs_db.append(
@@ -381,7 +391,7 @@ class Database:
         """Reset the list of trajectories undergoing branching."""
         self._ongoing = None
 
-    def get_ongoing(self) -> list[int] | None:
+    def get_ongoing(self) -> Union[list[int],None]:
         """Return the list of trajectories undergoing branching or None."""
         return self._ongoing
 
@@ -419,7 +429,7 @@ class Database:
             return trans_prob
 
 
-    def info(self):
+    def info(self) -> None:
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
         prettyLine = "################################################"
@@ -437,7 +447,8 @@ class Database:
             print("# Transition probability: {:24} #".format(self.getTransitionProbability()))
         print(prettyLine)
 
-    def plotScoreFunctions(self, fname: str = None) -> None:
+    def plotScoreFunctions(self,
+                           fname: Optional[str] = None) -> None:
         """Plot the score as function of time for all trajectories."""
         if not fname:
             pltfile = Path(self._name).stem + "_scores.png"

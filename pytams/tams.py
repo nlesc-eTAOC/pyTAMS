@@ -1,6 +1,8 @@
 import argparse
 import os
 import time
+from typing import Any
+from typing import Optional
 import numpy as np
 import toml
 from pytams.daskutils import DaskRunner
@@ -16,7 +18,7 @@ class TAMSError(Exception):
 
     pass
 
-def parse_cl_args(a_args: list = None) -> argparse.Namespace :
+def parse_cl_args(a_args: Optional[list[str]] = None) -> argparse.Namespace :
     """Parse provided list or default CL argv.
 
     Args:
@@ -38,8 +40,8 @@ class TAMS:
     """
 
     def __init__(self,
-                 fmodel_t,
-                 a_args: list = None) -> None:
+                 fmodel_t : Any,
+                 a_args: Optional[list[str]] = None) -> None:
         """Initialize a TAMS run.
 
         Args:
@@ -59,9 +61,9 @@ class TAMS:
 
         # Parse user-inputs
         self.v = self.parameters["tams"].get("verbose", False)
-        self._nTraj = self.parameters["tams"].get("ntrajectories", 500)
-        self._nSplitIter = self.parameters["tams"].get("nsplititer", 2000)
-        self._wallTime = self.parameters["tams"].get("walltime", 24.0*3600.0)
+        self._nTraj : int = self.parameters["tams"].get("ntrajectories", 500)
+        self._nSplitIter : int = self.parameters["tams"].get("nsplititer", 2000)
+        self._wallTime : float = self.parameters["tams"].get("walltime", 24.0*3600.0)
         self._plot_diags = self.parameters["tams"].get("diagnostics", False)
 
         # Database
@@ -71,7 +73,7 @@ class TAMS:
                              self._nSplitIter)
 
         # Initialize
-        self._startTime = time.monotonic()
+        self._startTime : float = time.monotonic()
         if self._tdb.isEmpty():
             self.init_trajectory_pool()
 
@@ -110,7 +112,7 @@ class TAMS:
         return self.remaining_walltime() < 0.05 * self._wallTime
 
 
-    def init_trajectory_pool(self):
+    def init_trajectory_pool(self) -> None:
         """Initialize the trajectory pool."""
         self.hasEnded = np.full((self._nTraj), False)
         for n in range(self._nTraj):
@@ -200,12 +202,13 @@ class TAMS:
         # Check the database for unfinished splitting iteration when restarting.
         # At this point, branching has been done, but advancing to final
         # time is still ongoing.
-        if self._tdb.get_ongoing():
+        ongoing_list = self._tdb.get_ongoing()
+        if ongoing_list:
             print("Unfinished splitting iteration detected, traj {} need(s) finishing".format(self._tdb.get_ongoing()))
             with DaskRunner(self.parameters,
                             self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
                 tasks_p = []
-                for i in self._tdb.get_ongoing():
+                for i in ongoing_list:
                     T = self._tdb.getTraj(i)
                     if not T.hasEnded():
                         tasks_p.append(runner.make_promise(task_delayed,
@@ -280,7 +283,7 @@ class TAMS:
 
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
-                    self._tdb.saveSplittingData(min_idx_list)
+                    self._tdb.saveSplittingData(min_idx_list.tolist())
 
                 else:
                     # Update the trajectory database, increment splitting index

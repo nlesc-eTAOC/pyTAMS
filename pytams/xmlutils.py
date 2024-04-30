@@ -2,6 +2,7 @@ import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any
+from typing import Optional
 import numpy as np
 
 
@@ -13,16 +14,19 @@ class XMLUtilsError(Exception):
 
 def manualCastSnap(elem: ET.Element) -> Any:
     """Manually cast XML snapshot state."""
+    assert(elem.text is not None)
     return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
 
 
 def manualCastSnapNoise(elem: ET.Element) -> Any:
     """Manually cast XML snapshot noise."""
+    assert(elem.text is not None)
     return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
 
 
 def manualCast(elem: ET.Element) -> Any:
     """Manually cast XML elements reads."""
+    assert(elem.text is not None)
     return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
 
 
@@ -81,7 +85,7 @@ def dict_to_xml(tag: str, d: dict) -> ET.Element:
     return elem
 
 
-def xml_to_dict(elem: ET.Element) -> dict:
+def xml_to_dict(elem: Optional[ET.Element] = None) -> dict:
     """Return an dictionnary an Element.
 
     Args:
@@ -91,9 +95,10 @@ def xml_to_dict(elem: ET.Element) -> dict:
         a dictionary containing the element entries
     """
     d = {}
-    for child in elem:
-        tag, entry = manualCast(child)
-        d[tag] = entry
+    if elem:
+        for child in elem:
+            tag, entry = manualCast(child)
+            d[tag] = entry
 
     return d
 
@@ -159,7 +164,7 @@ def make_xml_snapshot(idx: int,
     return elem
 
 
-def read_xml_snapshot(snap: ET.Element):
+def read_xml_snapshot(snap: ET.Element) -> tuple[float, float, Any, Any]:
     """Return snapshot data from an XML snapshot elemt.
 
     Args:
