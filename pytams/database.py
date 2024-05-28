@@ -3,6 +3,7 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 from typing import Optional
@@ -123,7 +124,7 @@ class Database:
             headerFile = self.headerFile()
             root = ET.Element("header")
             mdata = ET.SubElement(root, "metadata")
-            mdata.append(new_element("pyTAMS_version", datetime.now()))
+            mdata.append(new_element("pyTAMS_version", version(__package__)))
             mdata.append(new_element("date", datetime.now()))
             mdata.append(new_element("model_t", self._fmodel_t.name()))
             tree = ET.ElementTree(root)
