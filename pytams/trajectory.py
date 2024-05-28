@@ -144,6 +144,8 @@ class Trajectory:
                 restTraj._noise.append(noise)
                 restTraj._state.append(state)
 
+        restTraj._fmodel.setCurState(restTraj._state[-1])
+
         return restTraj
 
     @classmethod
