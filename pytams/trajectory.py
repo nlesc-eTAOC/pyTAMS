@@ -18,6 +18,42 @@ class WallTimeLimit(Exception):
 
     pass
 
+class ForwardModelAdvance(Exception):
+    """Exception for forward model advance fail."""
+
+    pass
+
+class Snapshot:
+    """A class defining a snapshot.
+
+    Gathering what defines a snapshot into an object
+    """
+    def __init__(self,
+                 time: float,
+                 score: float,
+                 noise: Any,
+                 state: Optional[Any] = None) -> None:
+        """Create a snapshot.
+        """
+        self._time = time
+        self._score = score
+        self._noise = noise
+        if state is not None:
+            self._state = state
+
+    def Time(self) -> float:
+        """Return the snapshot time."""
+        return self._time
+    def Score(self) -> float:
+        """Return the snapshot score."""
+        return self._score
+    def Noise(self) -> Any:
+        """Return the snapshot noise."""
+        return self._noise
+    def State(self) -> Any:
+        """Return the snapshot state."""
+        return self._state
+
 
 class Trajectory:
     """A class defining a stochastic trajectory.
@@ -47,11 +83,8 @@ class Trajectory:
         self._stoichForcingAmpl = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
         self._convergedVal = parameters.get("trajectory",{}).get("targetscore", 0.95)
 
-        # List of new maximums
-        self._time : list[float] = []
-        self._state : list[Any] = []
-        self._score : list[float] = []
-        self._noise : list [Any] = []
+        # List of snapshots
+        self._snaps : list[Snapshot] = []
 
         self._score_max = 0.0
 
@@ -85,13 +118,18 @@ class Trajectory:
             and not self._has_converged
             and remainingTime >= 0.05 * walltime
         ):
-            dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
+            try:
+                dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
+            except:
+                raise ForwardModelAdvance("Error advancing fmodel from {} with dt {}".format(self._t_cur,self._dt))
             self._t_cur = self._t_cur + dt
             score = self._fmodel.score()
-            self._time.append(self._t_cur)
-            self._state.append(self._fmodel.getCurState())
-            self._score.append(score)
-            self._noise.append(self._fmodel.noise())
+            self._snaps.append(Snapshot(self._t_cur,
+                                        score,
+                                        self._fmodel.noise(),
+                                        self._fmodel.getCurState()
+                                        )
+                               )
             if score > self._score_max:
                 self._score_max = score
 
@@ -139,12 +177,9 @@ class Trajectory:
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
-                restTraj._time.append(time)
-                restTraj._score.append(score)
-                restTraj._noise.append(noise)
-                restTraj._state.append(state)
+                restTraj._snaps.append(Snapshot(time, score, noise, state))
 
-        restTraj._fmodel.setCurState(restTraj._state[-1])
+        restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
 
         return restTraj
 
@@ -166,7 +201,7 @@ class Trajectory:
             score: a threshold score
         """
         # Check for empty trajectory
-        if not traj._score:
+        if len(traj._snaps) == 0:
             restTraj = Trajectory(
                 fmodel_t=type(traj._fmodel),
                 parameters=traj._parameters,
@@ -175,21 +210,18 @@ class Trajectory:
             return restTraj
 
         high_score_idx = 0
-        while traj._score[high_score_idx] < score:
+        while traj._snaps[high_score_idx].Score() < score:
             high_score_idx += 1
 
         restTraj = Trajectory(
             fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=rstId
         )
         for k in range(high_score_idx + 1):
-            restTraj._score.append(traj._score[k])
-            restTraj._time.append(traj._time[k])
-            restTraj._noise.append(traj._noise[k])
-            restTraj._state.append(traj._state[k])
+            restTraj._snaps.append(traj._snaps[k])
 
-        restTraj._fmodel.setCurState(restTraj._state[-1])
-        restTraj._t_cur = restTraj._time[-1]
-        restTraj._score_max = restTraj._score[-1]
+        restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
+        restTraj._t_cur = restTraj._snaps[-1].Time()
+        restTraj._score_max = restTraj._snaps[-1].Score()
 
         return restTraj
 
@@ -205,14 +237,14 @@ class Trajectory:
         mdata.append(new_element("score_max", self._score_max))
         mdata.append(new_element("ended", self._has_ended))
         mdata.append(new_element("converged", self._has_converged))
-        snaps = ET.SubElement(root, "snapshots")
-        for k in range(len(self._score)):
-            snaps.append(
+        snaps_xml = ET.SubElement(root, "snapshots")
+        for k in range(len(self._snaps)):
+            snaps_xml.append(
                 make_xml_snapshot(k,
-                                  self._time[k],
-                                  self._score[k],
-                                  self._noise[k],
-                                  self._state[k])
+                                  self._snaps[k].Time(),
+                                  self._snaps[k].Score(),
+                                  self._snaps[k].Noise(),
+                                  self._snaps[k].State())
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
@@ -251,16 +283,25 @@ class Trajectory:
 
     def getTimeArr(self) -> npt.NDArray[np.float64]:
         """Return the trajectory time instants."""
-        return np.array(self._time)
+        times = np.zeros(len(self._snaps))
+        for k in range(len(self._snaps)):
+            times[k] = self._snaps[k].Time()
+        return times
 
     def getScoreArr(self) -> npt.NDArray[np.float64]:
         """Return the trajectory scores."""
-        return np.array(self._score)
+        scores = np.zeros(len(self._snaps))
+        for k in range(len(self._snaps)):
+            scores[k] = self._snaps[k].Score()
+        return scores
 
     def getNoiseArr(self) -> npt.NDArray[Any]:
         """Return the trajectory noises."""
-        return np.array(self._noise)
+        noises = np.zeros(len(self._snaps), dtype=type(self._snaps[0].Noise))
+        for k in range(len(self._snaps)):
+            noises[k] = self._snaps[k].Noise()
+        return noises
 
     def getLength(self) -> int:
         """Return the trajectory length."""
-        return len(self._time)
+        return len(self._snaps)
