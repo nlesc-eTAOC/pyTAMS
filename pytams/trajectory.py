@@ -242,15 +242,7 @@ class Trajectory:
 
         # Reset score_max, ended and converged
         if need_update:
-            new_score_max = 0.0
-            for snap in restTraj._snaps:
-                if (snap.Score() > new_score_max):
-                    new_score_max = snap.Score()
-            restTraj._score_max = new_score_max
-            if new_score_max > restTraj._convergedVal:
-                restTraj._has_converged = True
-            if restTraj._t_cur >= restTraj._t_end or restTraj._has_converged:
-                restTraj._has_ended = True
+            restTraj.updateMetadata()
 
         return restTraj
 
@@ -331,6 +323,18 @@ class Trajectory:
             tree.write(traj_file)
         else:
             tree.write(self._checkFile)
+
+    def updateMetadata(self) -> None:
+        """Update trajectory score/ending metadata."""
+        new_score_max = 0.0
+        for snap in self._snaps:
+            if (snap.Score() > new_score_max):
+                new_score_max = snap.Score()
+        self._score_max = new_score_max
+        if new_score_max > self._convergedVal:
+            self._has_converged = True
+        if self._t_cur >= self._t_end or self._has_converged:
+            self._has_ended = True
 
     def ctime(self) -> float:
         """Return the current trajectory time."""
