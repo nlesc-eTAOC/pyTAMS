@@ -15,28 +15,32 @@ class SimpleFModel(ForwardModel):
                  params: Optional[dict] = None,
                  ioprefix: Optional[str] = None):
         """Override the template."""
-        self._state = 0.0
+        self._state : float = 0.0
 
     def advance(self, dt: float, forcingAmpl: float) -> float:
         """Override the template."""
         self._state = self._state + dt
         return dt
 
-    def getCurState(self):
+    def getCurState(self) -> float:
         """Override the template."""
         return self._state
 
-    def setCurState(self, state):
+    def setCurState(self, state) -> None:
         """Override the template."""
         self._state = state
 
-    def score(self):
+    def score(self) -> float:
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
-    def noise(self):
+    def getNoise(self) -> float:
         """Override the template."""
         return 0.0
+
+    def setNoise(self, a_noise) -> None:
+        """Override the template."""
+        pass
 
     @classmethod
     def name(cls):
@@ -64,6 +68,7 @@ class DoubleWellModel(ForwardModel):
         """Override the template."""
         self._state = self.initCondition()
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00001)
+        self._prescribed_noise = False
 
     def __RHS(self, state):
         """Double well RHS function."""
@@ -73,7 +78,8 @@ class DoubleWellModel(ForwardModel):
 
     def __dW(self, dt):
         """Stochastic forcing."""
-        self._rand = np.random.randn(2)
+        if not self._prescribed_noise:
+            self._rand = np.random.randn(2)
         return np.sqrt(dt) * self._rand
 
     def initCondition(self):
@@ -85,6 +91,7 @@ class DoubleWellModel(ForwardModel):
         self._state = (
             self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt)
         )
+        self._prescribed_noise = False
         return dt
 
     def getCurState(self):
@@ -107,9 +114,14 @@ class DoubleWellModel(ForwardModel):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
-    def noise(self):
+    def getNoise(self):
         """Override the template."""
         return self._rand
+
+    def setNoise(self, a_noise) -> None:
+        """Override the template."""
+        self._rand = a_noise
+        self._prescribed_noise = True
 
     @classmethod
     def name(cls):
