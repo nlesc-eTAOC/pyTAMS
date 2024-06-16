@@ -13,13 +13,14 @@ class XMLUtilsError(Exception):
 
 def manualCastSnap(elem: ET.Element) -> Any:
     """Manually cast XML snapshot state."""
-    assert(elem.text is not None)
-    return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
+    if not elem.text:
+        return elem.tag, None
+    else:
+        return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
 
 
 def manualCastSnapNoise(elem: ET.Element) -> Any:
     """Manually cast XML snapshot noise."""
-    assert(elem.text is not None)
     return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
 
 
@@ -58,11 +59,13 @@ def manualCastStr(type_str: str,
         elif type_str == "ndarray[int]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
             castedElem = np.fromstring(stripped_text, dtype=int, sep=" ")
-        elif type_str == "ndarray":     # Default ndarray to float (backward comp.)
+        elif type_str == "ndarray[bool]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-            castedElem = np.fromstring(stripped_text, sep=" ")
+            castedElem = np.fromstring(stripped_text.lstrip(), dtype=bool, sep=" ")
         elif type_str == "datetime":
             castedElem = datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
+        elif type_str == "None":
+            castedElem = None
         else:
             raise XMLUtilsError(
                 "Type {} not handled by manualCast !".format(type_str)
@@ -120,6 +123,8 @@ def get_val_type(val: Any) -> str:
             base_type = base_type + "[float]"
         elif val.dtype == "int64":
             base_type = base_type + "[int]"
+        elif val.dtype == "bool":
+            base_type = base_type + "[bool]"
         return base_type
     else:
         return base_type
@@ -161,8 +166,11 @@ def make_xml_snapshot(idx: int,
     elem.attrib["score"] = str(score)
     elem.attrib["noise_type"] = get_val_type(noise)
     elem.attrib["noise"] = str(noise)
-    elem.attrib["state_type"] = get_val_type(state)
-    elem.text = str(state)
+    if state is None:
+        elem.attrib["state_type"] = "None"
+    else:
+        elem.attrib["state_type"] = get_val_type(state)
+        elem.text = str(state)
 
     return elem
 
