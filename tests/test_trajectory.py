@@ -3,7 +3,8 @@ import os
 from math import isclose
 import pytest
 from pytams.fmodel import ForwardModel
-from pytams.trajectory import Snapshot, Trajectory
+from pytams.trajectory import Snapshot
+from pytams.trajectory import Trajectory
 from tests.models import SimpleFModel
 
 

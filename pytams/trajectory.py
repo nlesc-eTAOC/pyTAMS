@@ -34,10 +34,13 @@ class Snapshot:
                  noise: Any,
                  state: Optional[Any] = None) -> None:
         """Create a snapshot.
+
+        Holding time. score, noise and state (or not).
         """
         self._time = time
         self._score = score
         self._noise = noise
+        self._state = None
         if state is not None:
             self._state = state
 
@@ -53,6 +56,9 @@ class Snapshot:
     def State(self) -> Any:
         """Return the snapshot state."""
         return self._state
+    def hasState(self) -> bool:
+        """Check if snapshot has state."""
+        return self._state is not None
 
 
 class Trajectory:
@@ -75,24 +81,29 @@ class Trajectory:
             trajId: a string for the trajectory id
         """
         self._fmodel = fmodel_t(parameters, trajId)
-        self._parameters = parameters
+        self._parameters : dict = parameters
 
+        self._step : int = 0
         self._t_cur : float = 0.0
         self._t_end : float = parameters.get("trajectory",{}).get("end_time", 1.0)
         self._dt : float = parameters.get("trajectory",{}).get("step_size", 0.1)
-        self._stoichForcingAmpl = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
-        self._convergedVal = parameters.get("trajectory",{}).get("targetscore", 0.95)
+        self._stoichForcingAmpl : float = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
+        self._convergedVal : float = parameters.get("trajectory",{}).get("targetscore", 0.95)
+        self._sparse_state_int : int = parameters.get("trajectory",{}).get("sparse_int", 1)
+        self._sparse_state_beg : int = parameters.get("trajectory",{}).get("sparse_beg", 0)
 
         # List of snapshots
         self._snaps : list[Snapshot] = []
 
-        self._score_max = 0.0
+        self._noise_backlog : list[Any] = []
 
-        self._tid = trajId
-        self._checkFile = "{}.xml".format(trajId)
+        self._score_max : float = 0.0
 
-        self._has_ended = False
-        self._has_converged = False
+        self._tid : str = trajId
+        self._checkFile : str = "{}.xml".format(trajId)
+
+        self._has_ended : bool = False
+        self._has_converged : bool = False
 
     def setCheckFile(self, file: str) -> None:
         """Setter of the trajectory checkFile."""
@@ -113,23 +124,47 @@ class Trajectory:
         remainingTime = walltime - time.monotonic() + startTime
         end_time = min(t_end, self._t_end)
 
+        # Set the initial snapshot
+        # Always add the initial state
+        if self._step == 0:
+           self._snaps.append(Snapshot(self._t_cur,
+                                       self._fmodel.score(),
+                                       0.0,
+                                       self._fmodel.getCurState()
+                                       )
+                              )
+
         while (
             self._t_cur < end_time
             and not self._has_converged
             and remainingTime >= 0.05 * walltime
         ):
+            if self._noise_backlog:
+                self._fmodel.setNoise(self._noise_backlog[0])
+                self._noise_backlog.pop(0)
+
             try:
                 dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
-            except:
-                raise ForwardModelAdvance("Error advancing fmodel from {} with dt {}".format(self._t_cur,self._dt))
+            except ForwardModelAdvance:
+                pass
+
+            self._step += 1
             self._t_cur = self._t_cur + dt
             score = self._fmodel.score()
-            self._snaps.append(Snapshot(self._t_cur,
-                                        score,
-                                        self._fmodel.noise(),
-                                        self._fmodel.getCurState()
-                                        )
-                               )
+
+            if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
+                self._snaps.append(Snapshot(self._t_cur,
+                                            score,
+                                            self._fmodel.getNoise(),
+                                            self._fmodel.getCurState()
+                                            )
+                                   )
+            else:
+                self._snaps.append(Snapshot(self._t_cur,
+                                            score,
+                                            self._fmodel.getNoise(),
+                                            )
+                                   )
             if score > self._score_max:
                 self._score_max = score
 
@@ -140,6 +175,18 @@ class Trajectory:
 
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
+
+        # If trajectory ended but no state
+        # was stored on the last step -> pop snapshot and
+        # force a state for the final step.
+        if self._has_ended and not self._snaps[-1].hasState():
+            self._snaps.pop(-1)
+            self._snaps.append(Snapshot(self._t_cur,
+                                        score,
+                                        self._fmodel.getNoise(),
+                                        self._fmodel.getCurState()
+                                        )
+                               )
 
         if self._has_ended:
             self._fmodel.clear()
@@ -179,7 +226,31 @@ class Trajectory:
                 time, score, noise, state = read_xml_snapshot(snap)
                 restTraj._snaps.append(Snapshot(time, score, noise, state))
 
+        # Remove snapshots from the list until a state
+        # is available
+        need_update = False
+        for k in range(len(restTraj._snaps)-1,-1,-1):
+            if not restTraj._snaps[k].hasState():
+                restTraj._noise_backlog.append(restTraj._snaps[k].Noise())
+                restTraj._snaps.pop(k)
+                need_update = True
+            else:
+                break
+
         restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
+        restTraj._t_cur = restTraj._snaps[-1].Time()
+
+        # Reset score_max, ended and converged
+        if need_update:
+            new_score_max = 0.0
+            for snap in restTraj._snaps:
+                if (snap.Score() > new_score_max):
+                    new_score_max = snap.Score()
+            restTraj._score_max = new_score_max
+            if new_score_max > restTraj._convergedVal:
+                restTraj._has_converged = True
+            if restTraj._t_cur >= restTraj._t_end or restTraj._has_converged:
+                restTraj._has_ended = True
 
         return restTraj
 
@@ -209,15 +280,23 @@ class Trajectory:
             )
             return restTraj
 
+        # Find where to branch from
         high_score_idx = 0
+        last_snap_with_state = 0
         while traj._snaps[high_score_idx].Score() < score:
             high_score_idx += 1
+            if (traj._snaps[high_score_idx].hasState()):
+                last_snap_with_state = high_score_idx
 
         restTraj = Trajectory(
             fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=rstId
         )
+
         for k in range(high_score_idx + 1):
-            restTraj._snaps.append(traj._snaps[k])
+            if (k <= last_snap_with_state):
+                restTraj._snaps.append(traj._snaps[k])
+            else:
+                restTraj._noise_backlog.append(traj._snaps[k].Noise())
 
         restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
         restTraj._t_cur = restTraj._snaps[-1].Time()
@@ -305,3 +384,9 @@ class Trajectory:
     def getLength(self) -> int:
         """Return the trajectory length."""
         return len(self._snaps)
+
+    def getLastState(self) -> Any:
+        """Return the last state in the trajectory."""
+        for snap in reversed(self._snaps):
+            if snap.hasState():
+                return snap.State()

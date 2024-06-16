@@ -377,7 +377,7 @@ def task_delayed(traj: Trajectory,
     """
     wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
-        print("Advancing {} [time left: {}]".format(traj.id(), wall_time, ))
+        print("Advancing {} [time left: {}]".format(traj.id(), wall_time))
         if saveDB:
             traj.setCheckFile(
                 "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
