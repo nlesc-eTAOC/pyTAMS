@@ -2,7 +2,7 @@
 import os
 from math import isclose
 import pytest
-from pytams.fmodel import ForwardModel
+from pytams.fmodel import ForwardModelBaseClass
 from pytams.trajectory import Snapshot
 from pytams.trajectory import Trajectory
 from tests.models import SimpleFModel
@@ -21,9 +21,17 @@ def test_initSnapshotNoState():
     assert not snap.hasState()
 
 
+def test_initBaseClassError():
+    """Test using base class fmodel during trajectory creation."""
+    fmodel = ForwardModelBaseClass
+    parameters = {}
+    with pytest.raises(Exception):
+        t_test = Trajectory(fmodel, parameters, "ttest")
+
+
 def test_initBlankTraj():
     """Test blank trajectory creation."""
-    fmodel = ForwardModel
+    fmodel = SimpleFModel
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
     assert t_test.id() == "ttest"
@@ -33,7 +41,7 @@ def test_initBlankTraj():
 
 def test_initParametrizedTraj():
     """Test parametrized trajectory creation."""
-    fmodel = ForwardModel
+    fmodel = SimpleFModel
     parameters = {"trajectory" : {"end_time": 2.0,
                                   "step_size": 0.01,
                                   "targetscore": 0.25}}
@@ -43,22 +51,11 @@ def test_initParametrizedTraj():
 
 def test_restartEmptyTraj():
     """Test (empty) trajectory restart."""
-    fmodel = ForwardModel
+    fmodel = SimpleFModel
     parameters = {}
     t_test = Trajectory(fmodel, parameters, "ttest")
     rst_test = Trajectory.restartFromTraj(t_test, "ttest", 0.1)
     assert rst_test.ctime() == 0.0
-
-
-def test_templateModelExceptions():
-    """Test trajectory exception with template model."""
-    fmodel = ForwardModel
-    parameters = {"trajectory" : {"end_time": 0.04,
-                                  "step_size": 0.001,
-                                  "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "ttest")
-    with pytest.raises(Exception):
-        t_test.advance()
 
 
 def test_simpleModelTraj():
