@@ -1,20 +1,23 @@
 import netCDF4 as netcdf
 import numpy as np
-from pytams.fmodel import ForwardModel
+from typing import Any
+from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
 
 
-class MOCModel(ForwardModel):
+class MOCModel(ForwardModelBaseClass):
     """Meridional overturning circulation box model."""
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
+    def _init_model(self,
+                    params: dict = None,
+                    ioprefix: str = None):
         """E_A is the forcing amplitude.
 
         opt_params: "temp_params" to give lambda_a
                     "ice_params" to give [f_ice, q_factor_min]
         """
         self.E_A = 0.25
-        self._noise = 0.1
+        self._noise_level = 0.1
         # self.forcing = None
         # seed = 0
         # self.rng = np.random.Generator(seed)
@@ -89,10 +92,6 @@ class MOCModel(ForwardModel):
         """Sets the forcing amplitude and reinitializes the model."""
         self.E_A = E_A
         self.load_init_state()
-
-    def set_noise(self, noise):
-        """Sets the noise level."""
-        self._noise = noise
 
     def set_forcing(self, forcing_function, forcing_params, *fixed_args, **fixed_kwargs):
         """Sets the forcing function."""
@@ -215,10 +214,9 @@ class MOCModel(ForwardModel):
             self.OHC_s  = self.V_s * (T_s+273.15)
             self.OHC_d  = self.V_d * (T_d+273.15)
 
-    def _dW(self, dt):
+    def _dW(self, dt, noise):
         """Stochastic forcing."""
-        self._rand = np.random.normal()
-        return self._noise * self.E_A * self.S_0 * self._rand * np.sqrt(dt * (100*365*86400))
+        return self._noise_level * self.E_A * self.S_0 * noise * np.sqrt(dt * (100*365*86400))
 
     def sea_ice(self, temp):
         """Returns the AMOC reduction factor for a given response function."""
@@ -347,9 +345,13 @@ class MOCModel(ForwardModel):
         self.q_e = self.A_GM * self.L_xA * D / self.L_y
         self.q_S = self.q_Ek - self.q_e
 
-    def advance(self, dt: float, forcingAmpl: float) -> float:
+    def _advance(self,
+                 step: int,
+                 dt: float,
+                 noise: Any,
+                 forcingAmpl: float) -> float:
         """Override the template."""
-        self.system(self._state, self._dW(dt), dt)
+        self.system(self._state, self._dW(dt, noise), dt)
         self._state = self.update_vars()
         self.update_fluxes(self._state)
         return dt
@@ -376,8 +378,8 @@ class MOCModel(ForwardModel):
     #     #Basic initializations
     #     self.init_var_params(init_state)
 
-    #     # Initialize the trajectories, the noise is computed in advance
-    #     dW = self._noise * self.E_A * self.S_0 * \
+    #     # Initialize the trajectories, the noise level is computed in advance
+    #     dW = self._noise_level * self.E_A * self.S_0 * \
     #         self.rng.normal(scale=np.sqrt(self.delta_t * (100*365*86400)), size=(len(self.time)-1,N))
     #     traj = np.ma.masked_all((N, len(self.time), init_state.shape[-1]))
     #     traj[:,0] = init_state
@@ -445,8 +447,8 @@ class MOCModel(ForwardModel):
     #     #Basic initializations
     #     self.init_var_params(init_state)
 
-    #     # Initialize the trajectories, the noise is computed in advance
-    #     dW = self._noise * self.E_A * self.S_0 * \
+    #     # Initialize the trajectories, the noise_level is computed in advance
+    #     dW = self._noise_level * self.E_A * self.S_0 * \
     #         self.rng.normal(scale=np.sqrt(self.delta_t * (100*365*86400)), size=(t_end-1,N))
     #     traj = np.ma.masked_all((N, t_end, init_state.shape[-1]))
     #     traj[:,0] = init_state
@@ -535,9 +537,9 @@ class MOCModel(ForwardModel):
             return (self.q_N_on - q_N) / (self.q_N_on - z)
         return (self.q_N_off_full - q_N) / (self.q_N_off_full - self.q_N_on)
 
-    def noise(self):
-        """Return the random noise used in the last step."""
-        return self._rand
+    def _get_noise(self):
+        """Return a random noise."""
+        return np.random.normal()
 
 if __name__ == "__main__":
     fmodel = MOCModel
