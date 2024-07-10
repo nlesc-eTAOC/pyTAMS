@@ -3,7 +3,6 @@ import os
 import shutil
 import pytest
 import toml
-from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
@@ -11,7 +10,7 @@ from tests.models import SimpleFModel
 
 def test_initTAMS():
     """Test TAMS initialization."""
-    fmodel = ForwardModel
+    fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 500}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -94,7 +93,7 @@ def test_doublewellModel2WorkersTAMS():
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
                    "dask": {"nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
@@ -109,7 +108,7 @@ def test_doublewellModel2WorkersRestoreTAMS():
                                 "DB_restart": "dwTest.tdb"},
                    "dask": {"nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2

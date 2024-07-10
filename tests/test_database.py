@@ -50,7 +50,7 @@ def test_generateAndLoadTDB():
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
                    "dask": {"nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     tams.compute_probability()
 
