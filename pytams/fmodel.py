@@ -2,6 +2,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from typing import Any
 from typing import Optional
+from typing import final
 
 
 class ForwardModelError(Exception):
@@ -31,6 +32,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     """
 
 
+    @final
     def __init__(self,
                  params: Optional[dict] = None,
                  ioprefix: Optional[str] = None):
@@ -52,19 +54,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         # Call the concrete class init method
         self._init_model(params, ioprefix)
 
-    @abstractmethod
-    def _init_model(self,
-                    params: Optional[dict] = None,
-                    ioprefix: Optional[str] = None) -> None:
-        """Concrete class specific initialization.
-
-        Args:
-            params: an optional dict containing parameters
-            ioprefix: an optional string defining run folder (TOCHECK)
-        """
-        pass
-
-
+    @final
     def advance(self,
                 dt: float,
                 forcingAmpl: float) -> float:
@@ -103,6 +93,34 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         return actual_dt
 
+    @final
+    def getNoise(self) -> Any:
+        """Return the model's latest noise increment."""
+        return self._noise
+
+    @final
+    def setNoise(self, a_noise : Any) -> None:
+        """Set the model's next noise increment."""
+        self._prescribed_noise = True
+        self._noise = a_noise
+
+    @final
+    def clear(self) -> None:
+        """Destroy internal data."""
+        self._clear_model()
+
+    @abstractmethod
+    def _init_model(self,
+                    params: Optional[dict] = None,
+                    ioprefix: Optional[str] = None) -> None:
+        """Concrete class specific initialization.
+
+        Args:
+            params: an optional dict containing parameters
+            ioprefix: an optional string defining run folder (TOCHECK)
+        """
+        pass
+
     @abstractmethod
     def _advance(self,
                  step: int,
@@ -114,6 +132,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         Args:
             step: the current step counter
+            time: the starting time of the advance call
             dt: the time step size over which to advance
             noise: the noise to be used in the model step
             forcingAmpl: stochastic multiplicator
@@ -122,35 +141,28 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
         raise BaseClassCallError("Calling base class _advance() method !")
 
-
+    @abstractmethod
     def getCurState(self) -> Any:
         """Return the current state of the model."""
-        raise BaseClassCallError("Calling getCurState() method !")
+        raise BaseClassCallError("Calling base class getCurState method !")
 
+    @abstractmethod
     def setCurState(self, state : Any) -> Any:
         """Set the current state of the model."""
-        raise BaseClassCallError("Calling setCurState method !")
+        raise BaseClassCallError("Calling base class setCurState method !")
 
+    @abstractmethod
     def score(self) -> Any:
         """Return the model's current state score."""
-        raise BaseClassCallError("Calling score method !")
-
-    def getNoise(self) -> Any:
-        """Return the model's latest noise increment."""
-        return self._noise
+        raise BaseClassCallError("Calling base class score method !")
 
     @abstractmethod
     def _make_noise(self) -> Any:
         """Return the model's latest noise increment."""
-        raise BaseClassCallError("Calling getNoise method !")
+        raise BaseClassCallError("Calling base class _make_noise method !")
 
-    def setNoise(self, a_noise : Any) -> None:
-        """Set the model's next noise increment."""
-        self._prescribed_noise = True
-        self._noise = a_noise
-
-    def clear(self) -> None:
-        """Destroy internal data."""
+    def _clear_model(self) -> Any:
+        """Clear the concrete forward model internals."""
         pass
 
     @classmethod
