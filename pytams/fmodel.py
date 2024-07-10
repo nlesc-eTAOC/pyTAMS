@@ -79,7 +79,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
         # Get noise for the next model step
         if not self._prescribed_noise:
-            self._noise = self._get_noise()
+            self._noise = self._make_noise()
 
         try:
             actual_dt = self._advance(self._step, dt, self._noise, forcingAmpl)
@@ -127,7 +127,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         return self._noise
 
     @abstractmethod
-    def _get_noise(self) -> Any:
+    def _make_noise(self) -> Any:
         """Return the model's latest noise increment."""
         raise BaseClassCallError("Calling getNoise method !")
 

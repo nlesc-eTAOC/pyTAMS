@@ -537,7 +537,7 @@ class MOCModel(ForwardModelBaseClass):
             return (self.q_N_on - q_N) / (self.q_N_on - z)
         return (self.q_N_off_full - q_N) / (self.q_N_off_full - self.q_N_on)
 
-    def _get_noise(self):
+    def _make_noise(self):
         """Return a random noise."""
         return np.random.normal()
 

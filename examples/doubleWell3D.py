@@ -74,7 +74,7 @@ class DoubleWellModel3D(ForwardModelBaseClass):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
-    def _get_noise(self):
+    def _make_noise(self):
         """Override the template."""
         return self._rng.standard_normal(10)
 

@@ -39,7 +39,7 @@ class SimpleFModel(ForwardModelBaseClass):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
-    def _get_noise(self) -> float:
+    def _make_noise(self) -> float:
         """Override the template."""
         return 0.0
 
@@ -115,7 +115,7 @@ class DoubleWellModel(ForwardModelBaseClass):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
-    def _get_noise(self):
+    def _make_noise(self):
         """Override the template."""
         return np.random.randn(2)
 
