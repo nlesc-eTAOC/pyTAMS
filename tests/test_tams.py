@@ -3,7 +3,6 @@ import os
 import shutil
 import pytest
 import toml
-from pytams.fmodel import ForwardModel
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
@@ -11,7 +10,7 @@ from tests.models import SimpleFModel
 
 def test_initTAMS():
     """Test TAMS initialization."""
-    fmodel = ForwardModel
+    fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 500}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
