@@ -26,7 +26,7 @@ def test_initBaseClassError():
     fmodel = ForwardModelBaseClass
     parameters = {}
     with pytest.raises(Exception):
-        t_test = Trajectory(fmodel, parameters, "ttest")
+        _ = Trajectory(fmodel, parameters, "ttest")
 
 
 def test_initBlankTraj():

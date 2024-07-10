@@ -1,5 +1,6 @@
 import time
-from typing import Optional, Any
+from typing import Any
+from typing import Optional
 import numpy as np
 from pytams.fmodel import ForwardModelBaseClass
 

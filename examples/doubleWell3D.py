@@ -1,7 +1,6 @@
 import time
-import sys
-import numpy as np
 from typing import Any
+import numpy as np
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
 

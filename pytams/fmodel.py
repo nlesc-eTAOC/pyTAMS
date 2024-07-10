@@ -1,6 +1,7 @@
+from abc import ABCMeta
+from abc import abstractmethod
 from typing import Any
 from typing import Optional
-from abc import ABCMeta, abstractmethod
 
 
 class ForwardModelError(Exception):
@@ -82,9 +83,10 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         try:
             actual_dt = self._advance(self._step, dt, self._noise, forcingAmpl)
-        except:
+        except AdvanceError:
             raise AdvanceError("Damn it !")
 
+        # After a step, always reset flag to false
         self._prescribed_noise = False
 
         return actual_dt

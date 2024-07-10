@@ -1,6 +1,6 @@
+from typing import Any
 import netCDF4 as netcdf
 import numpy as np
-from typing import Any
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
 
