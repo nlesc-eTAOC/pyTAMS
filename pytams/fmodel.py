@@ -43,10 +43,14 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             params: an optional dict containing parameters
             ioprefix: an optional string defining run folder (TOCHECK)
         """
-        self._init_model(params, ioprefix)
+        # Initialize common tooling
         self._prescribed_noise : bool = False
         self._noise : Any = None
         self._step : int = 0
+        self._time : float = 0.0
+
+        # Call the concrete class init method
+        self._init_model(params, ioprefix)
 
     @abstractmethod
     def _init_model(self,
@@ -82,7 +86,15 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             self._noise = self._make_noise()
 
         try:
-            actual_dt = self._advance(self._step, dt, self._noise, forcingAmpl)
+            actual_dt = self._advance(self._step,
+                                      self._time,
+                                      dt,
+                                      self._noise,
+                                      forcingAmpl)
+            # Update internal counter. Note that actual_dt may differ
+            # from requested dt in some occasions.
+            self._step = self._step + 1
+            self._time = self._time + actual_dt
         except AdvanceError:
             raise AdvanceError("Damn it !")
 
@@ -94,6 +106,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     @abstractmethod
     def _advance(self,
                  step: int,
+                 time: float,
                  dt: float,
                  noise: Any,
                  forcingAmpl: float) -> float:

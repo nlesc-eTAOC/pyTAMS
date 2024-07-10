@@ -43,10 +43,11 @@ class DoubleWellModel3D(ForwardModelBaseClass):
         return np.array([-1.0, 0.0, 0.0])
 
     def _advance(self,
-                step: int,
-                dt: float,
-                noise: Any,
-                forcingAmpl: float) -> float:
+                 step: int,
+                 time: float,
+                 dt: float,
+                 noise: Any,
+                 forcingAmpl: float) -> float:
         """Override the template."""
         self._state = (
                 self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt, noise[:3])

@@ -20,6 +20,7 @@ class SimpleFModel(ForwardModelBaseClass):
 
     def _advance(self,
                  step: int,
+                 time: float,
                  dt: float,
                  noise: Any,
                  forcingAmpl: float) -> float:
@@ -86,6 +87,7 @@ class DoubleWellModel(ForwardModelBaseClass):
 
     def _advance(self,
                  step: int,
+                 time: float,
                  dt: float,
                  noise: Any,
                  forcingAmpl: float) -> float:

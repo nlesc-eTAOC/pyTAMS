@@ -347,6 +347,7 @@ class MOCModel(ForwardModelBaseClass):
 
     def _advance(self,
                  step: int,
+                 time: float,
                  dt: float,
                  noise: Any,
                  forcingAmpl: float) -> float:
