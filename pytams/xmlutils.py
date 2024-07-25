@@ -91,7 +91,7 @@ def dict_to_xml(tag: str, d: dict) -> ET.Element:
     return elem
 
 
-def xml_to_dict(elem: ET.Element) -> dict:
+def xml_to_dict(elem: ET.Element | None) -> dict:
     """Return an dictionnary an Element.
 
     Args:
@@ -100,6 +100,8 @@ def xml_to_dict(elem: ET.Element) -> dict:
     Return:
         a dictionary containing the element entries
     """
+    if not elem:
+        raise XMLUtilsError("Unable to parse XML element to dict since 'None' was passed")
     d = {}
     if elem:
         for child in elem:
