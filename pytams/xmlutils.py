@@ -1,7 +1,7 @@
 import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict, Callable
 import numpy as np
 
 
@@ -31,7 +31,7 @@ def manualCast(elem: ET.Element) -> Any:
 
 
 # Plain old data type cast in map
-POD_cast_dict = {
+POD_cast_dict : Dict[str, Callable] = {
         "int": int,
         "float": float,
         "float64": np.float64,
@@ -60,8 +60,9 @@ def manualCastStr(type_str: str,
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
             castedElem = np.fromstring(stripped_text, dtype=int, sep=" ")
         elif type_str == "ndarray[bool]":
-            stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-            castedElem = np.fromstring(stripped_text.lstrip(), dtype=bool, sep=" ")
+            stripped_text = elem_text.replace("[ ", " ").replace("]", "").replace("  ", " ")
+            npofstr = np.array(list(stripped_text.lstrip().split(" ")), dtype=object)
+            castedElem = npofstr == "True"
         elif type_str == "datetime":
             castedElem = datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
         elif type_str == "None":
