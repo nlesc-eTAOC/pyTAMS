@@ -22,6 +22,7 @@ def test_simpleModelTAMS():
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+                   "runner": {"type" : "asyncio"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -33,6 +34,7 @@ def test_simpleModelTAMSSlurmFail():
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+                   "runner": {"type" : "dask"},
                    "dask": {"backend" : "slurm", "slurm_config_file": "dummy.yaml"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -45,6 +47,7 @@ def test_simpleModelTwiceTAMS():
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+                   "runner": {"type" : "asyncio"},
                    "database" : {"DB_save" : True, "DB_prefix" : "simpleModelTest"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -67,6 +70,7 @@ def test_stallingSimpleModelTAMS():
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+                   "runner": {"type" : "asyncio"},
                    "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 1.1}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     with pytest.raises(Exception):
@@ -78,6 +82,7 @@ def test_doublewellModelTAMS():
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
+                   "runner": {"type" : "dask"},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -85,18 +90,33 @@ def test_doublewellModelTAMS():
     assert transition_proba >= 0.2
 
 
+def test_doublewellDeterministicModelTAMS():
+    """Test TAMS with the doublewell model."""
+    fmodel = DoubleWellModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400,
+                            "walltime": 500.0, "deterministic": True},
+                   "runner": {"type" : "asyncio"},
+                   "trajectory": {"end_time": 10.0, "step_size": 0.01,
+                                  "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 0.4129496711338883
+
+
 def test_doublewellModel2WorkersTAMS():
     """Test TAMS with the doublewell model using two workers."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400,
+                            "walltime": 500.0, "deterministic": True},
+                   "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 2},
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
-                   "dask": {"nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba >= 0.2
+    assert transition_proba == 0.42805066795449315
 
 
 def test_doublewellModel2WorkersRestoreTAMS():
@@ -106,13 +126,13 @@ def test_doublewellModel2WorkersRestoreTAMS():
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest",
                                 "DB_restart": "dwTest.tdb"},
-                   "dask": {"nworker_init": 2, "nworker_iter": 2},
+                   "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
-    shutil.rmtree("dwTest.tdb")
+    #shutil.rmtree("dwTest.tdb")
 
 
 def test_doublewellVerySlowTAMS():
@@ -121,7 +141,7 @@ def test_doublewellVerySlowTAMS():
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 15.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
-                   "dask": {"nworker_init": 1, "nworker_iter": 1},
+                   "runner": {"type" : "dask", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7, "stoichforcing" : 0.1},
                    "model": {"slow_factor": 0.5}}
@@ -137,7 +157,7 @@ def test_doublewellSlowTAMS():
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 20.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
-                   "dask": {"nworker_init": 1, "nworker_iter": 1},
+                   "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7, "stoichforcing" : 0.1},
                    "model": {"slow_factor": 0.005}}
@@ -153,7 +173,7 @@ def test_doublewellSlowRestoreTAMS():
         toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 10.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest",
                                 "DB_restart": "dwTest.tdb"},
-                   "dask": {"nworker_init": 1, "nworker_iter": 1},
+                   "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7, "stoichforcing" : 0.1},
                    "model": {"slow_factor": 0.005}}
