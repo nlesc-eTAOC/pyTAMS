@@ -1,7 +1,9 @@
 import ast
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Any, Dict, Callable
+from typing import Any
+from typing import Callable
+from typing import Dict
 import numpy as np
 
 
