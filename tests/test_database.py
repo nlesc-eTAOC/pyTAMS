@@ -48,7 +48,7 @@ def test_generateAndLoadTDB():
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
-                   "dask": {"nworker_init": 2, "nworker_iter": 2},
+                   "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -90,7 +90,7 @@ def test_replaceTrajInDB():
 
     traj_zero = tdb.getTraj(0)
     tdb.overwriteTraj(1,traj_zero)
-    assert tdb.getTraj(1).id() == "traj000000"
+    assert tdb.getTraj(1).idstr() == "traj000000"
 
 
 def test_accessTrajDataInDB():
