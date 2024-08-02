@@ -65,11 +65,16 @@ class DoubleWellModel(ForwardModelBaseClass):
     """
 
     def _init_model(self,
-                    params: Optional[dict] = None,
+                    params: dict,
                     ioprefix: Optional[str] = None):
         """Override the template."""
         self._state = self.initCondition()
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
+        if params["model"]["deterministic"]:
+            seed = int(ioprefix[4:])
+            self._rng = np.random.default_rng(seed)
+        else:
+            self._rng = np.random.default_rng()
 
     def __RHS(self, state):
         """Double well RHS function."""
@@ -119,7 +124,7 @@ class DoubleWellModel(ForwardModelBaseClass):
 
     def _make_noise(self):
         """Override the template."""
-        return np.random.randn(2)
+        return self._rng.standard_normal(2)
 
     @classmethod
     def name(cls):
