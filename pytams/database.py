@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import toml
 from pytams.trajectory import Trajectory
+from pytams.trajectory import formTrajID
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -20,16 +21,6 @@ class DatabaseError(Exception):
     """Exception class for TAMS Database."""
 
     pass
-
-
-def formTrajID(n: int) -> str:
-    """Helper to assemble a trajectory ID string."""
-    return "traj{:06}".format(n)
-
-
-def getIndexFromID(identity: str) -> int:
-    """Helper to get trajectory index from ID string."""
-    return int(identity[-6:])
 
 
 class Database:
@@ -177,10 +168,10 @@ class Database:
             tree = ET.parse(databaseFile)
             root = tree.getroot()
             for T in self._trajs_db:
-                T_entry = root.find(T.id())
+                T_entry = root.find(T.idstr())
                 if T.hasStarted() and T_entry is None:
                     loc = T.checkFile()
-                    root.append(new_element(T.id(), loc))
+                    root.append(new_element(T.idstr(), loc))
 
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
@@ -292,7 +283,7 @@ class Database:
                     Trajectory(
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
-                        trajId=formTrajID(n),
+                        trajId=n,
                     )
                 )
         return nTrajRestored
@@ -469,3 +460,4 @@ class Database:
         plt.tight_layout() # to fit everything in the prescribed area
         plt.savefig(pltfile, dpi=300)
         plt.clf()
+        plt.close()
