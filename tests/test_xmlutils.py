@@ -27,7 +27,7 @@ def test_castTypes():
     elem = pxml.new_element("test", np.ones(5, dtype=int))
     castedElem = pxml.manualCast(elem)
     assert isinstance(castedElem[1], np.ndarray)
-    elem = pxml.new_element("test", np.ones(2,dtype=bool))
+    elem = pxml.new_element("test", np.ones(5,dtype=bool))
     castedElem = pxml.manualCast(elem)
     assert isinstance(castedElem[1], np.ndarray)
     elem = pxml.new_element("test", {'key1': 'val1','key2': "val2", 'key3': 1, 'key4': 1.0})
