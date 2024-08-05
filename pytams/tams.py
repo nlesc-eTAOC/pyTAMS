@@ -6,6 +6,7 @@ import os
 import time
 from typing import Any
 from typing import Optional
+from typing import Tuple
 import numpy as np
 import toml
 from pytams.database import Database
@@ -374,6 +375,9 @@ def pool_worker(traj: Trajectory,
         wall_time_info: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of the database
+
+    Returns:
+        The updated trajectory
     """
     wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
@@ -383,7 +387,7 @@ def pool_worker(traj: Trajectory,
                 "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
             )
         try:
-            traj = thinlayer(traj, wall_time)
+            traj.advance(walltime=wall_time)
         except WallTimeLimit:
             print("Trajectory advance ran out of time !")
             if saveDB:
@@ -398,8 +402,8 @@ def pool_worker(traj: Trajectory,
 
 
 async def pool_worker_async(
-    queue : asyncio.Queue[Any],
-    res_queue : asyncio.Queue[Any],
+    queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
+    res_queue : asyncio.Queue[Trajectory],
     executor : concurrent.futures.Executor) -> None:
     """A worker to generate each initial trajectory.
 
@@ -410,36 +414,13 @@ async def pool_worker_async(
     """
     while True:
         traj, wall_time_info, saveDB, nameDB = await queue.get()
-        wall_time = wall_time_info - time.monotonic()
-        if wall_time > 0.0 and not traj.hasEnded():
-            print("Advancing {} [time left: {}], Tq: {}".format(traj.idstr(), wall_time, queue.qsize()))
-            loop = asyncio.get_running_loop()
-            if saveDB:
-                traj.setCheckFile(
-                    "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
-                )
-            try:
-                traj = await loop.run_in_executor(executor, functools.partial(thinlayer, traj, wall_time))
-            except WallTimeLimit:
-                print("Trajectory advance ran out of time !")
-                if saveDB:
-                    await loop.run_in_executor(executor, traj.store)
-            except Exception:
-                print("Advance ran into an error !")
-            else:
-                if saveDB:
-                    await loop.run_in_executor(executor, traj.store)
-
-        await res_queue.put(traj)
-
-        # Mark the task as done
+        loop = asyncio.get_running_loop()
+        updated_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(pool_worker, traj, wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(updated_traj)
         queue.task_done()
-
-def thinlayer(traj : Trajectory,
-              wall_time : float) -> Trajectory:
-    """A thin wrapper to have advance() return a trajectory."""
-    traj.advance(walltime=wall_time)
-    return traj
 
 def ms_worker(
     t_end: float,
@@ -485,7 +466,7 @@ def ms_worker(
 
 async def ms_worker_async(
     queue : asyncio.Queue[Any],
-    res_queue : asyncio.Queue[Any],
+    res_queue : asyncio.Queue[Trajectory],
     executor : concurrent.futures.Executor,
 ) -> None:
     """An async worker to restart trajectories.
@@ -497,30 +478,11 @@ async def ms_worker_async(
     """
     while True:
         t_end, fromTraj, rstId, min_val, wall_time_info, saveDB, nameDB = await queue.get()
-        print("Restarting [{}] from {}".format(rstId, fromTraj.idstr()))
-        wall_time = wall_time_info - time.monotonic()
         loop = asyncio.get_running_loop()
-        traj = await loop.run_in_executor(executor,
-                                          functools.partial(Trajectory.restartFromTraj,
-                                                            fromTraj, rstId, min_val))
-        if saveDB:
-            traj.setCheckFile(
-                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
-            )
-
-        try:
-            traj = await loop.run_in_executor(executor, functools.partial(thinlayer, traj, wall_time))
-        except WallTimeLimit:
-            print("Trajectory advance ran out of time !")
-            if saveDB:
-                await loop.run_in_executor(executor, traj.store)
-        except Exception:
-            print("Advance ran into an error !")
-        else:
-            if saveDB:
-                await loop.run_in_executor(executor, traj.store)
-
-        await res_queue.put(traj)
-
-        # Mark the task as done
+        restarted_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(ms_worker, t_end, fromTraj, rstId, min_val,
+                              wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(restarted_traj)
         queue.task_done()
