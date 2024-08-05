@@ -34,7 +34,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
     @final
     def __init__(self,
-                 params: Optional[dict] = None,
+                 params: dict,
                  ioprefix: Optional[str] = None):
         """Base class __init__ method.
 
@@ -43,13 +43,20 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         Args:
             params: an optional dict containing parameters
-            ioprefix: an optional string defining run folder (TOCHECK)
+            ioprefix: an optional string defining run folder
         """
         # Initialize common tooling
         self._prescribed_noise : bool = False
         self._noise : Any = None
         self._step : int = 0
         self._time : float = 0.0
+
+        # Add the deterministic parameter to the model dictionary
+        # for clarity
+        if params.get("model", None):
+            params["model"]["deterministic"] = params.get("tams", {}).get("deterministic", False)
+        else:
+            params["model"] = {"deterministic": params.get("tams", {}).get("deterministic", False)}
 
         # Call the concrete class init method
         self._init_model(params, ioprefix)

@@ -26,15 +26,16 @@ def test_initBaseClassError():
     fmodel = ForwardModelBaseClass
     parameters = {}
     with pytest.raises(Exception):
-        _ = Trajectory(fmodel, parameters, "ttest")
+        _ = Trajectory(fmodel, parameters, 1)
 
 
 def test_initBlankTraj():
     """Test blank trajectory creation."""
     fmodel = SimpleFModel
     parameters = {}
-    t_test = Trajectory(fmodel, parameters, "ttest")
-    assert t_test.id() == "ttest"
+    t_test = Trajectory(fmodel, parameters, 1)
+    assert t_test.id() == 1
+    assert t_test.idstr() == "traj000001"
     assert t_test.ctime() == 0.0
     assert t_test.scoreMax() == 0.0
 
@@ -45,7 +46,7 @@ def test_initParametrizedTraj():
     parameters = {"trajectory" : {"end_time": 2.0,
                                   "step_size": 0.01,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "ttest")
+    t_test = Trajectory(fmodel, parameters, 1)
     assert t_test.stepSize() == 0.01
 
 
@@ -53,8 +54,8 @@ def test_restartEmptyTraj():
     """Test (empty) trajectory restart."""
     fmodel = SimpleFModel
     parameters = {}
-    t_test = Trajectory(fmodel, parameters, "ttest")
-    rst_test = Trajectory.restartFromTraj(t_test, "ttest", 0.1)
+    t_test = Trajectory(fmodel, parameters, 1)
+    rst_test = Trajectory.restartFromTraj(t_test, 2, 0.1)
     assert rst_test.ctime() == 0.0
 
 
@@ -64,7 +65,7 @@ def test_simpleModelTraj():
     parameters = {"trajectory" : {"end_time": 0.04,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "Traj1")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.01)
     assert isclose(t_test.scoreMax(), 0.1, abs_tol=1e-9)
     assert t_test.isConverged() is False
@@ -78,7 +79,7 @@ def test_storeAndRestoreSimpleTraj():
     parameters = {"trajectory" : {"end_time": 0.05,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "Traj1")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.02)
     assert isclose(t_test.scoreMax(), 0.2, abs_tol=1e-9)
     assert t_test.isConverged() is False
@@ -96,9 +97,9 @@ def test_restartSimpleTraj():
     parameters = {"trajectory" : {"end_time": 0.04,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "rstSimple")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.01)
-    rst_test = Trajectory.restartFromTraj(t_test, "testiD", 0.05)
+    rst_test = Trajectory.restartFromTraj(t_test, 2, 0.05)
     assert rst_test.ctime() == 0.005
 
 
@@ -108,7 +109,7 @@ def test_accessDataSimpleTraj():
     parameters = {"trajectory" : {"end_time": 0.04,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, "Simple")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.01)
     assert t_test.getLength() == 11
     assert isclose(t_test.getTimeArr()[-1], 0.01, abs_tol=1e-9)
@@ -121,7 +122,7 @@ def test_sparseSimpleTraj():
                                   "step_size": 0.001,
                                   "targetscore": 0.25,
                                   "sparse_int": 5}}
-    t_test = Trajectory(fmodel, parameters, "Traj1")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.012)
     assert isclose(t_test.scoreMax(), 0.12, abs_tol=1e-9)
     assert t_test.isConverged() is False
@@ -137,7 +138,7 @@ def test_storeAndRestartSparseSimpleTraj():
                                   "step_size": 0.001,
                                   "targetscore": 0.25,
                                   "sparse_int": 5}}
-    t_test = Trajectory(fmodel, parameters, "Traj1")
+    t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.013)
     assert isclose(t_test.scoreMax(), 0.13, abs_tol=1e-9)
     assert t_test.isConverged() is False

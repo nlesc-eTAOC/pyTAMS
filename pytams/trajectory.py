@@ -23,6 +23,17 @@ class ForwardModelAdvance(Exception):
 
     pass
 
+
+def formTrajID(n: int) -> str:
+    """Helper to assemble a trajectory ID string."""
+    return "traj{:06}".format(n)
+
+
+def getIndexFromID(identity: str) -> int:
+    """Helper to get trajectory index from ID string."""
+    return int(identity[-6:])
+
+
 class Snapshot:
     """A class defining a snapshot.
 
@@ -72,15 +83,15 @@ class Trajectory:
     def __init__(self,
                  fmodel_t: Any,
                  parameters: dict,
-                 trajId: str) -> None:
+                 trajId: int) -> None:
         """Create a trajectory.
 
         Args:
             fmodel_t: the forward model type
             parameters: a dictionary of input parameters
-            trajId: a string for the trajectory id
+            trajId: a int for the trajectory index
         """
-        self._fmodel = fmodel_t(parameters, trajId)
+        # Stash away the run parameters
         self._parameters : dict = parameters
 
         self._step : int = 0
@@ -99,19 +110,26 @@ class Trajectory:
 
         self._score_max : float = 0.0
 
-        self._tid : str = trajId
-        self._checkFile : str = "{}.xml".format(trajId)
+        self._tid : int = trajId
+        self._checkFile : str = "{}.xml".format(self.idstr())
 
         self._has_ended : bool = False
         self._has_converged : bool = False
+
+        # Each trajectory have its own instance of the model
+        self._fmodel = fmodel_t(self._parameters, self.idstr())
 
     def setCheckFile(self, file: str) -> None:
         """Setter of the trajectory checkFile."""
         self._checkFile = file
 
-    def id(self) -> str:
+    def id(self) -> int:
         """Return trajectory Id."""
         return self._tid
+
+    def idstr(self) -> str:
+        """Return trajectory Id."""
+        return formTrajID(self._tid)
 
     def advance(self, t_end: float = 1.0e12, walltime: float = 1.0e12) -> None:
         """Advance the trajectory to a prescribed end time.
@@ -192,7 +210,7 @@ class Trajectory:
             self._fmodel.clear()
 
         if remainingTime < 0.05 * walltime:
-            raise WallTimeLimit("{} ran out of time in advance()".format(self._tid))
+            raise WallTimeLimit("{} ran out of time in advance()".format(self.idstr()))
 
 
     @classmethod
@@ -250,7 +268,7 @@ class Trajectory:
     def restartFromTraj(
         cls,
         traj: Trajectory,
-        rstId: str,
+        rstId: int,
         score: float,
     ) -> Trajectory:
         """Create a new trajectory.
@@ -298,7 +316,7 @@ class Trajectory:
 
     def store(self, traj_file: Optional[str] = None) -> None:
         """Store the trajectory to an XML chkfile."""
-        root = ET.Element(self._tid)
+        root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters["trajectory"]))
         mdata = ET.SubElement(root, "metadata")
         mdata.append(new_element("id", self._tid))

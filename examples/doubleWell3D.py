@@ -20,11 +20,15 @@ class DoubleWellModel3D(ForwardModelBaseClass):
     """
 
     def _init_model(self,
-                    params: dict = None,
+                    params: dict,
                     ioprefix: str = None):
         """Override the template."""
         self._state = self.initCondition()
-        self._rng = np.random.default_rng()
+        if params["model"]["deterministic"]:
+            seed = int(ioprefix[4:])
+            self._rng = np.random.default_rng(seed)
+        else:
+            self._rng = np.random.default_rng()
 
     def __RHS(self, state):
         """Double well RHS function."""
@@ -77,12 +81,12 @@ class DoubleWellModel3D(ForwardModelBaseClass):
 
     def _make_noise(self):
         """Override the template."""
-        return self._rng.standard_normal(10)
+        return self._rng.standard_normal(3)
 
     @classmethod
     def name(self):
         """Return the model name."""
-        return "DoubleWellModel"
+        return "DoubleWellModel3D"
 
 if __name__ == "__main__":
     fmodel = DoubleWellModel3D

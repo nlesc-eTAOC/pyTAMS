@@ -1,14 +1,16 @@
 import argparse
+import asyncio
+import concurrent.futures
+import functools
 import os
 import time
 from typing import Any
 from typing import Optional
+from typing import Tuple
 import numpy as np
 import toml
-from pytams.daskutils import DaskRunner
 from pytams.database import Database
-from pytams.database import formTrajID
-from pytams.database import getIndexFromID
+from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
 
@@ -123,7 +125,7 @@ class TAMS:
                 Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
-                    trajId=formTrajID(n),
+                    trajId=n,
                 )
             )
 
@@ -133,21 +135,19 @@ class TAMS:
             "Creating the initial pool of {} trajectories".format(self._nTraj)
         )
 
-        with DaskRunner(self.parameters,
-                        self.parameters.get("dask",{}).get("nworker_init", 1)) as runner:
-            # Assemble a list of promises
-            # All the trajectories are added, even those already done
-            tasks_p = []
+        t_list = []
+        with get_runner_type(self.parameters)(self.parameters,
+                                              pool_worker,
+                                              pool_worker_async,
+                                              self.parameters.get("runner",{}).get("nworker_init", 1)) as runner:
             for T in self._tdb.trajList():
-                tasks_p.append(runner.make_promise(task_delayed,
-                                                   T,
-                                                   self._startTime + self._wallTime,
-                                                   self._tdb.save(),
-                                                   self._tdb.name()))
+                task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
+                runner.make_promise(task)
+            t_list = runner.execute_promises()
 
-            self._tdb.updateTrajList(runner.execute_promises(tasks_p))
-
-        # Update the trajectory stored database
+        # Re-order list since runner does not guarantee order
+        t_list.sort(key=lambda t: t.id())
+        self._tdb.updateTrajList(t_list)
         self._tdb.updateDiskData()
 
         self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
@@ -205,33 +205,34 @@ class TAMS:
         ongoing_list = self._tdb.get_ongoing()
         if ongoing_list:
             print("Unfinished splitting iteration detected, traj {} need(s) finishing".format(self._tdb.get_ongoing()))
-            with DaskRunner(self.parameters,
-                            self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
-                tasks_p = []
+            with get_runner_type(self.parameters)(self.parameters,
+                                                  pool_worker,
+                                                  pool_worker_async,
+                                                  self.parameters.get("runner",{}).get("nworker_init", 1)) as runner:
                 for i in ongoing_list:
                     T = self._tdb.getTraj(i)
-                    if not T.hasEnded():
-                        tasks_p.append(runner.make_promise(task_delayed,
-                                                           T,
-                                                           self._startTime + self._wallTime,
-                                                           self._tdb.save(),
-                                                           self._tdb.name()))
-                finished_traj = runner.execute_promises(tasks_p)
-
+                    task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
+                    runner.make_promise(task)
+                finished_traj = runner.execute_promises()
                 for T in finished_traj:
-                    self._tdb.overwriteTraj(getIndexFromID(T.id()), T)
+                    self._tdb.overwriteTraj(T.id(), T)
 
                 # Clear list of ongoing branches
                 self._tdb.reset_ongoing()
 
                 # increment splitting index
-                k = self._tdb.kSplit() + runner.dask_nworker
+                k = self._tdb.kSplit() + runner.n_workers()
                 self._tdb.setKSplit(k)
 
 
     def get_restart_at_random(self, min_idx_list : list[int]) -> list[int]:
         """Get a list of trajectory index to restart from at random."""
-        rng = np.random.default_rng()
+        # Enable deterministic runs by setting the a (different) seed
+        # for each splitting iteration
+        if self.parameters.get("tams",{}).get("deterministic", False):
+            rng = np.random.default_rng(seed=42*self._tdb.kSplit())
+        else:
+            rng = np.random.default_rng()
         rest_idx = [-1] * len(min_idx_list)
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
@@ -250,9 +251,12 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._tdb.kSplit()
 
-        with DaskRunner(self.parameters,
-                        self.parameters.get("dask",{}).get("nworker_iter", 1)) as runner:
+        with get_runner_type(self.parameters)(self.parameters,
+                                              ms_worker,
+                                              ms_worker_async,
+                                              self.parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
+                print("Starting it {} with {} workers".format(k, runner.n_workers()))
                 # Check for early exit conditions
                 early_exit, maxes = self.check_exit_splitting_loop(k)
                 if early_exit:
@@ -264,35 +268,32 @@ class TAMS:
                     self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
-                min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
-                    : runner.dask_nworker
+                min_idx_list = np.argpartition(maxes, runner.n_workers())[
+                    : runner.n_workers()
                 ]
                 min_vals = maxes[min_idx_list]
 
                 # Randomly select trajectory to branch from
-                rest_idx = self.get_restart_at_random(min_idx_list)
+                rest_idx = self.get_restart_at_random(min_idx_list.tolist())
 
                 self._tdb.appendBias(len(min_idx_list))
                 self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._nTraj))
 
                 # Assemble a list of promises
-                tasks_p = []
                 for i in range(len(min_idx_list)):
-                    tasks_p.append(
-                        runner.make_promise(worker,
-                                            1.0e9,
-                                            self._tdb.getTraj(rest_idx[i]),
-                                            self._tdb.getTraj(min_idx_list[i]).id(),
-                                            min_vals[i],
-                                            self._startTime + self._wallTime,
-                                            self._tdb.save(),
-                                            self._tdb.name())
-                    )
-                restartedTrajs = runner.execute_promises(tasks_p)
+                    task = [1.0e9,
+                            self._tdb.getTraj(rest_idx[i]),
+                            self._tdb.getTraj(min_idx_list[i]).id(),
+                            min_vals[i],
+                            self._startTime+self._wallTime,
+                            self._tdb.save(),
+                            self._tdb.name()]
+                    runner.make_promise(task)
+                restartedTrajs = runner.execute_promises()
 
                 # Update the trajectory database
-                for i in range(len(min_idx_list)):
-                    self._tdb.overwriteTraj(min_idx_list[i],restartedTrajs[i])
+                for T in restartedTrajs:
+                    self._tdb.overwriteTraj(T.id(), T)
 
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
@@ -301,7 +302,7 @@ class TAMS:
 
                 else:
                     # Update the trajectory database, increment splitting index
-                    k = k + runner.dask_nworker
+                    k = k + runner.n_workers()
                     self._tdb.setKSplit(k)
                     self._tdb.saveSplittingData()
 
@@ -363,7 +364,7 @@ class TAMS:
 
         return trans_prob
 
-def task_delayed(traj: Trajectory,
+def pool_worker(traj: Trajectory,
                  wall_time_info: float,
                  saveDB: bool,
                  nameDB: str) -> Trajectory:
@@ -374,13 +375,16 @@ def task_delayed(traj: Trajectory,
         wall_time_info: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of the database
+
+    Returns:
+        The updated trajectory
     """
     wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
-        print("Advancing {} [time left: {}]".format(traj.id(), wall_time))
+        print("Advancing {} [time left: {}]".format(traj.idstr(), wall_time))
         if saveDB:
             traj.setCheckFile(
-                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
+                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
             )
         try:
             traj.advance(walltime=wall_time)
@@ -397,10 +401,31 @@ def task_delayed(traj: Trajectory,
     return traj
 
 
-def worker(
+async def pool_worker_async(
+    queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
+    res_queue : asyncio.Queue[Trajectory],
+    executor : concurrent.futures.Executor) -> None:
+    """A worker to generate each initial trajectory.
+
+    Args:
+        queue: a queue from which to get tasks
+        res_queue: a queue to put the results in
+        executor: an executor to launch the work in
+    """
+    while True:
+        traj, wall_time_info, saveDB, nameDB = await queue.get()
+        loop = asyncio.get_running_loop()
+        updated_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(pool_worker, traj, wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(updated_traj)
+        queue.task_done()
+
+def ms_worker(
     t_end: float,
     fromTraj: Trajectory,
-    rstId: str,
+    rstId: int,
     min_val: float,
     wall_time_info: float,
     saveDB: bool,
@@ -417,12 +442,12 @@ def worker(
         saveDB: a bool to save the trajectory to database
         nameDB: name of DB to save the traj in (Opt)
     """
-    print("Restarting {} from {}".format(rstId, fromTraj.id(), ))
+    print("Restarting [{}] from {}".format(rstId, fromTraj.idstr(), ))
     wall_time = wall_time_info - time.monotonic()
     traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
     if saveDB:
         traj.setCheckFile(
-            "{}/{}/{}.xml".format(nameDB, "trajectories", traj.id())
+            "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
         )
 
     try:
@@ -438,3 +463,26 @@ def worker(
             traj.store()
 
     return traj
+
+async def ms_worker_async(
+    queue : asyncio.Queue[Any],
+    res_queue : asyncio.Queue[Trajectory],
+    executor : concurrent.futures.Executor,
+) -> None:
+    """An async worker to restart trajectories.
+
+    Args:
+        queue: an asyncio queue to get work from
+        res_queue: an asyncio queue to put results in
+        executor: an executor
+    """
+    while True:
+        t_end, fromTraj, rstId, min_val, wall_time_info, saveDB, nameDB = await queue.get()
+        loop = asyncio.get_running_loop()
+        restarted_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(ms_worker, t_end, fromTraj, rstId, min_val,
+                              wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(restarted_traj)
+        queue.task_done()
