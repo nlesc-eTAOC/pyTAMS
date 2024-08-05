@@ -124,7 +124,7 @@ class AsIORunner(BaseRunner):
                 asyncio.create_task(self._async_worker(self._queue,
                                                        self._rqueue,
                                                        self._executor))
-                for i in range(self._n_workers)]
+                for _ in range(self._n_workers)]
 
         # Wait until all tasks are processed
         await self._queue.join()
