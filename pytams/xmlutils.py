@@ -103,13 +103,13 @@ def xml_to_dict(elem: ET.Element | None) -> dict:
     Return:
         a dictionary containing the element entries
     """
-    if not elem:
+    if elem is None:
         raise XMLUtilsError("Unable to parse XML element to dict since 'None' was passed")
+
     d = {}
-    if elem:
-        for child in elem:
-            tag, entry = manualCast(child)
-            d[tag] = entry
+    for child in elem:
+        tag, entry = manualCast(child)
+        d[tag] = entry
 
     return d
 

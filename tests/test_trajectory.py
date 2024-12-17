@@ -11,7 +11,7 @@ from tests.models import SimpleFModel
 def test_initSnapshot():
     """Test initialization of a snapshot."""
     snap = Snapshot(0.1,0.1,"Noisy","State")
-    assert snap.Time() == 0.1
+    assert snap.time == 0.1
     assert snap.hasState()
 
 

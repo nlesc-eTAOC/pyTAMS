@@ -61,6 +61,10 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         # Call the concrete class init method
         self._init_model(params, ioprefix)
 
+        # Generate the first noise increment
+        # to at least get the proper type.
+        self._noise = self._make_noise()
+
     @final
     def advance(self,
                 dt: float,

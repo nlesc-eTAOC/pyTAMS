@@ -381,7 +381,7 @@ def pool_worker(traj: Trajectory,
     """
     wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
-        print("Advancing {} [time left: {}]".format(traj.idstr(), wall_time))
+        print("Advancing {} [time left: {}]".format(traj.idstr(), wall_time), flush=True)
         if saveDB:
             traj.setCheckFile(
                 "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
@@ -394,6 +394,7 @@ def pool_worker(traj: Trajectory,
                 traj.store()
         except Exception:
             print("Advance ran into an error !")
+            raise
         else:
             if saveDB:
                 traj.store()
@@ -442,7 +443,7 @@ def ms_worker(
         saveDB: a bool to save the trajectory to database
         nameDB: name of DB to save the traj in (Opt)
     """
-    print("Restarting [{}] from {}".format(rstId, fromTraj.idstr(), ))
+    print("Restarting [{}] from {}".format(rstId, fromTraj.idstr(), ), flush=True)
     wall_time = wall_time_info - time.monotonic()
     traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
     if saveDB:
@@ -458,6 +459,7 @@ def ms_worker(
             traj.store()
     except Exception:
         print("Advance ran into an error !")
+        raise
     else:
         if saveDB:
             traj.store()
