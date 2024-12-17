@@ -48,7 +48,7 @@ class Snapshot:
     """
     time : float
     score : float
-    noise : Any | None = None
+    noise : Any
     state : Any | None = None
 
     def hasState(self) -> bool:
@@ -133,10 +133,10 @@ class Trajectory:
         # Set the initial snapshot
         # Always add the initial state
         if self._step == 0:
-           self._snaps.append(Snapshot(self._t_cur,
-                                       self._fmodel.score(),
-                                       0.0,
-                                       self._fmodel.getCurState()
+           self._snaps.append(Snapshot(time=self._t_cur,
+                                       score=self._fmodel.score(),
+                                       noise=self._fmodel.getNoise(),
+                                       state=self._fmodel.getCurState()
                                        )
                               )
 
@@ -161,16 +161,16 @@ class Trajectory:
             score = self._fmodel.score()
 
             if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
-                self._snaps.append(Snapshot(self._t_cur,
-                                            score,
-                                            self._fmodel.getNoise(),
-                                            self._fmodel.getCurState()
+                self._snaps.append(Snapshot(time=self._t_cur,
+                                            score=score,
+                                            noise=self._fmodel.getNoise(),
+                                            state=self._fmodel.getCurState()
                                             )
                                    )
             else:
-                self._snaps.append(Snapshot(self._t_cur,
-                                            score,
-                                            self._fmodel.getNoise(),
+                self._snaps.append(Snapshot(time=self._t_cur,
+                                            score=score,
+                                            noise=self._fmodel.getNoise(),
                                             )
                                    )
             if score > self._score_max:
