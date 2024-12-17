@@ -1,8 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
 import os
 import time
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from typing import Any
 from typing import Optional
 import numpy as np
@@ -151,7 +151,7 @@ class Trajectory:
 
             try:
                 dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
-            except ForwardModelAdvance as e:
+            except ForwardModelAdvance:
                 err_msg = f"ForwardModel advance error at step {self._step:08}"
                 print(err_msg)
                 raise
