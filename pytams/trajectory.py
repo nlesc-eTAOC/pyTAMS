@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 import os
 import time
 import xml.etree.ElementTree as ET
@@ -33,43 +34,30 @@ def getIndexFromID(identity: str) -> int:
     """Helper to get trajectory index from ID string."""
     return int(identity[-6:])
 
-
+@dataclass
 class Snapshot:
-    """A class defining a snapshot.
+    """A dataclass defining a snapshot.
 
-    Gathering what defines a snapshot into an object
+    Gathering what defines a snapshot into an object.
+
+    Attributes:
+        time : snapshot time
+        score : score function value
+        noise : noise used to reach this snapshot
+        state : model state
     """
-    def __init__(self,
-                 time: float,
-                 score: float,
-                 noise: Any,
-                 state: Optional[Any] = None) -> None:
-        """Create a snapshot.
+    time : float
+    score : float
+    noise : Any | None = None
+    state : Any | None = None
 
-        Holding time. score, noise and state (or not).
-        """
-        self._time = time
-        self._score = score
-        self._noise = noise
-        self._state = None
-        if state is not None:
-            self._state = state
-
-    def Time(self) -> float:
-        """Return the snapshot time."""
-        return self._time
-    def Score(self) -> float:
-        """Return the snapshot score."""
-        return self._score
-    def Noise(self) -> Any:
-        """Return the snapshot noise."""
-        return self._noise
-    def State(self) -> Any:
-        """Return the snapshot state."""
-        return self._state
     def hasState(self) -> bool:
-        """Check if snapshot has state."""
-        return self._state is not None
+        """Check if snapshot has state.
+
+        Returns:
+            bool : True if state is not None
+        """
+        return self.state is not None
 
 
 class Trajectory:
@@ -163,8 +151,10 @@ class Trajectory:
 
             try:
                 dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
-            except ForwardModelAdvance:
-                pass
+            except ForwardModelAdvance as e:
+                err_msg = f"ForwardModel advance error at step {self._step:08}"
+                print(err_msg)
+                raise
 
             self._step += 1
             self._t_cur = self._t_cur + dt
@@ -249,14 +239,14 @@ class Trajectory:
         need_update = False
         for k in range(len(restTraj._snaps)-1,-1,-1):
             if not restTraj._snaps[k].hasState():
-                restTraj._noise_backlog.append(restTraj._snaps[k].Noise())
+                restTraj._noise_backlog.append(restTraj._snaps[k].noise)
                 restTraj._snaps.pop(k)
                 need_update = True
             else:
                 break
 
-        restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
-        restTraj._t_cur = restTraj._snaps[-1].Time()
+        restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
+        restTraj._t_cur = restTraj._snaps[-1].time
 
         # Reset score_max, ended and converged
         if need_update:
@@ -293,7 +283,7 @@ class Trajectory:
         # Find where to branch from
         high_score_idx = 0
         last_snap_with_state = 0
-        while traj._snaps[high_score_idx].Score() < score:
+        while traj._snaps[high_score_idx].score < score:
             high_score_idx += 1
             if (traj._snaps[high_score_idx].hasState()):
                 last_snap_with_state = high_score_idx
@@ -306,11 +296,11 @@ class Trajectory:
             if (k <= last_snap_with_state):
                 restTraj._snaps.append(traj._snaps[k])
             else:
-                restTraj._noise_backlog.append(traj._snaps[k].Noise())
+                restTraj._noise_backlog.append(traj._snaps[k].noise)
 
-        restTraj._fmodel.setCurState(restTraj._snaps[-1].State())
-        restTraj._t_cur = restTraj._snaps[-1].Time()
-        restTraj._score_max = restTraj._snaps[-1].Score()
+        restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
+        restTraj._t_cur = restTraj._snaps[-1].time
+        restTraj._score_max = restTraj._snaps[-1].score
 
         return restTraj
 
@@ -330,10 +320,10 @@ class Trajectory:
         for k in range(len(self._snaps)):
             snaps_xml.append(
                 make_xml_snapshot(k,
-                                  self._snaps[k].Time(),
-                                  self._snaps[k].Score(),
-                                  self._snaps[k].Noise(),
-                                  self._snaps[k].State())
+                                  self._snaps[k].time,
+                                  self._snaps[k].score,
+                                  self._snaps[k].noise,
+                                  self._snaps[k].state)
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
@@ -346,8 +336,8 @@ class Trajectory:
         """Update trajectory score/ending metadata."""
         new_score_max = 0.0
         for snap in self._snaps:
-            if (snap.Score() > new_score_max):
-                new_score_max = snap.Score()
+            if (snap.score > new_score_max):
+                new_score_max = snap.score
         self._score_max = new_score_max
         if new_score_max > self._convergedVal:
             self._has_converged = True
@@ -386,21 +376,21 @@ class Trajectory:
         """Return the trajectory time instants."""
         times = np.zeros(len(self._snaps))
         for k in range(len(self._snaps)):
-            times[k] = self._snaps[k].Time()
+            times[k] = self._snaps[k].time
         return times
 
     def getScoreArr(self) -> npt.NDArray[np.float64]:
         """Return the trajectory scores."""
         scores = np.zeros(len(self._snaps))
         for k in range(len(self._snaps)):
-            scores[k] = self._snaps[k].Score()
+            scores[k] = self._snaps[k].score
         return scores
 
     def getNoiseArr(self) -> npt.NDArray[Any]:
         """Return the trajectory noises."""
-        noises = np.zeros(len(self._snaps), dtype=type(self._snaps[0].Noise))
+        noises = np.zeros(len(self._snaps), dtype=type(self._snaps[0].noise))
         for k in range(len(self._snaps)):
-            noises[k] = self._snaps[k].Noise()
+            noises[k] = self._snaps[k].noise
         return noises
 
     def getLength(self) -> int:
@@ -411,4 +401,4 @@ class Trajectory:
         """Return the last state in the trajectory."""
         for snap in reversed(self._snaps):
             if snap.hasState():
-                return snap.State()
+                return snap.state
