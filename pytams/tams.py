@@ -392,7 +392,6 @@ def pool_worker(traj: Trajectory,
             print("Trajectory advance ran out of time !")
             if saveDB:
                 traj.store()
-            raise
         except Exception:
             print("Advance ran into an error !")
             raise
@@ -458,7 +457,6 @@ def ms_worker(
         print("Trajectory advance ran out of time !")
         if saveDB:
             traj.store()
-        raise
     except Exception:
         print("Advance ran into an error !")
         raise
