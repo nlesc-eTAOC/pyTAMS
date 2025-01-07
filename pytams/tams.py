@@ -67,6 +67,7 @@ class TAMS:
         self._nSplitIter : int = self.parameters["tams"].get("nsplititer", 2000)
         self._wallTime : float = self.parameters["tams"].get("walltime", 24.0*3600.0)
         self._plot_diags = self.parameters["tams"].get("diagnostics", False)
+        self._init_pool_only = self.parameters["tams"].get("pool_only", False)
 
         # Database
         self._tdb = Database(fmodel_t,
@@ -339,6 +340,10 @@ class TAMS:
 
         if self.out_of_time():
             self.verbosePrint("Ran out of walltime ! Exiting now.")
+            return -1.0
+
+        if self._init_pool_only:
+            self.verbosePrint("Stopping after the pool stage !")
             return -1.0
 
         # Perform multilevel splitting
