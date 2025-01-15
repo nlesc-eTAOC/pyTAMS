@@ -165,7 +165,8 @@ class DaskRunner(BaseRunner):
             async_wk: an asynchronous worker function
             n_workers: number of workers
         """
-        self.dask_backend = params.get("dask",{}).get("backend", "local")
+        dask_dict = params.get("dask",{})
+        self.dask_backend = dask_dict.get("backend", "local")
         self._n_workers : int = n_workers
         self._sync_worker = sync_wk
         self._async_worker = async_wk
@@ -174,7 +175,7 @@ class DaskRunner(BaseRunner):
             self.client = Client(threads_per_worker=1, n_workers=self._n_workers)
             self.cluster = None
         elif self.dask_backend == "slurm":
-            self.slurm_config_file = params.get("dask",{}).get("slurm_config_file", None)
+            self.slurm_config_file = dask_dict.get("slurm_config_file", None)
             if self.slurm_config_file:
                 if not os.path.exists(self.slurm_config_file):
                     raise RunnerError(
@@ -189,11 +190,13 @@ class DaskRunner(BaseRunner):
                 )
                 self.cluster = SLURMCluster()
             else:
-                self.dask_queue = params.get("dask",{}).get("queue", "regular")
-                self.dask_ntasks = params.get("dask",{}).get("ntasks_per_job", 1)
-                self.dask_nworker_ncore = params.get("dask",{}).get("ncores_per_worker", 1)
-                self.dask_prologue = params.get("dask",{}).get("job_prologue", [])
-                self.dask_walltime = params.get("dask",{}).get("worker_walltime", "04:00:00")
+                print("In here", flush=True)
+                self.dask_queue = dask_dict.get("queue", "regular")
+                self.dask_ntasks = dask_dict.get("ntasks_per_job", 1)
+                self.dask_ntasks_per_node = dask_dict.get("ntasks_per_node", self.dask_ntasks)
+                self.dask_nworker_ncore = dask_dict.get("ncores_per_worker", 1)
+                self.dask_prologue = dask_dict.get("job_prologue", [])
+                self.dask_walltime = dask_dict.get("worker_walltime", "04:00:00")
                 self.cluster = SLURMCluster(
                     queue=self.dask_queue,
                     cores=self.dask_nworker_ncore,
@@ -203,7 +206,7 @@ class DaskRunner(BaseRunner):
                     interface='ib0',
                     job_script_prologue=self.dask_prologue,
                     job_extra_directives=["--ntasks={}".format(self.dask_ntasks),
-                                          "--tasks-per-node={}".format(self.dask_ntasks),
+                                          "--tasks-per-node={}".format(self.dask_ntasks_per_node),
                                           "--exclusive"],
                     job_directives_skip=['--cpus-per-task=', '--mem'],
                 )
