@@ -41,7 +41,7 @@ have a look at the [contribution guidelines](CONTRIBUTING.md).
 
 ## Acknowledgements
 
-The development of *pyTAMS* was supported by the [Netherlands eScience Center](https://www.esciencecenter.nl/)
+The development of *pyTAMS* was supported by the Netherlands eScience Center
 in collaboration with the Institute for Marine and Atmospheric research Utrecht [IMAU](https://www.uu.nl/onderzoek/imau).
 
 This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [NLeSC/python-template](https://github.com/NLeSC/python-template).
