@@ -185,8 +185,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._step = step
         self._time = time
         self._trajectory_restart_hook()
-        print(f"Restarting model in trajectory branching at step {self._step} and time {self._time}", flush = True)
-        exit()
 
     def _trajectory_restart_hook(self) -> None:
         """Model-specific post trajectory restart hook."""
