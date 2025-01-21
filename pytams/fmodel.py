@@ -172,6 +172,26 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Return the model's latest noise increment."""
         raise BaseClassCallError("Calling base class _make_noise method !")
 
+    @final
+    def post_trajectory_restart_hook(self,
+                                     step : int,
+                                     time : float) -> None:
+        """Model post trajectory restart hook.
+
+        Args:
+            step: the current step counter
+            time: the time of the simulation
+        """
+        self._step = step
+        self._time = time
+        self._trajectory_restart_hook()
+        print(f"Restarting model in trajectory branching at step {self._step} and time {self._time}", flush = True)
+        exit()
+
+    def _trajectory_restart_hook(self) -> None:
+        """Model-specific post trajectory restart hook."""
+        pass
+
     def _clear_model(self) -> Any:
         """Clear the concrete forward model internals."""
         pass

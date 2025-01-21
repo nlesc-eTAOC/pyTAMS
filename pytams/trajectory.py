@@ -302,6 +302,10 @@ class Trajectory:
         restTraj._t_cur = restTraj._snaps[-1].time
         restTraj._score_max = restTraj._snaps[-1].score
 
+        # Enable the model to perform tweaks
+        # after a trajectory restart
+        restTraj._fmodel.post_trajectory_restart_hook(len(restTraj._snaps), restTraj._t_cur)
+
         return restTraj
 
     def store(self, traj_file: Optional[str] = None) -> None:
