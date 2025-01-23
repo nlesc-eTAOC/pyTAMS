@@ -283,7 +283,7 @@ class Trajectory:
         # Find where to branch from
         high_score_idx = 0
         last_snap_with_state = 0
-        while traj._snaps[high_score_idx].score < score:
+        while traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
             if (traj._snaps[high_score_idx].hasState()):
                 last_snap_with_state = high_score_idx
