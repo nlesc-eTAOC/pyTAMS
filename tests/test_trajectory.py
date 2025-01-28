@@ -100,7 +100,7 @@ def test_restartSimpleTraj():
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.01)
     rst_test = Trajectory.restartFromTraj(t_test, 2, 0.05)
-    assert rst_test.ctime() == 0.005
+    assert rst_test.ctime() == 0.006
 
 
 def test_accessDataSimpleTraj():
@@ -147,3 +147,4 @@ def test_storeAndRestartSparseSimpleTraj():
     rst_test = Trajectory.restoreFromChk("test.xml", fmodel, parameters)
     rst_test.advance()
     assert rst_test.isConverged() is True
+    os.remove("test.xml")

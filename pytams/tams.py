@@ -269,13 +269,21 @@ class TAMS:
                     self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
-                min_idx_list = np.argpartition(maxes, runner.n_workers())[
-                    : runner.n_workers()
-                ]
+                # or more if equal score
+                ordered_tlist = np.argsort(maxes)
+                is_same_min = False
+                min_idx_list = []
+                for idx in ordered_tlist:
+                  if len(min_idx_list) > 0:
+                    is_same_min = maxes[idx] == maxes[min_idx_list[-1]]
+                  if (len(min_idx_list) < runner.n_workers() or
+                      is_same_min):
+                    min_idx_list.append(idx)
+
                 min_vals = maxes[min_idx_list]
 
                 # Randomly select trajectory to branch from
-                rest_idx = self.get_restart_at_random(min_idx_list.tolist())
+                rest_idx = self.get_restart_at_random(min_idx_list)
 
                 self._tdb.appendBias(len(min_idx_list))
                 self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._nTraj))
@@ -299,7 +307,7 @@ class TAMS:
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
-                    self._tdb.saveSplittingData(min_idx_list.tolist())
+                    self._tdb.saveSplittingData(min_idx_list)
 
                 else:
                     # Update the trajectory database, increment splitting index

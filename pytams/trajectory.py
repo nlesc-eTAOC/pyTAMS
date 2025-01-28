@@ -280,24 +280,31 @@ class Trajectory:
             )
             return restTraj
 
-        # Find where to branch from
+        # To ensure that TAMS converges, branching occurs on
+        # the first snapshot with a score *strictly* above the target
+        # Traverse the trajectory until a snapshot with a score >
+        # the target is encountered
         high_score_idx = 0
         last_snap_with_state = 0
-        while traj._snaps[high_score_idx].score < score:
+        while traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
             if (traj._snaps[high_score_idx].hasState()):
                 last_snap_with_state = high_score_idx
 
+        # Init empty trajectory
         restTraj = Trajectory(
             fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=rstId
         )
 
+        # Append snapshots, up to high_score_idx + 1 to
+        # ensure > behavior
         for k in range(high_score_idx + 1):
             if (k <= last_snap_with_state):
                 restTraj._snaps.append(traj._snaps[k])
             else:
                 restTraj._noise_backlog.append(traj._snaps[k].noise)
 
+        # Update trajectory metadata
         restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
         restTraj._t_cur = restTraj._snaps[-1].time
         restTraj._score_max = restTraj._snaps[-1].score

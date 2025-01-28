@@ -101,9 +101,11 @@ def test_doublewellDeterministicModelTAMS():
                                   "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.39667780642202544
+    assert transition_proba == 0.39663733322475747
+    os.remove("input.toml")
 
 
+@pytest.mark.dependency()
 def test_doublewellModel2WorkersTAMS():
     """Test TAMS with the doublewell model using two workers."""
     fmodel = DoubleWellModel
@@ -117,8 +119,10 @@ def test_doublewellModel2WorkersTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba == 0.5238831403348925
+    os.remove("input.toml")
 
 
+@pytest.mark.dependency(depends=["test_doublewellModel2WorkersTAMS"])
 def test_doublewellModel2WorkersRestoreTAMS():
     """Test TAMS with the doublewell model using two workers and restoring."""
     fmodel = DoubleWellModel
@@ -132,7 +136,8 @@ def test_doublewellModel2WorkersRestoreTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
-    #shutil.rmtree("dwTest.tdb")
+    os.remove("input.toml")
+    shutil.rmtree("dwTest.tdb")
 
 
 def test_doublewellVerySlowTAMS():
@@ -149,8 +154,10 @@ def test_doublewellVerySlowTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    os.remove("input.toml")
+    shutil.rmtree("dwTest.tdb")
 
-
+@pytest.mark.dependency()
 def test_doublewellSlowTAMS():
     """Test TAMS run out of time with a slow doublewell."""
     fmodel = DoubleWellModel
@@ -165,7 +172,9 @@ def test_doublewellSlowTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    os.remove("input.toml")
 
+@pytest.mark.dependency(depends=["test_doublewellSlowTAMS"])
 def test_doublewellSlowRestoreTAMS():
     """Test TAMS restarting a slow doublewell."""
     fmodel = DoubleWellModel
@@ -181,4 +190,5 @@ def test_doublewellSlowRestoreTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")
