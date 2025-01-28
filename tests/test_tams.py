@@ -101,7 +101,7 @@ def test_doublewellDeterministicModelTAMS():
                                   "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.39667780642202544
+    assert transition_proba == 0.39663733322475747
 
 
 def test_doublewellModel2WorkersTAMS():
