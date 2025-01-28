@@ -1,8 +1,8 @@
 """Tests for the pytams.database class."""
 import os
 import shutil
-import toml
 import pytest
+import toml
 from pytams.database import Database
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
