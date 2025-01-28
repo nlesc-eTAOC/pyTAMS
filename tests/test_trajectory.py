@@ -147,3 +147,4 @@ def test_storeAndRestartSparseSimpleTraj():
     rst_test = Trajectory.restoreFromChk("test.xml", fmodel, parameters)
     rst_test.advance()
     assert rst_test.isConverged() is True
+    os.remove("test.xml")
