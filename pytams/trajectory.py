@@ -149,7 +149,7 @@ class Trajectory:
             and remainingTime >= 0.05 * walltime
         ):
             # Do a single and keep track of remaining walltime
-            self._one_step()
+            score = self._one_step()
 
             remainingTime = walltime - time.monotonic() + startTime
 
@@ -176,7 +176,7 @@ class Trajectory:
             _logger.warning(warn_msg)
             raise WallTimeLimit(warn_msg)
 
-    def _one_step(self) -> None:
+    def _one_step(self) -> float:
         """Perform a single step of the forward model."""
         if self._noise_backlog:
             self._fmodel.setNoise(self._noise_backlog[0])
@@ -211,6 +211,8 @@ class Trajectory:
 
         if score >= self._convergedVal:
             self._has_converged = True
+
+        return score
 
 
     @classmethod

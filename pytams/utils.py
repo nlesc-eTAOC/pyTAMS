@@ -1,9 +1,9 @@
 """A set of utility functions for TAMS."""
 
 import logging
-import numpy.typing as npt
-import numpy as np
 from typing import Any
+import numpy as np
+import numpy.typing as npt
 
 
 def setup_logger(params : dict[Any,Any]) -> None:

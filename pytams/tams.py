@@ -14,8 +14,8 @@ from pytams.database import Database
 from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
-from pytams.utils import setup_logger
 from pytams.utils import get_min_scored
+from pytams.utils import setup_logger
 
 _logger = logging.getLogger(__name__)
 
