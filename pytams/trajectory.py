@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import os
 import time
 import xml.etree.ElementTree as ET
@@ -12,6 +13,8 @@ from pytams.xmlutils import make_xml_snapshot
 from pytams.xmlutils import new_element
 from pytams.xmlutils import read_xml_snapshot
 from pytams.xmlutils import xml_to_dict
+
+_logger = logging.getLogger(__name__)
 
 
 class WallTimeLimit(Exception):
@@ -153,7 +156,7 @@ class Trajectory:
                 dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
             except ForwardModelAdvance:
                 err_msg = f"ForwardModel advance error at step {self._step:08}"
-                print(err_msg)
+                _logger.error(err_msg)
                 raise
 
             self._step += 1
@@ -200,7 +203,9 @@ class Trajectory:
             self._fmodel.clear()
 
         if remainingTime < 0.05 * walltime:
-            raise WallTimeLimit("{} ran out of time in advance()".format(self.idstr()))
+            warn_msg = f"{self.idstr()} ran out of time in advance()"
+            _logger.warning(warn_msg)
+            raise WallTimeLimit(warn_msg)
 
 
     @classmethod

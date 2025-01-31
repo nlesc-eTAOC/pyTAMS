@@ -1,7 +1,7 @@
 [tams]
 ntrajectories = 100
 nsplititer = 1000
-verbose = 1
+loglevel = "WARNING"
 walltime = 200.0
 diagnostics = false
 deterministic = false
