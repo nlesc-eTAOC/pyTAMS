@@ -420,12 +420,12 @@ class Database:
     def info(self) -> None:
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
-        db_date = str(db_date)
+        db_date_str = str(db_date)
         prettyLine = "####################################################"
         inf_tbl = f"""
             {prettyLine}
             # TAMS v{version:17s} trajectory database      #
-            # Date: {db_date:42s} #
+            # Date: {db_date_str:42s} #
             # Model: {db_model:41s} #
             {prettyLine}
             # Requested # of traj: {self._ntraj:27} #

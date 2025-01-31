@@ -176,7 +176,7 @@ class Trajectory:
             _logger.warning(warn_msg)
             raise WallTimeLimit(warn_msg)
 
-    def _one_step(self) -> float:
+    def _one_step(self) -> Any:
         """Perform a single step of the forward model."""
         if self._noise_backlog:
             self._fmodel.setNoise(self._noise_backlog[0])
