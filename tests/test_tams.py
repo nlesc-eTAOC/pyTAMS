@@ -4,6 +4,7 @@ import shutil
 import pytest
 import toml
 from pytams.tams import TAMS
+from pytams.tams import TAMSError
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
 
@@ -16,6 +17,11 @@ def test_initTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     assert tams.nTraj() == 500
 
+def test_initTAMSNoInput():
+    """Test failed TAMS initialization."""
+    fmodel = SimpleFModel
+    with pytest.raises(TAMSError):
+        _ = TAMS(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
 
 def test_simpleModelTAMS():
     """Test TAMS with simple model."""
@@ -28,6 +34,20 @@ def test_simpleModelTAMS():
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
 
+
+def test_simpleModelTAMSwithDB():
+    """Test TAMS with simple model."""
+    fmodel = SimpleFModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                   "runner": {"type" : "asyncio"},
+                   "database" : {"DB_save" : True, "DB_prefix" : "simpleModelTest"},
+                   "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15,
+                                  "chkfile_dump_all" : True}}, f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 1.0
+    shutil.rmtree("simpleModelTest.tdb")
 
 def test_simpleModelTAMSSlurmFail():
     """Test TAMS with simple model with Slurm dask backend."""

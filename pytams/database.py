@@ -63,7 +63,7 @@ class Database:
         self._prefix = params.get("database", {}).get("DB_prefix", "TAMS")
         self._load = params.get("database", {}).get("DB_restart", None)
         self._format = params.get("database", {}).get("DB_format", "XML")
-        self._name = "{}.tdb".format(self._prefix)
+        self._name = f"{self._prefix}.tdb"
 
         if self._load:
             self._name = self._load
@@ -89,7 +89,7 @@ class Database:
                 copy_exists = True
                 while copy_exists:
                     random_int = rng.integers(0, 999999)
-                    name_rnd = "{}_{:06d}".format(self._name, random_int)
+                    name_rnd = f"{self._name}_{random_int:06d}"
                     copy_exists = os.path.exists(name_rnd)
                 warn_msg = f"Database {self._name} already present. It will be copied to {name_rnd}"
                 _logger.warning(warn_msg)
@@ -98,14 +98,14 @@ class Database:
             os.mkdir(self._name)
 
             # Save the runtime options
-            with open("{}/input_params.toml".format(self._name), 'w') as f:
+            with open(f"{self._name}/input_params.toml", 'w') as f:
                 toml.dump(self._parameters, f)
 
             # Header file with metadata
             self._writeMetadata()
 
             # Empty trajectories subfolder
-            os.mkdir("{}/{}".format(self._name, "trajectories"))
+            os.mkdir(f"{self._name}/trajectories")
 
     def _writeMetadata(self) -> None:
         """Write the database Metadata to disk."""
@@ -181,7 +181,7 @@ class Database:
 
         # Splitting data file
         if self._format == "XML":
-            splittingDataFile = "{}/splittingData.xml".format(self._name)
+            splittingDataFile = f"{self._name}/splittingData.xml"
             root = ET.Element("splitting")
             root.append(new_element("nsplititer", self._nsplititer))
             root.append(new_element("ksplit", self._ksplit))
@@ -201,7 +201,7 @@ class Database:
         """Read splitting data."""
         # Read data file
         if self._format == "XML":
-            splittingDataFile = "{}/splittingData.xml".format(self._name)
+            splittingDataFile = f"{self._name}/splittingData.xml"
             tree = ET.parse(splittingDataFile)
             root = tree.getroot()
             datafromxml = xml_to_dict(root)
@@ -300,7 +300,7 @@ class Database:
 
         # Parameters stored in the DB override
         # newly provided parameters.
-        with open("{}/input_params.toml".format(self._name), 'r') as f:
+        with open(f"{self._load}/input_params.toml", 'r') as f:
             readInParams = toml.load(f)
         self._parameters.update(readInParams)
 
@@ -333,11 +333,11 @@ class Database:
 
     def headerFile(self) -> str:
         """Helper returning the DB header file."""
-        return "{}/header.xml".format(self._name)
+        return f"{self._name}/header.xml"
 
     def poolFile(self) -> str:
         """Helper returning the DB trajectory pool file."""
-        return "{}/trajPool.xml".format(self._name)
+        return f"{self._name}/trajPool.xml"
 
     def isEmpty(self) -> bool:
         """Check if database is empty."""
@@ -420,12 +420,12 @@ class Database:
     def info(self) -> None:
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
-        db_date = str(db_date)
+        db_date_str = str(db_date)
         prettyLine = "####################################################"
         inf_tbl = f"""
             {prettyLine}
             # TAMS v{version:17s} trajectory database      #
-            # Date: {db_date:42s} #
+            # Date: {db_date_str:42s} #
             # Model: {db_model:41s} #
             {prettyLine}
             # Requested # of traj: {self._ntraj:27} #

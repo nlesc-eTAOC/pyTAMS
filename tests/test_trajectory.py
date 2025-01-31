@@ -5,6 +5,7 @@ import pytest
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.trajectory import Snapshot
 from pytams.trajectory import Trajectory
+from pytams.utils import moving_avg
 from tests.models import SimpleFModel
 
 
@@ -148,3 +149,15 @@ def test_storeAndRestartSparseSimpleTraj():
     rst_test.advance()
     assert rst_test.isConverged() is True
     os.remove("test.xml")
+
+def test_scoreMovingAverage():
+    """Test using a moving average on a score array."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.9,
+                                  "step_size": 0.0001,
+                                  "targetscore": 0.95}}
+    t_test = Trajectory(fmodel, parameters, 1)
+    t_test.advance()
+    score = t_test.getScoreArr()
+    avg_score = moving_avg(score, 10)
+    assert isclose(avg_score[0],0.0045,abs_tol=1e-9)
