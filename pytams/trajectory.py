@@ -30,7 +30,7 @@ class ForwardModelAdvance(Exception):
 
 def formTrajID(n: int) -> str:
     """Helper to assemble a trajectory ID string."""
-    return "traj{n:06}"
+    return f"traj{n:06}"
 
 
 def getIndexFromID(identity: str) -> int:
