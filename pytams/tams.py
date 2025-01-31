@@ -15,6 +15,7 @@ from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
 from pytams.utils import setup_logger
+from pytams.utils import get_min_scored
 
 _logger = logging.getLogger(__name__)
 
@@ -266,17 +267,7 @@ class TAMS:
 
                 # Get the nworker lower scored trajectories
                 # or more if equal score
-                ordered_tlist = np.argsort(maxes)
-                is_same_min = False
-                min_idx_list = []
-                for idx in ordered_tlist:
-                  if len(min_idx_list) > 0:
-                    is_same_min = maxes[idx] == maxes[min_idx_list[-1]]
-                  if (len(min_idx_list) < runner.n_workers() or
-                      is_same_min):
-                    min_idx_list.append(idx)
-
-                min_vals = maxes[min_idx_list]
+                min_idx_list, min_vals = get_min_scored(maxes, runner.n_workers())
 
                 # Randomly select trajectory to branch from
                 rest_idx = self.get_restart_at_random(min_idx_list)

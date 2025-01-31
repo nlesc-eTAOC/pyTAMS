@@ -148,39 +148,8 @@ class Trajectory:
             and not self._has_converged
             and remainingTime >= 0.05 * walltime
         ):
-            if self._noise_backlog:
-                self._fmodel.setNoise(self._noise_backlog[0])
-                self._noise_backlog.pop(0)
-
-            try:
-                dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
-            except ForwardModelAdvance:
-                err_msg = f"ForwardModel advance error at step {self._step:08}"
-                _logger.error(err_msg)
-                raise
-
-            self._step += 1
-            self._t_cur = self._t_cur + dt
-            score = self._fmodel.score()
-
-            if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
-                self._snaps.append(Snapshot(time=self._t_cur,
-                                            score=score,
-                                            noise=self._fmodel.getNoise(),
-                                            state=self._fmodel.getCurState()
-                                            )
-                                   )
-            else:
-                self._snaps.append(Snapshot(time=self._t_cur,
-                                            score=score,
-                                            noise=self._fmodel.getNoise(),
-                                            )
-                                   )
-            if score > self._score_max:
-                self._score_max = score
-
-            if score >= self._convergedVal:
-                self._has_converged = True
+            # Do a single and keep track of remaining walltime
+            self._one_step()
 
             remainingTime = walltime - time.monotonic() + startTime
 
@@ -206,6 +175,42 @@ class Trajectory:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
             _logger.warning(warn_msg)
             raise WallTimeLimit(warn_msg)
+
+    def _one_step(self) -> None:
+        """Perform a single step of the forward model."""
+        if self._noise_backlog:
+            self._fmodel.setNoise(self._noise_backlog[0])
+            self._noise_backlog.pop(0)
+
+        try:
+            dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
+        except ForwardModelAdvance:
+            err_msg = f"ForwardModel advance error at step {self._step:08}"
+            _logger.error(err_msg)
+            raise
+
+        self._step += 1
+        self._t_cur = self._t_cur + dt
+        score = self._fmodel.score()
+
+        if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
+            self._snaps.append(Snapshot(time=self._t_cur,
+                                        score=score,
+                                        noise=self._fmodel.getNoise(),
+                                        state=self._fmodel.getCurState()
+                                        )
+                               )
+        else:
+            self._snaps.append(Snapshot(time=self._t_cur,
+                                        score=score,
+                                        noise=self._fmodel.getNoise(),
+                                        )
+                               )
+        if score > self._score_max:
+            self._score_max = score
+
+        if score >= self._convergedVal:
+            self._has_converged = True
 
 
     @classmethod
