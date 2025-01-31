@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import concurrent.futures
+import logging
 import ntpath
 import os
 import shutil
@@ -11,7 +12,6 @@ from typing import Callable
 import dask
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
-import logging
 
 _logger = logging.getLogger(__name__)
 

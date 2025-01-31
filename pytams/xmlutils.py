@@ -1,11 +1,11 @@
 import ast
+import logging
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Dict
 import numpy as np
-import logging
 
 _logger = logging.getLogger(__name__)
 
