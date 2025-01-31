@@ -11,6 +11,9 @@ from typing import Callable
 import dask
 from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class RunnerError(Exception):
@@ -178,15 +181,13 @@ class DaskRunner(BaseRunner):
             self.slurm_config_file = dask_dict.get("slurm_config_file", None)
             if self.slurm_config_file:
                 if not os.path.exists(self.slurm_config_file):
-                    raise RunnerError(
-                        "Specified slurm_config_file do not exists: {}".format(
-                            self.slurm_config_file
-                        )
-                    )
+                    err_msg = f"Specified slurm_config_file do not exists: {self.slurm_config_file}"
+                    _logger.error(err_msg)
+                    raise RunnerError(err_msg)
 
                 config_file = ntpath.basename(self.slurm_config_file)
                 shutil.move(
-                    self.slurm_config_file, "~/.config/dask/{}".format(config_file)
+                    self.slurm_config_file, f"~/.config/dask/{config_file}"
                 )
                 self.cluster = SLURMCluster()
             else:
@@ -204,15 +205,17 @@ class DaskRunner(BaseRunner):
                     processes=1,
                     interface='ib0',
                     job_script_prologue=self.dask_prologue,
-                    job_extra_directives=["--ntasks={}".format(self.dask_ntasks),
-                                          "--tasks-per-node={}".format(self.dask_ntasks_per_node),
+                    job_extra_directives=[f"--ntasks={self.dask_ntasks}",
+                                          f"--tasks-per-node={self.dask_ntasks_per_node}",
                                           "--exclusive"],
                     job_directives_skip=['--cpus-per-task=', '--mem'],
                 )
             self.cluster.scale(jobs=self._n_workers)
             self.client = Client(self.cluster)
         else:
-            raise RunnerError("Unknown [dask] backend: {}".format(self.dask_backend))
+            err_msg = f"Unknown [dask] backend: {self.dask_backend}"
+            _logger.error(err_msg)
+            raise RunnerError(err_msg)
 
     def __enter__(self) -> DaskRunner:
         """To enable use of with."""
@@ -258,6 +261,8 @@ def get_runner_type(params : dict) -> type[BaseRunner]:
     }
     runner_str = params.get("runner", {}).get("type").lower()
     if runner_str not in runner_map:
-        raise RunnerError("Unable to get unknown {} runner.".format(runner_str))
+        err_msg = f"Unable to get {runner_str} runner."
+        _logger.error(err_msg)
+        raise RunnerError(err_msg)
 
     return runner_map[runner_str]

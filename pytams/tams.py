@@ -58,9 +58,9 @@ class TAMS:
 
         input_file = vars(parse_cl_args(a_args=a_args))["input"]
         if (not os.path.exists(input_file)):
-            raise TAMSError(
-                "Could not find the {} TAMS input file !".format(input_file)
-            )
+            err_msg = f"Could not find the {input_file} TAMS input file !"
+            _logger.error(err_msg)
+            raise TAMSError(err_msg)
 
         with open(input_file, 'r') as f:
             self.parameters = toml.load(f)
@@ -262,7 +262,7 @@ class TAMS:
 
                 # Plot trajectory database scores
                 if self._plot_diags:
-                    pltfile = "Score_k{:05}.png".format(k)
+                    pltfile = f"Score_k{k:05}.png"
                     self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
@@ -386,9 +386,7 @@ def pool_worker(traj: Trajectory,
         dbg_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
         _logger.debug(dbg_msg)
         if saveDB:
-            traj.setCheckFile(
-                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
-            )
+            traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
         try:
             traj.advance(walltime=wall_time)
         except WallTimeLimit:
@@ -454,10 +452,7 @@ def ms_worker(
         _logger.debug(dbg_msg)
         traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
         if saveDB:
-            traj.setCheckFile(
-                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
-            )
-
+            traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
         try:
             traj.advance(walltime=wall_time)
         except WallTimeLimit:

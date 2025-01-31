@@ -5,6 +5,10 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 import numpy as np
+import logging
+
+_logger = logging.getLogger(__name__)
+
 
 
 class XMLUtilsError(Exception):
@@ -70,9 +74,9 @@ def manualCastStr(type_str: str,
         elif type_str == "None":
             castedElem = None
         else:
-            raise XMLUtilsError(
-                "Type {} not handled by manualCast !".format(type_str)
-            )
+            err_msg = f"Type {type_str} not handled by manualCast !"
+            _logger.error(err_msg)
+            raise XMLUtilsError(err_msg)
     return castedElem
 
 
@@ -104,6 +108,7 @@ def xml_to_dict(elem: ET.Element | None) -> dict:
         a dictionary containing the element entries
     """
     if elem is None:
+        _logger.error("Unable to parse XML element to dict since 'None' was passed")
         raise XMLUtilsError("Unable to parse XML element to dict since 'None' was passed")
 
     d = {}
@@ -166,7 +171,7 @@ def make_xml_snapshot(idx: int,
         noise: the stochastic noise
         state: the associated state
     """
-    elem = ET.Element("Snap_{:07d}".format(idx))
+    elem = ET.Element(f"Snap_{idx:07d}")
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
     elem.attrib["noise_type"] = get_val_type(noise)
