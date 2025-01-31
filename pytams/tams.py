@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import concurrent.futures
 import functools
+import logging
 import os
 import time
 from typing import Any
@@ -13,7 +14,9 @@ from pytams.database import Database
 from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
+from pytams.utils import setup_logger
 
+_logger = logging.getLogger(__name__)
 
 class TAMSError(Exception):
     """Exception class for TAMS."""
@@ -61,8 +64,10 @@ class TAMS:
         with open(input_file, 'r') as f:
             self.parameters = toml.load(f)
 
+        # Setup logger
+        setup_logger(self.parameters)
+
         # Parse user-inputs
-        self.v = self.parameters["tams"].get("verbose", False)
         self._nTraj : int = self.parameters["tams"].get("ntrajectories", 500)
         self._nSplitIter : int = self.parameters["tams"].get("nsplititer", 2000)
         self._wallTime : float = self.parameters["tams"].get("walltime", 24.0*3600.0)
@@ -83,11 +88,6 @@ class TAMS:
     def nTraj(self) -> int:
         """Return the number of trajectory used for TAMS."""
         return self._nTraj
-
-    def verbosePrint(self, message: str) -> None:
-        """Print only in verbose mode."""
-        if self.v:
-            print("TAMS-[{}]".format(message), flush=True)
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
@@ -132,9 +132,8 @@ class TAMS:
 
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories."""
-        self.verbosePrint(
-            "Creating the initial pool of {} trajectories".format(self._nTraj)
-        )
+        inf_msg = f"Creating the initial pool of {self._nTraj} trajectories"
+        _logger.info(inf_msg)
 
         t_list = []
         with get_runner_type(self.parameters)(self.parameters,
@@ -151,7 +150,8 @@ class TAMS:
         self._tdb.updateTrajList(t_list)
         self._tdb.updateDiskData()
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
+        inf_msg = f"Run time: {self.elapsed_time()} s"
+        _logger.info(inf_msg)
 
     def check_exit_splitting_loop(self, k: int) -> tuple[bool, np.ndarray]:
         """Check for exit criterion of the splitting loop.
@@ -165,11 +165,8 @@ class TAMS:
         """
         # Check for walltime
         if self.out_of_time():
-            self.verbosePrint(
-                "Ran out of time after {} splitting iterations".format(
-                    k
-                )
-            )
+            warn_msg = f"Ran out of time after {k} splitting iterations"
+            _logger.warning(warn_msg)
             return True, np.empty(1)
 
         # Gather max score from all trajectories
@@ -182,19 +179,15 @@ class TAMS:
 
         # Exit if our work is done
         if allConverged:
-            self.verbosePrint(
-                "All trajectory converged after {} splitting iterations".format(
-                    k
-                )
-            )
+            inf_msg = f"All trajectories converged after {k} splitting iterations"
+            _logger.info(inf_msg)
             return True, np.empty(1)
 
         # Exit if splitting is stalled
         if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-            raise TAMSError(
-                "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                    np.amax(maxes))
-            )
+            err_msg = f"Splitting is stalling with all trajectories stuck at a score_max: {np.amax(maxes)}"
+            _logger.error(err_msg)
+            raise TAMSError(err_msg)
 
         return False, maxes
 
@@ -205,7 +198,8 @@ class TAMS:
         # time is still ongoing.
         ongoing_list = self._tdb.get_ongoing()
         if ongoing_list:
-            print("Unfinished splitting iteration detected, traj {} need(s) finishing".format(self._tdb.get_ongoing()))
+            inf_msg = f"Unfinished splitting iteration detected, traj {self._tdb.get_ongoing()} need(s) finishing"
+            _logger.info(inf_msg)
             with get_runner_type(self.parameters)(self.parameters,
                                                   pool_worker,
                                                   pool_worker_async,
@@ -244,7 +238,8 @@ class TAMS:
 
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
-        self.verbosePrint("Using multi-level splitting to get the probability")
+        inf_msg = "Using multi-level splitting to get the probability"
+        _logger.info(inf_msg)
 
         # Finish any unfinished splitting iteration
         self.finished_ongoing_splitting()
@@ -257,7 +252,8 @@ class TAMS:
                                               ms_worker_async,
                                               self.parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
-                print("Starting it {} with {} workers".format(k, runner.n_workers()))
+                inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
+                _logger.info(inf_msg)
                 # Check for early exit conditions
                 early_exit, maxes = self.check_exit_splitting_loop(k)
                 if early_exit:
@@ -321,11 +317,8 @@ class TAMS:
         Returns:
             the transition probability
         """
-        self.verbosePrint(
-            "Computing {} rare event probability using TAMS".format(
-                self._fmodel_t.name()
-            )
-        )
+        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using TAMS"
+        _logger.info(inf_msg)
 
         # Skip pool stage if splitting iterative
         # process has started
@@ -343,22 +336,26 @@ class TAMS:
                 break
 
         if not skip_pool and allConverged:
-            self.verbosePrint("All trajectory converged prior to splitting !")
+            inf_msg = "All trajectories converged prior to splitting !"
+            _logger.info(inf_msg)
             return 1.0
 
         if self.out_of_time():
-            self.verbosePrint("Ran out of walltime ! Exiting now.")
+            warn_msg = "Ran out of walltime ! Exiting now."
+            _logger.warning(warn_msg)
             return -1.0
 
         if self._init_pool_only:
-            self.verbosePrint("Stopping after the pool stage !")
+            warn_msg = "Stopping after the pool stage !"
+            _logger.warning(warn_msg)
             return -1.0
 
         # Perform multilevel splitting
         self.do_multilevel_splitting()
 
         if self.out_of_time():
-            self.verbosePrint("Ran out of walltime ! Exiting now.")
+            warn_msg = "Ran out of walltime ! Exiting now."
+            _logger.warning(warn_msg)
             return -1.0
 
         W = self._nTraj * self._tdb.weights()[-1]
@@ -373,7 +370,8 @@ class TAMS:
 
         trans_prob = successCount * self._tdb.weights()[-1] / W
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
+        inf_msg = f"Run time: {self.elapsed_time()} s"
+        _logger.info(inf_msg)
 
         return trans_prob
 
@@ -394,7 +392,8 @@ def pool_worker(traj: Trajectory,
     """
     wall_time = wall_time_info - time.monotonic()
     if wall_time > 0.0 and not traj.hasEnded():
-        print("Advancing {} [time left: {}]".format(traj.idstr(), wall_time), flush=True)
+        dbg_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
+        _logger.debug(dbg_msg)
         if saveDB:
             traj.setCheckFile(
                 "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
@@ -402,11 +401,13 @@ def pool_worker(traj: Trajectory,
         try:
             traj.advance(walltime=wall_time)
         except WallTimeLimit:
-            print("Trajectory advance ran out of time !")
+            warn_msg = "Trajectory advance ran out of time !"
+            _logger.warning(warn_msg)
             if saveDB:
                 traj.store()
         except Exception:
-            print("Advance ran into an error !")
+            err_msg = "Trajectory advance ran into an error !"
+            _logger.error(err_msg)
             raise
         else:
             if saveDB:
@@ -456,26 +457,30 @@ def ms_worker(
         saveDB: a bool to save the trajectory to database
         nameDB: name of DB to save the traj in (Opt)
     """
-    print("Restarting [{}] from {}".format(rstId, fromTraj.idstr(), ), flush=True)
     wall_time = wall_time_info - time.monotonic()
-    traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
-    if saveDB:
-        traj.setCheckFile(
-            "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
-        )
+    if wall_time > 0.0 :
+        dbg_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
+        _logger.debug(dbg_msg)
+        traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+        if saveDB:
+            traj.setCheckFile(
+                "{}/{}/{}.xml".format(nameDB, "trajectories", traj.idstr())
+            )
 
-    try:
-        traj.advance(walltime=wall_time)
-    except WallTimeLimit:
-        print("Trajectory advance ran out of time !")
-        if saveDB:
-            traj.store()
-    except Exception:
-        print("Advance ran into an error !")
-        raise
-    else:
-        if saveDB:
-            traj.store()
+        try:
+            traj.advance(walltime=wall_time)
+        except WallTimeLimit:
+            warn_msg = "Trajectory advance ran out of time !"
+            _logger.warning(warn_msg)
+            if saveDB:
+                traj.store()
+        except Exception:
+            err_msg = "Trajectory advance ran into an error !"
+            _logger.error(err_msg)
+            raise
+        else:
+            if saveDB:
+                traj.store()
 
     return traj
 

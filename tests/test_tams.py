@@ -21,7 +21,7 @@ def test_simpleModelTAMS():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
                    "runner": {"type" : "asyncio"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -33,7 +33,7 @@ def test_simpleModelTAMSSlurmFail():
     """Test TAMS with simple model with Slurm dask backend."""
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "DEBUG"},
                    "runner": {"type" : "dask"},
                    "dask": {"backend" : "slurm", "slurm_config_file": "dummy.yaml"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
@@ -46,7 +46,8 @@ def test_simpleModelTwiceTAMS():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING",
+                            "logfile": "test.log"},
                    "runner": {"type" : "asyncio"},
                    "database" : {"DB_save" : True, "DB_prefix" : "simpleModelTest"},
                    "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15}}, f)
@@ -63,13 +64,15 @@ def test_simpleModelTwiceTAMS():
             shutil.rmtree(folder)
             ndb += 1
     assert ndb == 2
+    assert os.path.exists("test.log")
+    os.remove("test.log")
 
 
 def test_stallingSimpleModelTAMS():
     """Test TAMS with simple model and stalled score function."""
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200},
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "ERROR"},
                    "runner": {"type" : "asyncio"},
                    "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 1.1}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])

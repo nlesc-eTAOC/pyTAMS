@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import shutil
 import xml.etree.ElementTree as ET
@@ -15,6 +16,8 @@ from pytams.trajectory import Trajectory
 from pytams.trajectory import formTrajID
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
+
+_logger = logging.getLogger(__name__)
 
 
 class DatabaseError(Exception):
@@ -67,13 +70,13 @@ class Database:
             self._restoreTrajDB()
         else:
             if not ntraj:
-                raise DatabaseError(
-                        "Initializing TAMS database from scratch require ntraj !"
-                )
+                err_msg = "Initializing TAMS database from scratch require ntraj !"
+                _logger.error(err_msg)
+                raise DatabaseError(err_msg)
             if not nsplititer:
-                raise DatabaseError(
-                        "Initializing TAMS database from scratch require nsplititer !"
-                )
+                err_msg = "Initializing TAMS database from scratch require nsplititer !"
+                _logger.error(err_msg)
+                raise DatabaseError(err_msg)
             self._ntraj = ntraj
             self._nsplititer = nsplititer
             self._setUpTree()
@@ -88,13 +91,8 @@ class Database:
                     random_int = rng.integers(0, 999999)
                     name_rnd = "{}_{:06d}".format(self._name, random_int)
                     copy_exists = os.path.exists(name_rnd)
-                print(
-                    """
-                    TAMS database {} already present but not specified as restart.
-                    It will be copied to {}.""".format(
-                        self._name, name_rnd
-                    )
-                )
+                warn_msg = f"Database {self._name} already present. It will be copied to {name_rnd}"
+                _logger.warning(warn_msg)
                 shutil.move(self._name, name_rnd)
 
             os.mkdir(self._name)
@@ -134,9 +132,9 @@ class Database:
             ET.indent(tree, space="\t", level=0)
             tree.write(databaseFile)
         else:
-            raise DatabaseError(
-                    "Unsupported TAMS database format: {} !".format(self._format)
-            )
+            err_msg = f"Unsupported TAMS database format: {self._format} !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
 
     def _readHeader(self) -> tuple[str, datetime, str]:
         """Read the database Metadata to header."""
@@ -151,9 +149,9 @@ class Database:
                 db_model = datafromxml["model_t"]
                 return pyTAMS_version, db_date, db_model
             else:
-                raise DatabaseError(
-                        "Unsupported TAMS database format: {} !".format(self._format)
-                )
+                err_msg = f"Unsupported TAMS database format: {self._format} !"
+                _logger.error(err_msg)
+                raise DatabaseError(err_msg)
         else:
             return "Error", datetime.min, "Error"
 
@@ -161,9 +159,8 @@ class Database:
     def appendTrajsToDB(self) -> None:
         """Append started trajectories to the pool file."""
         if self._save:
-            print(
-                "Appending started trajectories to database {}".format(self._name)
-            )
+            inf_msg = f"Appending started trajectories to database {self._name}"
+            _logger.info(inf_msg)
             databaseFile = self.poolFile()
             tree = ET.parse(databaseFile)
             root = tree.getroot()
@@ -196,9 +193,9 @@ class Database:
             ET.indent(tree, space="\t", level=0)
             tree.write(splittingDataFile)
         else:
-            raise DatabaseError(
-                    "Unsupported TAMS database format: {} !".format(self._format)
-            )
+            err_msg = f"Unsupported TAMS database format: {self._format} !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
 
     def _readSplittingData(self) -> None:
         """Read splitting data."""
@@ -215,15 +212,16 @@ class Database:
             if "ongoing" in datafromxml:
                 self._ongoing = datafromxml["ongoing"].tolist()
         else:
-            raise DatabaseError(
-                    "Unsupported TAMS database format: {} !".format(self._format)
-            )
+            err_msg = f"Unsupported TAMS database format: {self._format} !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
 
     def _restoreTrajDB(self) -> None:
         """Initialize TAMS from a stored trajectory database."""
         assert(self._load is not None)
         if os.path.exists(self._load):
-            print("Load TAMS database: {}".format(self._load))
+            inf_msg = f"Loading TAMS database: {self._load}"
+            _logger.info(inf_msg)
 
             # Check the database parameters against current run
             self._check_database_consistency()
@@ -235,11 +233,12 @@ class Database:
             dbFile = self.poolFile()
             nTrajRestored = self.loadTrajectoryDB(dbFile)
 
-            print("{} trajectories loaded".format(nTrajRestored))
+            inf_msg = f"{nTrajRestored} trajectories loaded"
+            _logger.info(inf_msg)
         else:
-            raise DatabaseError(
-                "Could not find the {} TAMS database !".format(self._load)
-            )
+            err_msg = f"Could not find the {self._load} TAMS database !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
 
     def loadTrajectoryDB(self, dbFile: str) -> int:
         """Load trajectories stored into the database.
@@ -273,11 +272,9 @@ class Database:
                         )
                     )
                 else:
-                    raise DatabaseError(
-                        "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
-                            chkFile
-                        )
-                    )
+                    err_msg = f"Could not find the trajectory checkFile {chkFile} listed in the TAMS database !"
+                    _logger.error(err_msg)
+                    raise DatabaseError(err_msg)
             else:
                 self._trajs_db.append(
                     Trajectory(
@@ -296,11 +293,10 @@ class Database:
         root = tree.getroot()
         headerfromxml = xml_to_dict(root.find("metadata"))
         if self._fmodel_t.name() != headerfromxml["model_t"]:
-            raise DatabaseError(
-                "Trying to restore a TAMS with {} model from database with {} model !".format(
-                    self._fmodel_t.name(), headerfromxml["model_t"]
-                )
-            )
+            err_msg = f"Trying to restore a TAMS with {self._fmodel_t.name()}"\
+                      f"model from database with {headerfromxml['model_t']} model !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
 
         # Parameters stored in the DB override
         # newly provided parameters.
@@ -424,20 +420,23 @@ class Database:
     def info(self) -> None:
         """Print database info to screen."""
         version, db_date, db_model = self._readHeader()
-        prettyLine = "################################################"
-        print(prettyLine)
-        print("# TAMS v{:13s} trajectory database      #".format(version))
-        print("# Date: {:38s} #".format(str(db_date)))
-        print("# Model: {:37s} #".format(db_model))
-        print(prettyLine)
-        print("# Requested # of traj: {:23} #".format(self._ntraj))
-        print("# Requested # of splitting iter: {:13} #".format(self._nsplititer))
-        print("# Number of 'Ended' trajectories: {:12} #".format(self.countEndedTraj()))
-        print("# Number of 'Converged' trajectories: {:8} #".format(self.countConvergedTraj()))
-        print("# Current splitting iter counter: {:12} #".format(self._ksplit))
-        if self.countEndedTraj() < self._ntraj:
-            print("# Transition probability: {:24} #".format(self.getTransitionProbability()))
-        print(prettyLine)
+        db_date = str(db_date)
+        prettyLine = "####################################################"
+        inf_tbl = f"""
+            {prettyLine}
+            # TAMS v{version:17s} trajectory database      #
+            # Date: {db_date:42s} #
+            # Model: {db_model:41s} #
+            {prettyLine}
+            # Requested # of traj: {self._ntraj:27} #
+            # Requested # of splitting iter: {self._nsplititer:17} #
+            # Number of 'Ended' trajectories: {self.countEndedTraj():16} #
+            # Number of 'Converged' trajectories: {self.countConvergedTraj():12} #
+            # Current splitting iter counter: {self._ksplit:16} #
+            # Transition probability: {self.getTransitionProbability():24} #
+            {prettyLine}
+        """
+        print(inf_tbl)
 
     def plotScoreFunctions(self,
                            fname: Optional[str] = None) -> None:

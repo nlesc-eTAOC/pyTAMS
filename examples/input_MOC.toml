@@ -1,7 +1,8 @@
 [tams]
 ntrajectories = 100
 nsplititer = 1000
-verbose = true
+loglevel = "WARNING"
+
 
 [trajectory]
 end_time = 3153600000

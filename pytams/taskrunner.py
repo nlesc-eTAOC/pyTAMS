@@ -190,7 +190,6 @@ class DaskRunner(BaseRunner):
                 )
                 self.cluster = SLURMCluster()
             else:
-                print("In here", flush=True)
                 self.dask_queue = dask_dict.get("queue", "regular")
                 self.dask_ntasks = dask_dict.get("ntasks_per_job", 1)
                 self.dask_ntasks_per_node = dask_dict.get("ntasks_per_node", self.dask_ntasks)
