@@ -30,7 +30,7 @@ class ForwardModelAdvance(Exception):
 
 def formTrajID(n: int) -> str:
     """Helper to assemble a trajectory ID string."""
-    return "traj{:06}".format(n)
+    return "traj{n:06}"
 
 
 def getIndexFromID(identity: str) -> int:
@@ -93,6 +93,7 @@ class Trajectory:
         self._convergedVal : float = parameters.get("trajectory",{}).get("targetscore", 0.95)
         self._sparse_state_int : int = parameters.get("trajectory",{}).get("sparse_int", 1)
         self._sparse_state_beg : int = parameters.get("trajectory",{}).get("sparse_beg", 0)
+        self._write_chkfile_all : bool = parameters.get("trajectory",{}).get("chkfile_dump_all", False)
 
         # List of snapshots
         self._snaps : list[Snapshot] = []
@@ -102,7 +103,7 @@ class Trajectory:
         self._score_max : float = 0.0
 
         self._tid : int = trajId
-        self._checkFile : str = "{}.xml".format(self.idstr())
+        self._checkFile : str = f"{self.idstr()}.xml"
 
         self._has_ended : bool = False
         self._has_converged : bool = False
@@ -206,6 +207,10 @@ class Trajectory:
                                         noise=self._fmodel.getNoise(),
                                         )
                                )
+
+        if self._write_chkfile_all:
+            self.store()
+
         if score > self._score_max:
             self._score_max = score
 
