@@ -29,6 +29,20 @@ def test_simpleModelTAMS():
     assert transition_proba == 1.0
 
 
+def test_simpleModelTAMSwithDB():
+    """Test TAMS with simple model."""
+    fmodel = SimpleFModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                   "runner": {"type" : "asyncio"},
+                   "database" : {"DB_save" : True, "DB_prefix" : "simpleModelTest"},
+                   "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15,
+                                  "chkfile_dump_all" : True}}, f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 1.0
+    shutil.rmtree("simpleModelTest.tdb")
+
 def test_simpleModelTAMSSlurmFail():
     """Test TAMS with simple model with Slurm dask backend."""
     fmodel = SimpleFModel
