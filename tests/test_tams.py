@@ -4,6 +4,7 @@ import shutil
 import pytest
 import toml
 from pytams.tams import TAMS
+from pytams.tams import TAMSError
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
 
@@ -16,6 +17,11 @@ def test_initTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     assert tams.nTraj() == 500
 
+def test_initTAMSNoInput():
+    """Test failed TAMS initialization."""
+    fmodel = SimpleFModel
+    with pytest.raises(TAMSError):
+        tams = TAMS(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
 
 def test_simpleModelTAMS():
     """Test TAMS with simple model."""
