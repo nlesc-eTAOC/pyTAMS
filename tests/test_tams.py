@@ -21,7 +21,7 @@ def test_initTAMSNoInput():
     """Test failed TAMS initialization."""
     fmodel = SimpleFModel
     with pytest.raises(TAMSError):
-        tams = TAMS(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
+        _ = TAMS(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
 
 def test_simpleModelTAMS():
     """Test TAMS with simple model."""
