@@ -11,9 +11,29 @@ from typing import Any
 from typing import Callable
 import dask
 from dask.distributed import Client
+from dask.distributed import WorkerPlugin
+from dask.distributed.worker import Worker
 from dask_jobqueue import SLURMCluster
+from pytams.utils import setup_logger
 
 _logger = logging.getLogger(__name__)
+
+
+class WorkerLoggerPlugin(WorkerPlugin):
+    """A plugin to configure logging on each worker."""
+    def __init__(self,
+                 params : dict[Any,Any]) -> None:
+        """Init function pass in the params dict."""
+        self._params = params
+
+    def setup(self, worker : Worker) -> None:
+        """Configure logging on the worker.
+
+        Args:
+            worker: the dask worker
+        """
+        # Configure logging on each worker
+        setup_logger(self._params)
 
 
 class RunnerError(Exception):
@@ -84,6 +104,7 @@ class AsIORunner(BaseRunner):
             async_wk: an asynchronous worker function
             n_workers: number of workers
         """
+        self._params = params
         self._queue : asyncio.Queue[Any] = asyncio.Queue()
         self._rqueue : asyncio.Queue[Any] = asyncio.Queue()
         self._n_workers : int = n_workers
@@ -122,7 +143,9 @@ class AsIORunner(BaseRunner):
     async def run_tasks(self) -> list[Any]:
         """Create worker tasks and run."""
         if not self._workers:
-            self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=self._n_workers)
+            self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=self._n_workers,
+                                                                    initializer=setup_logger,
+                                                                    initargs=(self._params,))
             self._workers = [
                 asyncio.create_task(self._async_worker(self._queue,
                                                        self._rqueue,
@@ -216,6 +239,9 @@ class DaskRunner(BaseRunner):
             err_msg = f"Unknown [dask] backend: {self.dask_backend}"
             _logger.error(err_msg)
             raise RunnerError(err_msg)
+
+        # Setup the worker logging
+        self.client.register_plugin(WorkerLoggerPlugin(params))
 
     def __enter__(self) -> DaskRunner:
         """To enable use of with."""
