@@ -5,11 +5,18 @@ from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Dict
+from contextlib import contextmanager
 import numpy as np
 
 _logger = logging.getLogger(__name__)
 
-
+@contextmanager
+def oneliner_ndarray():
+    """Force ndarray print on a single line temporarily."""
+    oldoptions = np.get_printoptions()
+    np.set_printoptions(linewidth=np.inf)
+    yield
+    np.set_printoptions(**oldoptions)
 
 class XMLUtilsError(Exception):
     """Exception class for the xmlutils."""
@@ -175,7 +182,8 @@ def make_xml_snapshot(idx: int,
     elem.attrib["time"] = str(time)
     elem.attrib["score"] = str(score)
     elem.attrib["noise_type"] = get_val_type(noise)
-    elem.attrib["noise"] = str(noise)
+    with oneliner_ndarray():
+        elem.attrib["noise"] = str(noise)
     if state is None:
         elem.attrib["state_type"] = "None"
     else:
