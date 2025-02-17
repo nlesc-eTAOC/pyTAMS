@@ -164,7 +164,15 @@ class AsIORunner(BaseRunner):
     def execute_promises(self) -> Any:
         """A synchronous wrapper to run_tasks."""
         assert(self._loop)
-        return self._loop.run_until_complete(self.run_tasks())
+        try:
+            res = self._loop.run_until_complete(self.run_tasks())
+        except Exception:
+            err_msg = "Error in AsIORunner while executing promises."
+            _logger.error(err_msg)
+            raise
+        else:
+            return res
+
 
     def n_workers(self) -> int:
         """Return the number of workers in the runner."""
@@ -267,12 +275,23 @@ class DaskRunner(BaseRunner):
         Args:
             list_of_p: a list of dask promises
 
-        Return:
+        Returns:
             A list with the return argument of each promised task.
+
+        Raises:
+            Exception if compute fails (raise internal error)
         """
-        res = list(dask.compute(*self._tlist))
-        self._tlist.clear()
-        return res
+        try:
+            res = list(dask.compute(*self._tlist))
+        except Exception:
+            err_msg = "Error in DaskRunner while executing promises."
+            _logger.error(err_msg)
+            raise
+        else:
+            self._tlist.clear()
+            return res
+
+
 
     def n_workers(self) -> int:
         """Return the number of workers in the runner."""
