@@ -12,8 +12,8 @@ from typing import Union
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
+from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
-from pytams.trajectory import formTrajID
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -101,7 +101,7 @@ class Database:
             with open(f"{self._name}/input_params.toml", 'w') as f:
                 toml.dump(self._parameters, f)
 
-            # Header file with metadata
+            # Header file with metadata and pool DB
             self._writeMetadata()
 
             # Empty trajectories subfolder
@@ -123,14 +123,8 @@ class Database:
             # Initialialize splitting data file
             self.saveSplittingData()
 
-            # Dynamically updated file with trajectory pool
-            # Empty for now
-            databaseFile = self.poolFile()
-            root = ET.Element("trajectories")
-            root.append(new_element("ntraj", self._ntraj))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
+            # Initialize the SQL pool file
+            self._pool_db = SQLFile(self.poolFile())
         else:
             err_msg = f"Unsupported TAMS database format: {self._format} !"
             _logger.error(err_msg)
@@ -154,24 +148,6 @@ class Database:
                 raise DatabaseError(err_msg)
         else:
             return "Error", datetime.min, "Error"
-
-
-    def appendTrajsToDB(self) -> None:
-        """Append started trajectories to the pool file."""
-        if self._save:
-            inf_msg = f"Appending started trajectories to database {self._name}"
-            _logger.info(inf_msg)
-            databaseFile = self.poolFile()
-            tree = ET.parse(databaseFile)
-            root = tree.getroot()
-            for T in self._trajs_db:
-                T_entry = root.find(T.idstr())
-                if T.hasStarted() and T_entry is None:
-                    loc = T.checkFile()
-                    root.append(new_element(T.idstr(), loc))
-
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
 
     def saveSplittingData(self,
                           ongoing_trajs: Optional[list[int]] = None) -> None:
@@ -230,8 +206,7 @@ class Database:
             self._readSplittingData()
 
             # Load trajectories stored in the database when available.
-            dbFile = self.poolFile()
-            nTrajRestored = self.loadTrajectoryDB(dbFile)
+            nTrajRestored = self.loadTrajectoryDB(self.poolFile())
 
             inf_msg = f"{nTrajRestored} trajectories loaded"
             _logger.info(inf_msg)
@@ -249,40 +224,31 @@ class Database:
         Return:
             number of trajectories loaded
         """
+        db_handle = SQLFile(dbFile)
         # Counter for number of trajectory loaded
         nTrajRestored = 0
 
-        tree = ET.parse(dbFile)
-        root = tree.getroot()
-        datafromxml = xml_to_dict(root)
-        self._ntraj = datafromxml["ntraj"]
+        self._ntraj = db_handle.get_trajectory_count()
         for n in range(self._ntraj):
-            trajId = formTrajID(n)
-            T_entry = root.find(trajId)
-            if T_entry is not None:
-                chkFile = T_entry.text
-                assert(chkFile is not None)
-                if os.path.exists(chkFile):
-                    nTrajRestored += 1
-                    self._trajs_db.append(
-                        Trajectory.restoreFromChk(
-                            chkFile,
-                            fmodel_t=self._fmodel_t,
-                            parameters=self._parameters
-                        )
-                    )
-                else:
-                    err_msg = f"Could not find the trajectory checkFile {chkFile} listed in the TAMS database !"
-                    _logger.error(err_msg)
-                    raise DatabaseError(err_msg)
-            else:
+            trajChkFile = db_handle.fetch_trajectory(n)
+            if os.path.exists(trajChkFile):
+                nTrajRestored += 1
                 self._trajs_db.append(
-                    Trajectory(
+                    Trajectory.restoreFromChk(
+                        trajChkFile,
                         fmodel_t=self._fmodel_t,
-                        parameters=self._parameters,
-                        trajId=n,
+                        parameters=self._parameters
                     )
                 )
+            else:
+                T = Trajectory(
+                    fmodel_t=self._fmodel_t,
+                    parameters=self.parameters,
+                    trajId=n,
+                )
+                T.setCheckFile(trajChkFile)
+                self._trajs_db.append(T)
+
         return nTrajRestored
 
 
@@ -313,8 +279,16 @@ class Database:
         return self._save
 
     def appendTraj(self, a_traj: Trajectory) -> None:
-        """Append a Trajectory to the internal list."""
+        """Append a Trajectory to the internal list.
+
+        Args:
+            a_traj: the trajectory
+        """
         self._trajs_db.append(a_traj)
+
+        # Also adds it to the pool file.
+        if self._save:
+            self._pool_db.add_trajectory(a_traj.checkFile())
 
     def trajList(self) -> list[Trajectory]:
         """Access to the trajectory list."""
@@ -337,7 +311,7 @@ class Database:
 
     def poolFile(self) -> str:
         """Helper returning the DB trajectory pool file."""
-        return f"{self._name}/trajPool.xml"
+        return f"{self._name}/trajPool.db"
 
     def isEmpty(self) -> bool:
         """Check if database is empty."""
@@ -350,10 +324,6 @@ class Database:
     def updateTrajList(self, a_trajList: list[Trajectory]) -> None:
         """Overwrite the trajectory list."""
         self._trajs_db = a_trajList
-
-    def updateDiskData(self) -> None:
-        """Update trajectory list stored to disk."""
-        self.appendTrajsToDB()
 
     def weights(self) -> list[float]:
         """Splitting iterations weights."""

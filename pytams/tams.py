@@ -11,6 +11,7 @@ from typing import Tuple
 import numpy as np
 import toml
 from pytams.database import Database
+from pytams.sqldb import SQLFile
 from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
@@ -123,33 +124,41 @@ class TAMS:
         """Initialize the trajectory pool."""
         self.hasEnded = np.full((self._nTraj), False)
         for n in range(self._nTraj):
-            self._tdb.appendTraj(
-                Trajectory(
+            T = Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
                     trajId=n,
                 )
-            )
+            T.setCheckFile(f"./{self._tdb.name()}/trajectories/{T.idstr()}.xml")
+            self._tdb.appendTraj(T)
 
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories."""
         inf_msg = f"Creating the initial pool of {self._nTraj} trajectories"
         _logger.info(inf_msg)
 
-        t_list = []
         with get_runner_type(self.parameters)(self.parameters,
                                               pool_worker,
                                               pool_worker_async,
                                               self.parameters.get("runner",{}).get("nworker_init", 1)) as runner:
             for T in self._tdb.trajList():
-                task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
+                task = [T,
+                        self._startTime+self._wallTime,
+                        self._tdb.save(),
+                        self._tdb.name()]
                 runner.make_promise(task)
-            t_list = runner.execute_promises()
+
+            try:
+                t_list = runner.execute_promises()
+            except:
+                err_msg = f"Failed to generate the initial pool of {self._nTraj} trajectories"
+                _logger.error(err_msg)
+                raise
 
         # Re-order list since runner does not guarantee order
+        # And update list of trajectories in the database
         t_list.sort(key=lambda t: t.id())
         self._tdb.updateTrajList(t_list)
-        self._tdb.updateDiskData()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -210,6 +219,7 @@ class TAMS:
                     task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
                     runner.make_promise(task)
                 finished_traj = runner.execute_promises()
+
                 for T in finished_traj:
                     self._tdb.overwriteTraj(T.id(), T)
 
@@ -367,9 +377,9 @@ class TAMS:
         return trans_prob
 
 def pool_worker(traj: Trajectory,
-                 wall_time_info: float,
-                 saveDB: bool,
-                 nameDB: str) -> Trajectory:
+                wall_time_info: float,
+                saveDB: bool,
+                nameDB: str) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
@@ -381,26 +391,40 @@ def pool_worker(traj: Trajectory,
     Returns:
         The updated trajectory
     """
+    # Get wall time
     wall_time = wall_time_info - time.monotonic()
+
     if wall_time > 0.0 and not traj.hasEnded():
-        dbg_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
-        _logger.debug(dbg_msg)
+        # Fetch a handle to the trajectory in the database pool
+        # Try to lock the trajectory
         if saveDB:
-            traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            get_to_work = sqlpool.lock_trajectory(traj.id())
+            if not get_to_work:
+                return traj
+
+        inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
+        _logger.info(inf_msg)
         try:
             traj.advance(walltime=wall_time)
+
         except WallTimeLimit:
-            warn_msg = "Trajectory advance ran out of time !"
+            warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
             _logger.warning(warn_msg)
-            if saveDB:
-                traj.store()
+
         except Exception:
-            err_msg = "Trajectory advance ran into an error !"
+            err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
             _logger.error(err_msg)
             raise
-        else:
+
+        finally:
             if saveDB:
                 traj.store()
+                if traj.hasEnded():
+                    sqlpool.mark_trajectory_as_completed(traj.id())
+                else:
+                    sqlpool.release_trajectory(traj.id())
 
     return traj
 
@@ -446,27 +470,47 @@ def ms_worker(
         saveDB: a bool to save the trajectory to database
         nameDB: name of DB to save the traj in (Opt)
     """
+    # Get wall time
     wall_time = wall_time_info - time.monotonic()
+
     if wall_time > 0.0 :
+        # Fetch a handle to the trajectory we are branching in the database pool
+        # Try to lock the trajectory
+        if saveDB:
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            get_to_work = sqlpool.lock_trajectory(rstId, True)
+            if not get_to_work:
+                err_msg = f"Unable to lock trajectory {rstId} for branching"
+                _logger.error(err_msg)
+                raise RuntimeError(err_msg)
+
         dbg_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
         _logger.debug(dbg_msg)
+
         traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
         if saveDB:
             traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
+
         try:
             traj.advance(walltime=wall_time)
+
         except WallTimeLimit:
-            warn_msg = "Trajectory advance ran out of time !"
+            warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
             _logger.warning(warn_msg)
-            if saveDB:
-                traj.store()
+
         except Exception:
-            err_msg = "Trajectory advance ran into an error !"
+            err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
             _logger.error(err_msg)
             raise
-        else:
+
+        finally:
             if saveDB:
                 traj.store()
+                if traj.hasEnded():
+                    sqlpool.mark_trajectory_as_completed(traj.id())
+                else:
+                    sqlpool.release_trajectory(traj.id())
 
     return traj
 
