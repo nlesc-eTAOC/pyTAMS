@@ -1,23 +1,43 @@
-import copy
+import argparse
+import asyncio
+import concurrent.futures
+import functools
+import logging
 import os
-import shutil
 import time
-import xml.etree.ElementTree as ET
-from datetime import datetime
-from typing import List
+from typing import Any
+from typing import Optional
+from typing import Tuple
 import numpy as np
-from pytams.daskutils import DaskRunner
+import toml
+from pytams.database import Database
+from pytams.sqldb import SQLFile
+from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
-from pytams.xmlutils import dict_to_xml
-from pytams.xmlutils import new_element
-from pytams.xmlutils import xml_to_dict
+from pytams.trajectory import WallTimeLimit
+from pytams.utils import get_min_scored
+from pytams.utils import setup_logger
 
+_logger = logging.getLogger(__name__)
 
 class TAMSError(Exception):
     """Exception class for TAMS."""
 
     pass
 
+def parse_cl_args(a_args: Optional[list[str]] = None) -> argparse.Namespace :
+    """Parse provided list or default CL argv.
+
+    Args:
+        a_args: optional list of options
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input", help="pyTAMS input .toml file", default="input.toml")
+    if a_args is not False:
+        args = parser.parse_args(a_args)
+    else:
+        args = parser.parse_args()
+    return args
 
 class TAMS:
     """A class implementing TAMS.
@@ -26,232 +46,50 @@ class TAMS:
     populate, explore and IO the database.
     """
 
-    def __init__(self, fmodel_t, parameters: dict) -> None:
+    def __init__(self,
+                 fmodel_t : Any,
+                 a_args: Optional[list[str]] = None) -> None:
         """Initialize a TAMS run.
 
         Args:
             fmodel_t: the forward model type
-            parameters: a dictionary of input parameters
+            a_args: optional list of options
         """
         self._fmodel_t = fmodel_t
-        self.parameters = parameters
+
+        input_file = vars(parse_cl_args(a_args=a_args))["input"]
+        if (not os.path.exists(input_file)):
+            err_msg = f"Could not find the {input_file} TAMS input file !"
+            _logger.error(err_msg)
+            raise TAMSError(err_msg)
+
+        with open(input_file, 'r') as f:
+            self.parameters = toml.load(f)
+
+        # Setup logger
+        setup_logger(self.parameters)
 
         # Parse user-inputs
-        self.v = parameters.get("Verbose", False)
+        self._nTraj : int = self.parameters["tams"].get("ntrajectories", 500)
+        self._nSplitIter : int = self.parameters["tams"].get("nsplititer", 2000)
+        self._wallTime : float = self.parameters["tams"].get("walltime", 24.0*3600.0)
+        self._plot_diags = self.parameters["tams"].get("diagnostics", False)
+        self._init_pool_only = self.parameters["tams"].get("pool_only", False)
 
-        self._saveDB = self.parameters.get("DB_save", False)
-        self._prefixDB = self.parameters.get("DB_prefix", "TAMS")
-        self._restartDB = self.parameters.get("DB_restart", None)
-
-        self._nTraj = self.parameters.get("nTrajectories", 500)
-        self._nSplitIter = self.parameters.get("nSplitIter", 2000)
-        self._wallTime = self.parameters.get("wallTime", 600.0)
-
-        # Trajectory Pool
-        self._trajs_db = []
-
-        # Trajectory Database
-        if (self._saveDB):
-            self._nameDB = "{}.tdb".format(self._prefixDB)
-
-        # Splitting data
-        self._kSplit = 0
-        self._l_bias = []
-        self._weights = [1]
+        # Database
+        self._tdb = Database(fmodel_t,
+                             self.parameters,
+                             self._nTraj,
+                             self._nSplitIter)
 
         # Initialize
-        self._startTime = time.monotonic()
-        if self._restartDB is not None:
-            self.restoreTrajDB()
-        else:
-            self.initTrajDB()
+        self._startTime : float = time.monotonic()
+        if self._tdb.isEmpty():
             self.init_trajectory_pool()
 
-    def initTrajDB(self) -> None:
-        """Initialize the trajectory database."""
-        if self._saveDB:
-            self.verbosePrint(
-                "Initializing the trajectories database {}".format(self._nameDB)
-            )
-            if os.path.exists(self._nameDB) and self._nameDB != self._restartDB:
-                rng = np.random.default_rng(12345)
-                copy_exists = True
-                while copy_exists:
-                    random_int = rng.integers(0, 999999)
-                    nameDB_rnd = "{}_{:06d}".format(self._nameDB, random_int)
-                    copy_exists = os.path.exists(nameDB_rnd)
-
-                print(
-                    """
-                    TAMS database {} already present but not specified as restart.
-                    It will be copied to {}.""".format(
-                        self._nameDB, nameDB_rnd
-                    )
-                )
-                shutil.move(self._nameDB, nameDB_rnd)
-
-            os.mkdir(self._nameDB)
-
-            # Header file with metadata
-            headerFile = "{}/header.xml".format(self._nameDB)
-            root = ET.Element("header")
-            mdata = ET.SubElement(root, "metadata")
-            mdata.append(new_element("pyTAMS_version", datetime.now()))
-            mdata.append(new_element("date", datetime.now()))
-            mdata.append(new_element("model_t", self._fmodel_t.name()))
-            root.append(dict_to_xml("parameters", self.parameters))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(headerFile)
-
-            # Initialialize splitting data file
-            self.saveSplittingData(self._nameDB)
-
-            # Dynamically updated file with trajectory pool
-            # Empty for now
-            databaseFile = "{}/trajPool.xml".format(self._nameDB)
-            root = ET.Element("trajectories")
-            root.append(new_element("nTraj", self._nTraj))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
-
-            # Empty trajectories subfolder
-            os.mkdir("{}/{}".format(self._nameDB, "trajectories"))
-
-    def appendTrajsToDB(self) -> None:
-        """Append started trajectories to the pool file."""
-        if self._saveDB:
-            self.verbosePrint(
-                "Appending started trajectories to database {}".format(self._nameDB)
-            )
-            databaseFile = "{}/trajPool.xml".format(self._nameDB)
-            tree = ET.parse(databaseFile)
-            root = tree.getroot()
-            for T in self._trajs_db:
-                T_entry = root.find(T.id())
-                if T.hasStarted() and T_entry is None:
-                    loc = T.checkFile()
-                    root.append(new_element(T.id(), loc))
-
-            ET.indent(tree, space="\t", level=0)
-            tree.write(databaseFile)
-
-    def saveSplittingData(self, a_db: str) -> None:
-        """Write splitting data to XML file."""
-        # Splitting data file
-        splittingDataFile = "{}/splittingData.xml".format(a_db)
-        root = ET.Element("Splitting")
-        root.append(new_element("kSplit", self._kSplit))
-        root.append(new_element("bias", np.array(self._l_bias)))
-        root.append(new_element("weight", np.array(self._weights)))
-        tree = ET.ElementTree(root)
-        ET.indent(tree, space="\t", level=0)
-        tree.write(splittingDataFile)
-
-    def readSplittingData(self, a_db: str) -> None:
-        """Read splitting data from XML file."""
-        # Read data file
-        splittingDataFile = "{}/splittingData.xml".format(a_db)
-        tree = ET.parse(splittingDataFile)
-        root = tree.getroot()
-        datafromxml = xml_to_dict(root)
-        self._kSplit = datafromxml["kSplit"]
-        self._l_bias = datafromxml["bias"].tolist()
-        self._weights = datafromxml["weight"].tolist()
-
-    def restoreTrajDB(self) -> None:
-        """Initialize TAMS from a stored trajectory database."""
-        if os.path.exists(self._restartDB):
-            self.verbosePrint(
-                "Restoring from the trajectories database {}".format(self._restartDB)
-            )
-
-            # Check the database parameters against current run
-            self.check_database_consistency(self._restartDB)
-
-            # Load splitting data
-            self.readSplittingData(self._restartDB)
-
-            # Load trajectories stored in the database when available.
-            dbFile = "{}/trajPool.xml".format(self._restartDB)
-            nTrajRestored = self.loadTrajectoryDB(dbFile)
-
-            self.verbosePrint(
-                "--> {} trajectories restored from the database".format(nTrajRestored)
-            )
-        else:
-            raise TAMSError(
-                "Could not find the {} TAMS database !".format(self._restartDB)
-            )
-
-    def loadTrajectoryDB(self, dbFile: str) -> int:
-        """Load trajectories stored into the database.
-
-        Args:
-            dbFile: the database file
-
-        Return:
-            number of trajectories loaded
-        """
-        # Counter for number of trajectory loaded
-        nTrajRestored = 0
-
-        tree = ET.parse(dbFile)
-        root = tree.getroot()
-        for n in range(self._nTraj):
-            trajId = "traj{:06}".format(n)
-            T_entry = root.find(trajId)
-            if T_entry is not None:
-                chkFile = T_entry.text
-                if os.path.exists(chkFile):
-                    nTrajRestored += 1
-                    self._trajs_db.append(
-                        Trajectory.restoreFromChk(
-                            chkFile,
-                            fmodel_t=self._fmodel_t,
-                        )
-                    )
-                else:
-                    raise TAMSError(
-                        "Could not find the trajectory checkFile {} listed in the TAMS database !".format(
-                            chkFile
-                        )
-                    )
-            else:
-                self._trajs_db.append(
-                    Trajectory(
-                        fmodel_t=self._fmodel_t,
-                        parameters=self.parameters,
-                        trajId="traj{:06}".format(n),
-                    )
-                )
-        return nTrajRestored
-
-    def check_database_consistency(self, a_db: str) -> None:
-        """Check the restart database consistency."""
-        # Open and load header
-        headerFile = "{}/header.xml".format(a_db)
-        tree = ET.parse(headerFile)
-        root = tree.getroot()
-        headerfromxml = xml_to_dict(root.find("metadata"))
-        if self._fmodel_t.name() != headerfromxml["model_t"]:
-            raise TAMSError(
-                "Trying to restore a TAMS with {} model from database with {} model !".format(
-                    self._fmodel_t.name(), headerfromxml["model_t"]
-                )
-            )
-
-        # Parameters stored in the database override any
-        # newly modified params
-        # TODO: will need to relax this later on
-        paramsfromxml = xml_to_dict(root.find("parameters"))
-        self.parameters.update(paramsfromxml)
-
-    def verbosePrint(self, message: str) -> None:
-        """Print only in verbose mode."""
-        if self.v:
-            print("TAMS-[{}]".format(message))
+    def nTraj(self) -> int:
+        """Return the number of trajectory used for TAMS."""
+        return self._nTraj
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
@@ -282,156 +120,197 @@ class TAMS:
         return self.remaining_walltime() < 0.05 * self._wallTime
 
 
-    def init_trajectory_pool(self):
+    def init_trajectory_pool(self) -> None:
         """Initialize the trajectory pool."""
         self.hasEnded = np.full((self._nTraj), False)
         for n in range(self._nTraj):
-            self._trajs_db.append(
-                Trajectory(
+            T = Trajectory(
                     fmodel_t=self._fmodel_t,
                     parameters=self.parameters,
-                    trajId="traj{:06}".format(n),
+                    trajId=n,
                 )
-            )
-
-    def task_delayed(self, traj: Trajectory) -> Trajectory:
-        """A worker to generate each initial trajectory.
-
-        Args:
-            traj: a trajectory
-        """
-        if not self.out_of_time() and not traj.hasEnded():
-            traj.advance(walltime=self.remaining_walltime())
-            if self._saveDB:
-                traj.setCheckFile(
-                    "{}/{}/{}.xml".format(self._nameDB, "trajectories", traj.id())
-                )
-                traj.store()
-
-        return traj
+            T.setCheckFile(f"./{self._tdb.name()}/trajectories/{T.idstr()}.xml")
+            self._tdb.appendTraj(T)
 
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories."""
-        self.verbosePrint(
-            "Creating the initial pool of {} trajectories".format(self._nTraj)
-        )
+        inf_msg = f"Creating the initial pool of {self._nTraj} trajectories"
+        _logger.info(inf_msg)
 
-        with DaskRunner(self.parameters) as runner:
-            # Assemble a list of promises
-            # All the trajectories are added, even those already done
-            tasks_p = []
-            for T in self._trajs_db:
-                tasks_p.append(runner.make_promise(self.task_delayed, T))
+        with get_runner_type(self.parameters)(self.parameters,
+                                              pool_worker,
+                                              pool_worker_async,
+                                              self.parameters.get("runner",{}).get("nworker_init", 1)) as runner:
+            for T in self._tdb.trajList():
+                task = [T,
+                        self._startTime+self._wallTime,
+                        self._tdb.save(),
+                        self._tdb.name()]
+                runner.make_promise(task)
 
-            self._trajs_db = runner.execute_promises(tasks_p)
+            try:
+                t_list = runner.execute_promises()
+            except:
+                err_msg = f"Failed to generate the initial pool of {self._nTraj} trajectories"
+                _logger.error(err_msg)
+                raise
 
-        # Update the trajectory database
-        self.appendTrajsToDB()
+        # Re-order list since runner does not guarantee order
+        # And update list of trajectories in the database
+        t_list.sort(key=lambda t: t.id())
+        self._tdb.updateTrajList(t_list)
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
+        inf_msg = f"Run time: {self.elapsed_time()} s"
+        _logger.info(inf_msg)
 
-    def worker(
-        self, t_end: float,
-        min_idx_list: List[int],
-        rstId: str,
-        min_val: float
-    ) -> Trajectory:
-        """A worker to restart trajectories.
+    def check_exit_splitting_loop(self, k: int) -> tuple[bool, np.ndarray]:
+        """Check for exit criterion of the splitting loop.
 
         Args:
-            t_end: a final time
-            min_idx_list: the list of trajectory restarted in
-                          the current splitting iteration
-            rstId: Id of the trajectory being worked on
-            min_val: the value of the score function to restart from
+            k: loop counter
+
+        Returns:
+            bool to trigger splitting loop break
+            array of maximas accros all trajectories
         """
-        rng = np.random.default_rng()
-        rest_idx = min_idx_list[0]
-        while rest_idx in min_idx_list:
-            rest_idx = rng.integers(0, len(self._trajs_db))
+        # Check for walltime
+        if self.out_of_time():
+            warn_msg = f"Ran out of time after {k} splitting iterations"
+            _logger.warning(warn_msg)
+            return True, np.empty(1)
 
-        traj = Trajectory.restartFromTraj(self._trajs_db[rest_idx], rstId, min_val)
+        # Gather max score from all trajectories
+        # and check for early convergence
+        allConverged = True
+        maxes = np.zeros(self._tdb.trajListLen())
+        for i in range(self._tdb.trajListLen()):
+            maxes[i] = self._tdb.getTraj(i).scoreMax()
+            allConverged = allConverged and self._tdb.getTraj(i).isConverged()
 
-        traj.advance(walltime=self.remaining_walltime())
+        # Exit if our work is done
+        if allConverged:
+            inf_msg = f"All trajectories converged after {k} splitting iterations"
+            _logger.info(inf_msg)
+            return True, np.empty(1)
 
-        return traj
+        # Exit if splitting is stalled
+        if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
+            err_msg = f"Splitting is stalling with all trajectories stuck at a score_max: {np.amax(maxes)}"
+            _logger.error(err_msg)
+            raise TAMSError(err_msg)
+
+        return False, maxes
+
+    def finished_ongoing_splitting(self) -> None:
+        """Check and finish unfinished splitting iterations."""
+        # Check the database for unfinished splitting iteration when restarting.
+        # At this point, branching has been done, but advancing to final
+        # time is still ongoing.
+        ongoing_list = self._tdb.get_ongoing()
+        if ongoing_list:
+            inf_msg = f"Unfinished splitting iteration detected, traj {self._tdb.get_ongoing()} need(s) finishing"
+            _logger.info(inf_msg)
+            with get_runner_type(self.parameters)(self.parameters,
+                                                  pool_worker,
+                                                  pool_worker_async,
+                                                  self.parameters.get("runner",{}).get("nworker_init", 1)) as runner:
+                for i in ongoing_list:
+                    T = self._tdb.getTraj(i)
+                    task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
+                    runner.make_promise(task)
+                finished_traj = runner.execute_promises()
+
+                for T in finished_traj:
+                    self._tdb.overwriteTraj(T.id(), T)
+
+                # Clear list of ongoing branches
+                self._tdb.reset_ongoing()
+
+                # increment splitting index
+                k = self._tdb.kSplit() + runner.n_workers()
+                self._tdb.setKSplit(k)
+
+
+    def get_restart_at_random(self, min_idx_list : list[int]) -> list[int]:
+        """Get a list of trajectory index to restart from at random."""
+        # Enable deterministic runs by setting the a (different) seed
+        # for each splitting iteration
+        if self.parameters.get("tams",{}).get("deterministic", False):
+            rng = np.random.default_rng(seed=42*self._tdb.kSplit())
+        else:
+            rng = np.random.default_rng()
+        rest_idx = [-1] * len(min_idx_list)
+        for i in range(len(min_idx_list)):
+            rest_idx[i] = min_idx_list[0]
+            while rest_idx[i] in min_idx_list:
+                rest_idx[i] = rng.integers(0, self._tdb.trajListLen())
+        return rest_idx
+
 
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories."""
-        self.verbosePrint("Using multi-level splitting to get the probability")
+        inf_msg = "Using multi-level splitting to get the probability"
+        _logger.info(inf_msg)
+
+        # Finish any unfinished splitting iteration
+        self.finished_ongoing_splitting()
 
         # Initialize splitting iterations counter
-        k = self._kSplit
+        k = self._tdb.kSplit()
 
-        with DaskRunner(self.parameters) as runner:
+        with get_runner_type(self.parameters)(self.parameters,
+                                              ms_worker,
+                                              ms_worker_async,
+                                              self.parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
             while k <= self._nSplitIter:
-                # Check for walltime
-                if self.out_of_time():
-                    self.verbosePrint(
-                        "Ran out of time after {} splitting iterations".format(
-                            k
-                        )
-                    )
+                inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
+                _logger.info(inf_msg)
+                # Check for early exit conditions
+                early_exit, maxes = self.check_exit_splitting_loop(k)
+                if early_exit:
                     break
 
-                # Gather max score from all trajectories
-                # and check for early convergence
-                allConverged = True
-                maxes = np.zeros(len(self._trajs_db))
-                for i in range(len(self._trajs_db)):
-                    maxes[i] = self._trajs_db[i].scoreMax()
-                    allConverged = allConverged and self._trajs_db[i].isConverged()
-
-                # Exit if our work is done
-                if allConverged:
-                    self.verbosePrint(
-                        "All trajectory converged after {} splitting iterations".format(
-                            k
-                        )
-                    )
-                    break
-
-                # Exit if splitting is stalled
-                if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
-                    raise TAMSError(
-                        "Splitting is stalling with all trajectories stuck at a score_max: {}".format(
-                            np.amax(maxes))
-                    )
+                # Plot trajectory database scores
+                if self._plot_diags:
+                    pltfile = f"Score_k{k:05}.png"
+                    self._tdb.plotScoreFunctions(pltfile)
 
                 # Get the nworker lower scored trajectories
-                min_idx_list = np.argpartition(maxes, runner.dask_nworker)[
-                    : runner.dask_nworker
-                ]
-                min_vals = maxes[min_idx_list]
+                # or more if equal score
+                min_idx_list, min_vals = get_min_scored(maxes, runner.n_workers())
 
-                self._l_bias.append(len(min_idx_list))
-                self._weights.append(self._weights[-1] * (1 - self._l_bias[-1] / self._nTraj))
+                # Randomly select trajectory to branch from
+                rest_idx = self.get_restart_at_random(min_idx_list)
+
+                self._tdb.appendBias(len(min_idx_list))
+                self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._nTraj))
 
                 # Assemble a list of promises
-                tasks_p = []
                 for i in range(len(min_idx_list)):
-                    tasks_p.append(
-                        runner.make_promise(self.worker,
-                                            1.0e9,
-                                            min_idx_list,
-                                            self._trajs_db[min_idx_list[i]].id(),
-                                            min_vals[i])
-                    )
+                    task = [1.0e9,
+                            self._tdb.getTraj(rest_idx[i]),
+                            self._tdb.getTraj(min_idx_list[i]).id(),
+                            min_vals[i],
+                            self._startTime+self._wallTime,
+                            self._tdb.save(),
+                            self._tdb.name()]
+                    runner.make_promise(task)
+                restartedTrajs = runner.execute_promises()
 
-                restartedTrajs = runner.execute_promises(tasks_p)
+                # Update the trajectory database
+                for T in restartedTrajs:
+                    self._tdb.overwriteTraj(T.id(), T)
 
-                # Update the trajectory pool and database
-                k += runner.dask_nworker
-                self._kSplit = k
-                for i in range(len(min_idx_list)):
-                    self._trajs_db[min_idx_list[i]] = copy.deepcopy(restartedTrajs[i])
-                    if self._saveDB:
-                        self.saveSplittingData(self._nameDB)
-                        tid = self._trajs_db[min_idx_list[i]].id()
-                        self._trajs_db[min_idx_list[i]].setCheckFile(
-                            "{}/{}/{}.xml".format(self._nameDB, "trajectories", tid)
-                        )
-                        self._trajs_db[min_idx_list[i]].store()
+                if self.out_of_time():
+                    # Save splitting data with ongoing trajectories
+                    # but do not increment splitting index yet
+                    self._tdb.saveSplittingData(min_idx_list)
+
+                else:
+                    # Update the trajectory database, increment splitting index
+                    k = k + runner.n_workers()
+                    self._tdb.setKSplit(k)
+                    self._tdb.saveSplittingData()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -439,15 +318,12 @@ class TAMS:
         Returns:
             the transition probability
         """
-        self.verbosePrint(
-            "Computing {} rare event probability using TAMS".format(
-                self._fmodel_t.name()
-            )
-        )
+        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using TAMS"
+        _logger.info(inf_msg)
 
         # Skip pool stage if splitting iterative
         # process has started
-        skip_pool = self._kSplit > 0
+        skip_pool = self._tdb.kSplit() > 0
 
         # Generate the initial trajectory pool
         if not skip_pool:
@@ -455,38 +331,214 @@ class TAMS:
 
         # Check for early convergence
         allConverged = True
-        for T in self._trajs_db:
+        for T in self._tdb.trajList():
             if not T.isConverged():
                 allConverged = False
                 break
 
         if not skip_pool and allConverged:
-            self.verbosePrint("All trajectory converged prior to splitting !")
+            inf_msg = "All trajectories converged prior to splitting !"
+            _logger.info(inf_msg)
             return 1.0
 
         if self.out_of_time():
-            self.verbosePrint("Ran out of walltime ! Exiting now.")
+            warn_msg = "Ran out of walltime ! Exiting now."
+            _logger.warning(warn_msg)
+            return -1.0
+
+        if self._init_pool_only:
+            warn_msg = "Stopping after the pool stage !"
+            _logger.warning(warn_msg)
             return -1.0
 
         # Perform multilevel splitting
         self.do_multilevel_splitting()
 
-        W = self._nTraj * self._weights[-1]
-        for i in range(len(self._l_bias)):
-            W += self._l_bias[i] * self._weights[i]
+        if self.out_of_time():
+            warn_msg = "Ran out of walltime ! Exiting now."
+            _logger.warning(warn_msg)
+            return -1.0
 
-        # Compute how many traj. converged to the vicinity of B
+        W = self._nTraj * self._tdb.weights()[-1]
+        for i in range(len(self._tdb.biases())):
+            W += self._tdb.biases()[i] * self._tdb.weights()[i]
+
+        # Compute how many traj. converged
         successCount = 0
-        for T in self._trajs_db:
+        for T in self._tdb.trajList():
             if T.isConverged():
                 successCount += 1
 
-        trans_prob = successCount * self._weights[-1] / W
+        trans_prob = successCount * self._tdb.weights()[-1] / W
 
-        self.verbosePrint("Run time: {} s".format(self.elapsed_time()))
+        inf_msg = f"Run time: {self.elapsed_time()} s"
+        _logger.info(inf_msg)
 
         return trans_prob
 
-    def nTraj(self) -> int:
-        """Return the number of trajectory used for TAMS."""
-        return self._nTraj
+def traj_advance_with_exception(traj: Trajectory,
+                                wall_time: float,
+                                saveDB: bool,
+                                nameDB: str) -> Trajectory:
+    """Advance a trajectory with exception handling.
+
+    Args:
+        traj: a trajectory
+        wall_time: the time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of the database
+
+    Returns:
+        The updated trajectory
+    """
+    try:
+        traj.advance(walltime=wall_time)
+
+    except WallTimeLimit:
+        warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
+        _logger.warning(warn_msg)
+
+    except Exception:
+        err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
+        _logger.error(err_msg)
+        raise
+
+    finally:
+        if saveDB:
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            traj.store()
+            if traj.hasEnded():
+                sqlpool.mark_trajectory_as_completed(traj.id())
+            else:
+                sqlpool.release_trajectory(traj.id())
+
+    return traj
+
+
+def pool_worker(traj: Trajectory,
+                wall_time_info: float,
+                saveDB: bool,
+                nameDB: str) -> Trajectory:
+    """A worker to generate each initial trajectory.
+
+    Args:
+        traj: a trajectory
+        wall_time_info: the time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of the database
+
+    Returns:
+        The updated trajectory
+    """
+    # Get wall time
+    wall_time = wall_time_info - time.monotonic()
+
+    if wall_time > 0.0 and not traj.hasEnded():
+        # Fetch a handle to the trajectory in the database pool
+        # Try to lock the trajectory
+        if saveDB:
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            get_to_work = sqlpool.lock_trajectory(traj.id())
+            if not get_to_work:
+                return traj
+
+        inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
+        _logger.info(inf_msg)
+
+        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
+
+    return traj
+
+
+async def pool_worker_async(
+    queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
+    res_queue : asyncio.Queue[Trajectory],
+    executor : concurrent.futures.Executor) -> None:
+    """A worker to generate each initial trajectory.
+
+    Args:
+        queue: a queue from which to get tasks
+        res_queue: a queue to put the results in
+        executor: an executor to launch the work in
+    """
+    while True:
+        traj, wall_time_info, saveDB, nameDB = await queue.get()
+        loop = asyncio.get_running_loop()
+        updated_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(pool_worker, traj, wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(updated_traj)
+        queue.task_done()
+
+def ms_worker(
+    t_end: float,
+    fromTraj: Trajectory,
+    rstId: int,
+    min_val: float,
+    wall_time_info: float,
+    saveDB: bool,
+    nameDB: str,
+) -> Trajectory:
+    """A worker to restart trajectories.
+
+    Args:
+        t_end: a final time
+        fromTraj: a trajectory to restart from
+        rstId: Id of the trajectory being worked on
+        min_val: the value of the score function to restart from
+        wall_time_info: the time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of DB to save the traj in (Opt)
+    """
+    # Get wall time
+    wall_time = wall_time_info - time.monotonic()
+
+    if wall_time > 0.0 :
+        # Fetch a handle to the trajectory we are branching in the database pool
+        # Try to lock the trajectory
+        if saveDB:
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            get_to_work = sqlpool.lock_trajectory(rstId, True)
+            if not get_to_work:
+                err_msg = f"Unable to lock trajectory {rstId} for branching"
+                _logger.error(err_msg)
+                raise RuntimeError(err_msg)
+
+        inf_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
+        _logger.info(inf_msg)
+
+        traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+
+        if saveDB:
+            traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
+
+        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
+
+    return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+
+async def ms_worker_async(
+    queue : asyncio.Queue[Any],
+    res_queue : asyncio.Queue[Trajectory],
+    executor : concurrent.futures.Executor,
+) -> None:
+    """An async worker to restart trajectories.
+
+    Args:
+        queue: an asyncio queue to get work from
+        res_queue: an asyncio queue to put results in
+        executor: an executor
+    """
+    while True:
+        t_end, fromTraj, rstId, min_val, wall_time_info, saveDB, nameDB = await queue.get()
+        loop = asyncio.get_running_loop()
+        restarted_traj = await loop.run_in_executor(
+            executor,
+            functools.partial(ms_worker, t_end, fromTraj, rstId, min_val,
+                              wall_time_info, saveDB, nameDB)
+        )
+        await res_queue.put(restarted_traj)
+        queue.task_done()

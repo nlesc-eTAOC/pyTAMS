@@ -1,0 +1,30 @@
+[tams]
+ntrajectories = 100
+nsplititer = 1000
+loglevel = "WARNING"
+walltime = 200.0
+diagnostics = false
+deterministic = false
+
+[trajectory]
+end_time = 10.0
+step_size = 0.01
+targetscore = 0.95
+stoichforcing = 0.4
+#sparse_int = 17
+
+[model]
+test_param = "toto"
+
+[runner]
+type = "asyncio"
+nworker_init=2
+nworker_iter=2
+
+[dask]
+backend = "local"
+
+[database]
+DB_save = true
+DB_prefix = "ABC_DW_3DTest"
+#DB_restart = "ABC_DW_3DTest.tdb"

@@ -1,43 +1,56 @@
 import time
+from typing import Any
+from typing import Optional
 import numpy as np
-from pytams.fmodel import ForwardModel
+from pytams.fmodel import ForwardModelBaseClass
 
 
-class SimpleFModel(ForwardModel):
+class SimpleFModel(ForwardModelBaseClass):
     """Simple forward model.
 
     The state is the time and score
     10 times the state, ceiled to 1.0
     """
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
-        """Override the template."""
-        self._state = 0.0
+    def _init_model(self,
+                    params: Optional[dict] = None,
+                    ioprefix: Optional[str] = None):
+        """Initialize model state."""
+        self._state : float = 0.0
 
-    def advance(self, dt: float, forcingAmpl: float) -> float:
+    def _advance(self,
+                 step: int,
+                 time: float,
+                 dt: float,
+                 noise: Any,
+                 forcingAmpl: float) -> float:
         """Override the template."""
         self._state = self._state + dt
         return dt
 
-    def getCurState(self):
+    def getCurState(self) -> float:
         """Override the template."""
         return self._state
 
-    def setCurState(self, state):
+    def setCurState(self, state) -> None:
         """Override the template."""
         self._state = state
 
-    def score(self):
+    def score(self) -> float:
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
+    def _make_noise(self) -> float:
+        """Override the template."""
+        return 0.0
+
     @classmethod
-    def name(self):
+    def name(cls):
         """Return the model name."""
         return "SimpleFModel"
 
 
-class DoubleWellModel(ForwardModel):
+class DoubleWellModel(ForwardModelBaseClass):
     """2D double well forward model.
 
     V(x,y) = x^4/4 - x^2/2 + y^2
@@ -51,28 +64,41 @@ class DoubleWellModel(ForwardModel):
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
 
-    def __init__(self, params: dict = None, ioprefix: str = None):
+    def _init_model(self,
+                    params: dict,
+                    ioprefix: Optional[str] = None):
         """Override the template."""
         self._state = self.initCondition()
+        self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
+        if params["model"]["deterministic"]:
+            seed = int(ioprefix[4:])
+            self._rng = np.random.default_rng(seed)
+        else:
+            self._rng = np.random.default_rng()
 
     def __RHS(self, state):
         """Double well RHS function."""
-        sleepTime = float(0.00001 * np.random.rand(1).item())
+        sleepTime = float(self._slow_factor * np.random.rand(1).item())
         time.sleep(sleepTime)
         return np.array([state[0] - state[0] ** 3, -2 * state[1]])
 
-    def __dW(self, dt):
+    def __dW(self, dt, noise):
         """Stochastic forcing."""
-        return np.sqrt(dt) * np.random.randn(2)
+        return np.sqrt(dt) * noise
 
     def initCondition(self):
         """Return the initial conditions."""
         return np.array([-1.0, 0.0])
 
-    def advance(self, dt: float, forcingAmpl: float) -> float:
+    def _advance(self,
+                 step: int,
+                 time: float,
+                 dt: float,
+                 noise: Any,
+                 forcingAmpl: float) -> float:
         """Override the template."""
         self._state = (
-            self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt)
+            self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt, noise)
         )
         return dt
 
@@ -96,7 +122,11 @@ class DoubleWellModel(ForwardModel):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
+    def _make_noise(self):
+        """Override the template."""
+        return self._rng.standard_normal(2)
+
     @classmethod
-    def name(self):
+    def name(cls):
         """Return the model name."""
         return "DoubleWellModel"
