@@ -376,6 +376,46 @@ class TAMS:
 
         return trans_prob
 
+def traj_advance_with_exception(traj: Trajectory,
+                                wall_time: float,
+                                saveDB: bool,
+                                nameDB: str) -> Trajectory:
+    """Advance a trajectory with exception handling.
+
+    Args:
+        traj: a trajectory
+        wall_time: the time limit to advance the trajectory
+        saveDB: a bool to save the trajectory to database
+        nameDB: name of the database
+
+    Returns:
+        The updated trajectory
+    """
+    try:
+        traj.advance(walltime=wall_time)
+
+    except WallTimeLimit:
+        warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
+        _logger.warning(warn_msg)
+
+    except Exception:
+        err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
+        _logger.error(err_msg)
+        raise
+
+    finally:
+        if saveDB:
+            pool_file = f"./{nameDB}/trajPool.db"
+            sqlpool = SQLFile(pool_file)
+            traj.store()
+            if traj.hasEnded():
+                sqlpool.mark_trajectory_as_completed(traj.id())
+            else:
+                sqlpool.release_trajectory(traj.id())
+
+    return traj
+
+
 def pool_worker(traj: Trajectory,
                 wall_time_info: float,
                 saveDB: bool,
@@ -406,25 +446,8 @@ def pool_worker(traj: Trajectory,
 
         inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
-        try:
-            traj.advance(walltime=wall_time)
 
-        except WallTimeLimit:
-            warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
-            _logger.warning(warn_msg)
-
-        except Exception:
-            err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
-            _logger.error(err_msg)
-            raise
-
-        finally:
-            if saveDB:
-                traj.store()
-                if traj.hasEnded():
-                    sqlpool.mark_trajectory_as_completed(traj.id())
-                else:
-                    sqlpool.release_trajectory(traj.id())
+        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
 
     return traj
 
@@ -485,34 +508,17 @@ def ms_worker(
                 _logger.error(err_msg)
                 raise RuntimeError(err_msg)
 
-        dbg_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
-        _logger.debug(dbg_msg)
+        inf_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
+        _logger.info(inf_msg)
 
         traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+
         if saveDB:
             traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
 
-        try:
-            traj.advance(walltime=wall_time)
+        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
 
-        except WallTimeLimit:
-            warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
-            _logger.warning(warn_msg)
-
-        except Exception:
-            err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
-            _logger.error(err_msg)
-            raise
-
-        finally:
-            if saveDB:
-                traj.store()
-                if traj.hasEnded():
-                    sqlpool.mark_trajectory_as_completed(traj.id())
-                else:
-                    sqlpool.release_trajectory(traj.id())
-
-    return traj
+    return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
 
 async def ms_worker_async(
     queue : asyncio.Queue[Any],
