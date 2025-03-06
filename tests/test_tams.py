@@ -13,9 +13,19 @@ def test_initTAMS():
     """Test TAMS initialization."""
     fmodel = SimpleFModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 500}}, f)
+        toml.dump({"tams": {"ntrajectories": 500, "nsplititer": 200},
+                   "trajectory" : {"end_time": 0.02, "step_size": 0.001}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     assert tams.nTraj() == 500
+
+def test_initTAMSMissingReq():
+    """Test failed TAMS initialization."""
+    fmodel = SimpleFModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"nsplititer": 200},
+                   "trajectory" : {"end_time": 0.02, "step_size": 0.001}}, f)
+    with pytest.raises(ValueError):
+        _ = TAMS(fmodel_t=fmodel, a_args=[])
 
 def test_initTAMSNoInput():
     """Test failed TAMS initialization."""

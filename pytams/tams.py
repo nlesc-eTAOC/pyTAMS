@@ -70,11 +70,18 @@ class TAMS:
         setup_logger(self.parameters)
 
         # Parse user-inputs
-        self._nTraj : int = self.parameters["tams"].get("ntrajectories", 500)
-        self._nSplitIter : int = self.parameters["tams"].get("nsplititer", 2000)
-        self._wallTime : float = self.parameters["tams"].get("walltime", 24.0*3600.0)
-        self._plot_diags = self.parameters["tams"].get("diagnostics", False)
-        self._init_pool_only = self.parameters["tams"].get("pool_only", False)
+        tams_subdict = self.parameters["tams"]
+        if ("ntrajectories" not in tams_subdict or
+            "nsplititer" not in tams_subdict):
+            err_msg = "TAMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
+            _logger.error(err_msg)
+            raise ValueError
+
+        self._nTraj : int = tams_subdict.get("ntrajectories")
+        self._nSplitIter : int = tams_subdict.get("nsplititer")
+        self._wallTime : float = tams_subdict.get("walltime", 24.0*3600.0)
+        self._plot_diags = tams_subdict.get("diagnostics", False)
+        self._init_pool_only = tams_subdict.get("pool_only", False)
 
         # Database
         self._tdb = Database(fmodel_t,

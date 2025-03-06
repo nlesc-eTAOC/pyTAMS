@@ -76,18 +76,25 @@ class Trajectory:
             parameters: a dictionary of input parameters
             trajId: a int for the trajectory index
         """
-        # Stash away the run parameters
-        self._parameters : dict = parameters
+        # Stash away the full parameters dict
+        self._parameters_full : dict = parameters
+
+        traj_params = parameters.get("trajectory", {})
+        if ("end_time" not in traj_params or
+            "step_size" not in traj_params):
+            err_msg = "Trajectory 'end_time' and 'step_size' must be specified in the input file !"
+            _logger.error(err_msg)
+            raise ValueError
 
         self._step : int = 0
         self._t_cur : float = 0.0
-        self._t_end : float = parameters.get("trajectory",{}).get("end_time", 1.0)
-        self._dt : float = parameters.get("trajectory",{}).get("step_size", 0.1)
-        self._stoichForcingAmpl : float = parameters.get("trajectory",{}).get("stoichforcing", 0.5)
-        self._convergedVal : float = parameters.get("trajectory",{}).get("targetscore", 0.95)
-        self._sparse_state_int : int = parameters.get("trajectory",{}).get("sparse_int", 1)
-        self._sparse_state_beg : int = parameters.get("trajectory",{}).get("sparse_beg", 0)
-        self._write_chkfile_all : bool = parameters.get("trajectory",{}).get("chkfile_dump_all", False)
+        self._t_end : float = traj_params.get("end_time")
+        self._dt : float = traj_params.get("step_size")
+        self._stoichForcingAmpl : float = traj_params.get("stoichforcing", 1.0)
+        self._convergedVal : float = traj_params.get("targetscore", 0.95)
+        self._sparse_state_int : int = traj_params.get("sparse_freq", 1)
+        self._sparse_state_beg : int = traj_params.get("sparse_start", 0)
+        self._write_chkfile_all : bool = traj_params.get("chkfile_dump_all", False)
 
         # List of snapshots
         self._snaps : list[Snapshot] = []
@@ -103,7 +110,7 @@ class Trajectory:
         self._has_converged : bool = False
 
         # Each trajectory have its own instance of the model
-        self._fmodel = fmodel_t(self._parameters, self.idstr())
+        self._fmodel = fmodel_t(parameters, self.idstr())
 
     def setCheckFile(self, file: str) -> None:
         """Setter of the trajectory checkFile."""
@@ -286,7 +293,7 @@ class Trajectory:
         if len(traj._snaps) == 0:
             restTraj = Trajectory(
                 fmodel_t=type(traj._fmodel),
-                parameters=traj._parameters,
+                parameters=traj._parameters_full,
                 trajId=rstId,
             )
             return restTraj
@@ -304,7 +311,7 @@ class Trajectory:
 
         # Init empty trajectory
         restTraj = Trajectory(
-            fmodel_t=type(traj._fmodel), parameters=traj._parameters, trajId=rstId
+            fmodel_t=type(traj._fmodel), parameters=traj._parameters_full, trajId=rstId
         )
 
         # Append snapshots, up to high_score_idx + 1 to
@@ -329,7 +336,7 @@ class Trajectory:
     def store(self, traj_file: Optional[str] = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self.idstr())
-        root.append(dict_to_xml("params", self._parameters["trajectory"]))
+        root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
         mdata = ET.SubElement(root, "metadata")
         mdata.append(new_element("id", self._tid))
         mdata.append(new_element("t_cur", self._t_cur))
