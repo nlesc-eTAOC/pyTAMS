@@ -1,0 +1,298 @@
+pytams.taskrunner
+=================
+
+.. py:module:: pytams.taskrunner
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.taskrunner._logger
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.taskrunner.RunnerError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.taskrunner.WorkerLoggerPlugin
+   pytams.taskrunner.BaseRunner
+   pytams.taskrunner.AsIORunner
+   pytams.taskrunner.DaskRunner
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.taskrunner.get_runner_type
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:class:: WorkerLoggerPlugin(params: dict[Any, Any])
+
+   Bases: :py:obj:`dask.distributed.WorkerPlugin`
+
+
+   A plugin to configure logging on each worker.
+
+
+   .. py:attribute:: _params
+
+
+   .. py:method:: setup(worker: dask.distributed.worker.Worker) -> None
+
+      Configure logging on the worker.
+
+      :param worker: the dask worker
+
+
+
+.. py:exception:: RunnerError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for the runner.
+
+
+.. py:class:: BaseRunner(params: dict, sync_wk: Callable, async_wk: Callable, n_workers: int = 1)
+
+   An ABC for the task runners.
+
+
+   .. py:method:: __enter__() -> BaseRunner
+      :abstractmethod:
+
+
+      To enable use of with.
+
+
+
+   .. py:method:: __exit__(*args: list[str]) -> None
+      :abstractmethod:
+
+
+      Executed leaving with scope.
+
+
+
+   .. py:method:: make_promise(task: list[Any]) -> None
+      :abstractmethod:
+
+
+      Log a new task to the list of task to tackle.
+
+
+
+   .. py:method:: execute_promises() -> Any
+      :abstractmethod:
+
+
+      Execute the list of promises.
+
+
+
+   .. py:method:: n_workers() -> int
+      :abstractmethod:
+
+
+      Return the number of workers in the runner.
+
+
+
+.. py:class:: AsIORunner(params: dict, sync_wk: Callable, async_wk: Callable, n_workers: int = 1)
+
+   Bases: :py:obj:`BaseRunner`
+
+
+   A task runner class based on asyncIO.
+
+   An runner that relies on asyncio to schedule
+   a tasks concurently in worker processes.
+   Tasks are added to an internal queue from
+   which worker can take them and put the results
+   back into result queue.
+
+
+   .. py:attribute:: _params
+
+
+   .. py:attribute:: _queue
+      :type:  asyncio.Queue[Any]
+
+
+   .. py:attribute:: _rqueue
+      :type:  asyncio.Queue[Any]
+
+
+   .. py:attribute:: _n_workers
+      :type:  int
+      :value: 1
+
+
+
+   .. py:attribute:: _sync_worker
+
+
+   .. py:attribute:: _async_worker
+
+
+   .. py:attribute:: _loop
+      :type:  asyncio.AbstractEventLoop | None
+      :value: None
+
+
+
+   .. py:attribute:: _executor
+      :type:  concurrent.futures.Executor | None
+      :value: None
+
+
+
+   .. py:attribute:: _workers
+      :type:  list[asyncio.Task[Any]] | None
+      :value: None
+
+
+
+   .. py:method:: __enter__() -> AsIORunner
+
+      To enable use of with.
+
+
+
+   .. py:method:: __exit__(*args: list[str]) -> None
+
+      Executed leaving with scope.
+
+
+
+   .. py:method:: add_task(task: list[Any]) -> None
+      :async:
+
+
+      Append a task to the queue.
+
+
+
+   .. py:method:: make_promise(task: list[Any]) -> None
+
+      A synchronous wrapper to add_task.
+
+
+
+   .. py:method:: run_tasks() -> list[Any]
+      :async:
+
+
+      Create worker tasks and run.
+
+
+
+   .. py:method:: execute_promises() -> Any
+
+      A synchronous wrapper to run_tasks.
+
+
+
+   .. py:method:: n_workers() -> int
+
+      Return the number of workers in the runner.
+
+
+
+.. py:class:: DaskRunner(params: dict, sync_wk: Callable, async_wk: Callable, n_workers: int = 1)
+
+   Bases: :py:obj:`BaseRunner`
+
+
+   A task runner class based on Dask.
+
+   An runner that relies on dask to schedule
+   a tasks concurently in workers.
+
+
+   .. py:attribute:: dask_backend
+
+
+   .. py:attribute:: _n_workers
+      :type:  int
+      :value: 1
+
+
+
+   .. py:attribute:: _sync_worker
+
+
+   .. py:attribute:: _async_worker
+
+
+   .. py:attribute:: _tlist
+      :type:  list[Any]
+      :value: []
+
+
+
+   .. py:method:: __enter__() -> DaskRunner
+
+      To enable use of with.
+
+
+
+   .. py:method:: __exit__(*args: list[str]) -> None
+
+      Executed leaving with scope.
+
+
+
+   .. py:method:: make_promise(task: list[Any]) -> None
+
+      Append a task to the internal task list.
+
+
+
+   .. py:method:: just_delay(obj: Any) -> Any
+
+      Delay an object.
+
+
+
+   .. py:method:: execute_promises() -> Any
+
+      Execute a list of promises.
+
+      :param list_of_p: a list of dask promises
+
+      :returns: A list with the return argument of each promised task.
+
+      :raises Exception if compute fails (raise internal error):
+
+
+
+   .. py:method:: n_workers() -> int
+
+      Return the number of workers in the runner.
+
+
+
+.. py:function:: get_runner_type(params: dict) -> type[BaseRunner]
+
+   Create an engine from parameters.
+
+

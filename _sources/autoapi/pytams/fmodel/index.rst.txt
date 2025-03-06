@@ -1,0 +1,206 @@
+pytams.fmodel
+=============
+
+.. py:module:: pytams.fmodel
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.fmodel.ForwardModelError
+   pytams.fmodel.BaseClassCallError
+   pytams.fmodel.AdvanceError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.fmodel.ForwardModelBaseClass
+
+
+Module Contents
+---------------
+
+.. py:exception:: ForwardModelError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for the forward model.
+
+
+.. py:exception:: BaseClassCallError
+
+   Bases: :py:obj:`ForwardModelError`
+
+
+   BaseClass ForwardModel method called !
+
+
+.. py:exception:: AdvanceError
+
+   Bases: :py:obj:`ForwardModelError`
+
+
+   Concrete ForwardModel _advance error !
+
+
+.. py:class:: ForwardModelBaseClass(params: dict, ioprefix: Optional[str] = None)
+
+   A base class for the stochastic forward model.
+
+   Implement the core methods required of the forward
+   model within the TAMS context. Exception are thrown
+   if required functions are not overritten in actual model.
+
+
+   .. py:attribute:: _prescribed_noise
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: _noise
+      :type:  Any
+      :value: None
+
+
+
+   .. py:attribute:: _step
+      :type:  int
+      :value: 0
+
+
+
+   .. py:attribute:: _time
+      :type:  float
+      :value: 0.0
+
+
+
+   .. py:method:: advance(dt: float, forcingAmpl: float) -> float
+
+      Base class advance function of the model.
+
+      The base class advance function update the internal
+      step counter and manage the generation (or reuse)
+      of the stochastic noise.
+      It also handles exceptions.
+
+      :param dt: the time step size over which to advance
+      :param forcingAmpl: stochastic multiplicator
+
+      :returns: Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+
+
+
+   .. py:method:: getNoise() -> Any
+
+      Return the model's latest noise increment.
+
+
+
+   .. py:method:: setNoise(a_noise: Any) -> None
+
+      Set the model's next noise increment.
+
+
+
+   .. py:method:: clear() -> None
+
+      Destroy internal data.
+
+
+
+   .. py:method:: _init_model(params: Optional[dict] = None, ioprefix: Optional[str] = None) -> None
+      :abstractmethod:
+
+
+      Concrete class specific initialization.
+
+      :param params: an optional dict containing parameters
+      :param ioprefix: an optional string defining run folder (TOCHECK)
+
+
+
+   .. py:method:: _advance(step: int, time: float, dt: float, noise: Any, forcingAmpl: float) -> float
+      :abstractmethod:
+
+
+      Concrete class advance function.
+
+      :param step: the current step counter
+      :param time: the starting time of the advance call
+      :param dt: the time step size over which to advance
+      :param noise: the noise to be used in the model step
+      :param forcingAmpl: stochastic multiplicator
+
+      :returns: Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+
+
+
+   .. py:method:: getCurState() -> Any
+      :abstractmethod:
+
+
+      Return the current state of the model.
+
+
+
+   .. py:method:: setCurState(state: Any) -> Any
+      :abstractmethod:
+
+
+      Set the current state of the model.
+
+
+
+   .. py:method:: score() -> Any
+      :abstractmethod:
+
+
+      Return the model's current state score.
+
+
+
+   .. py:method:: _make_noise() -> Any
+      :abstractmethod:
+
+
+      Return the model's latest noise increment.
+
+
+
+   .. py:method:: post_trajectory_restart_hook(step: int, time: float) -> None
+
+      Model post trajectory restart hook.
+
+      :param step: the current step counter
+      :param time: the time of the simulation
+
+
+
+   .. py:method:: _trajectory_restart_hook() -> None
+
+      Model-specific post trajectory restart hook.
+
+
+
+   .. py:method:: _clear_model() -> Any
+
+      Clear the concrete forward model internals.
+
+
+
+   .. py:method:: name() -> str
+      :classmethod:
+
+
+      Return a the model name.
+
+
+

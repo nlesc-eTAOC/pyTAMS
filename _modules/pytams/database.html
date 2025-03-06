@@ -1,0 +1,685 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.database &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.database</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.database</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xml.etree.ElementTree</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ET</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">version</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">toml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.sqldb</span><span class="w"> </span><span class="kn">import</span> <span class="n">SQLFile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.trajectory</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trajectory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.xmlutils</span><span class="w"> </span><span class="kn">import</span> <span class="n">new_element</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.xmlutils</span><span class="w"> </span><span class="kn">import</span> <span class="n">xml_to_dict</span>
+
+<div class="viewcode-block" id="_logger">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database._logger">[docs]</a>
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DatabaseError">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.DatabaseError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DatabaseError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception class for TAMS Database.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="Database">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Database</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A database class for TAMS.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fmodel_t</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                 <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                 <span class="n">ntraj</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">nsplititer</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Init a TAMS database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            fmodel_t: the forward model type</span>
+<span class="sd">            params: a dictionary of parameters</span>
+<span class="sd">            ntraj: [OPT] number of traj to hold</span>
+<span class="sd">            nsplititer: [OPT] number of splitting iteration to hold</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Database._fmodel_t">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._fmodel_t">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span> <span class="o">=</span> <span class="n">fmodel_t</span></div>
+
+
+        <span class="c1"># Metadata</span>
+<div class="viewcode-block" id="Database._verbose">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._verbose">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Database._save">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._save">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Database._load">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._load">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span><span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Database._parameters">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._parameters">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">params</span></div>
+
+
+        <span class="c1"># Trajectory Pool</span>
+<div class="viewcode-block" id="Database._trajs_db">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._trajs_db">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Trajectory</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+        <span class="c1"># Splitting data</span>
+<div class="viewcode-block" id="Database._ksplit">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._ksplit">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span> <span class="o">=</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="Database._l_bias">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._l_bias">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="Database._weights">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._weights">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Database._ongoing">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._ongoing">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ongoing</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_save&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<div class="viewcode-block" id="Database._prefix">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._prefix">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_prefix&quot;</span><span class="p">,</span> <span class="s2">&quot;TAMS&quot;</span><span class="p">)</span></div>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_restart&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<div class="viewcode-block" id="Database._format">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._format">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DB_format&quot;</span><span class="p">,</span> <span class="s2">&quot;XML&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Database._name">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._name">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="si">}</span><span class="s2">.tdb&quot;</span></div>
+
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_restoreTrajDB</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ntraj</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Initializing TAMS database from scratch require ntraj !&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">nsplititer</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Initializing TAMS database from scratch require nsplititer !&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span> <span class="o">=</span> <span class="n">ntraj</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_nsplititer</span> <span class="o">=</span> <span class="n">nsplititer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_setUpTree</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Database._setUpTree">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._setUpTree">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_setUpTree</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the trajectory database tree.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">:</span>
+                <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">12345</span><span class="p">)</span>
+                <span class="n">copy_exists</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">while</span> <span class="n">copy_exists</span><span class="p">:</span>
+                    <span class="n">random_int</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">integers</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">999999</span><span class="p">)</span>
+                    <span class="n">name_rnd</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">random_int</span><span class="si">:</span><span class="s2">06d</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">copy_exists</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">name_rnd</span><span class="p">)</span>
+                <span class="n">warn_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Database </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2"> already present. It will be copied to </span><span class="si">{</span><span class="n">name_rnd</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="n">name_rnd</span><span class="p">)</span>
+
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+
+            <span class="c1"># Save the runtime options</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/input_params.toml&quot;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">toml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+
+            <span class="c1"># Header file with metadata and pool DB</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writeMetadata</span><span class="p">()</span>
+
+            <span class="c1"># Empty trajectories subfolder</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/trajectories&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database._writeMetadata">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._writeMetadata">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_writeMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the database Metadata to disk.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">==</span> <span class="s2">&quot;XML&quot;</span><span class="p">:</span>
+            <span class="n">headerFile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">headerFile</span><span class="p">()</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s2">&quot;header&quot;</span><span class="p">)</span>
+            <span class="n">mdata</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;metadata&quot;</span><span class="p">)</span>
+            <span class="n">mdata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;pyTAMS_version&quot;</span><span class="p">,</span> <span class="n">version</span><span class="p">(</span><span class="n">__package__</span><span class="p">)))</span>
+            <span class="n">mdata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()))</span>
+            <span class="n">mdata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;model_t&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="o">.</span><span class="n">name</span><span class="p">()))</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">ElementTree</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">space</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">headerFile</span><span class="p">)</span>
+
+            <span class="c1"># Initialialize splitting data file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">saveSplittingData</span><span class="p">()</span>
+
+            <span class="c1"># Initialize the SQL pool file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pool_db</span> <span class="o">=</span> <span class="n">SQLFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">poolFile</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unsupported TAMS database format: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="si">}</span><span class="s2"> !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database._readHeader">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._readHeader">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_readHeader</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read the database Metadata to header.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">==</span> <span class="s2">&quot;XML&quot;</span><span class="p">:</span>
+                <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headerFile</span><span class="p">())</span>
+                <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+                <span class="n">mdata</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">)</span>
+                <span class="n">datafromxml</span> <span class="o">=</span> <span class="n">xml_to_dict</span><span class="p">(</span><span class="n">mdata</span><span class="p">)</span>
+                <span class="n">pyTAMS_version</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;pyTAMS_version&quot;</span><span class="p">]</span>
+                <span class="n">db_date</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span>
+                <span class="n">db_model</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;model_t&quot;</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">pyTAMS_version</span><span class="p">,</span> <span class="n">db_date</span><span class="p">,</span> <span class="n">db_model</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unsupported TAMS database format: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="si">}</span><span class="s2"> !&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Error&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="s2">&quot;Error&quot;</span></div>
+
+
+<div class="viewcode-block" id="Database.saveSplittingData">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.saveSplittingData">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">saveSplittingData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">ongoing_trajs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write splitting data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Splitting data file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">==</span> <span class="s2">&quot;XML&quot;</span><span class="p">:</span>
+            <span class="n">splittingDataFile</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/splittingData.xml&quot;</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s2">&quot;splitting&quot;</span><span class="p">)</span>
+            <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;nsplititer&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nsplititer</span><span class="p">))</span>
+            <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;ksplit&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span><span class="p">))</span>
+            <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)))</span>
+            <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">ongoing_trajs</span><span class="p">:</span>
+                <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_element</span><span class="p">(</span><span class="s2">&quot;ongoing&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ongoing_trajs</span><span class="p">)))</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">ElementTree</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+            <span class="n">ET</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">space</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">tree</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">splittingDataFile</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unsupported TAMS database format: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="si">}</span><span class="s2"> !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database._readSplittingData">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._readSplittingData">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_readSplittingData</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read splitting data.&quot;&quot;&quot;</span>
+        <span class="c1"># Read data file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format</span> <span class="o">==</span> <span class="s2">&quot;XML&quot;</span><span class="p">:</span>
+            <span class="n">splittingDataFile</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/splittingData.xml&quot;</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">splittingDataFile</span><span class="p">)</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+            <span class="n">datafromxml</span> <span class="o">=</span> <span class="n">xml_to_dict</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_nsplititer</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;nsplititer&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;ksplit&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;bias&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s2">&quot;ongoing&quot;</span> <span class="ow">in</span> <span class="n">datafromxml</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_ongoing</span> <span class="o">=</span> <span class="n">datafromxml</span><span class="p">[</span><span class="s2">&quot;ongoing&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unsupported TAMS database format: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_format</span><span class="si">}</span><span class="s2"> !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database._restoreTrajDB">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._restoreTrajDB">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_restoreTrajDB</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize TAMS from a stored trajectory database.&quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_load</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">):</span>
+            <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Loading TAMS database: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+            <span class="c1"># Check the database parameters against current run</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_database_consistency</span><span class="p">()</span>
+
+            <span class="c1"># Load splitting data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_readSplittingData</span><span class="p">()</span>
+
+            <span class="c1"># Load trajectories stored in the database when available.</span>
+            <span class="n">nTrajRestored</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadTrajectoryDB</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">poolFile</span><span class="p">())</span>
+
+            <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">nTrajRestored</span><span class="si">}</span><span class="s2"> trajectories loaded&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Could not find the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="si">}</span><span class="s2"> TAMS database !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.loadTrajectoryDB">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.loadTrajectoryDB">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loadTrajectoryDB</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbFile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load trajectories stored into the database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dbFile: the database file</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            number of trajectories loaded</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">db_handle</span> <span class="o">=</span> <span class="n">SQLFile</span><span class="p">(</span><span class="n">dbFile</span><span class="p">)</span>
+        <span class="c1"># Counter for number of trajectory loaded</span>
+        <span class="n">nTrajRestored</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span> <span class="o">=</span> <span class="n">db_handle</span><span class="o">.</span><span class="n">get_trajectory_count</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span><span class="p">):</span>
+            <span class="n">trajChkFile</span> <span class="o">=</span> <span class="n">db_handle</span><span class="o">.</span><span class="n">fetch_trajectory</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">trajChkFile</span><span class="p">):</span>
+                <span class="n">nTrajRestored</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">Trajectory</span><span class="o">.</span><span class="n">restoreFromChk</span><span class="p">(</span>
+                        <span class="n">trajChkFile</span><span class="p">,</span>
+                        <span class="n">fmodel_t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="p">,</span>
+                        <span class="n">parameters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">T</span> <span class="o">=</span> <span class="n">Trajectory</span><span class="p">(</span>
+                    <span class="n">fmodel_t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="p">,</span>
+                    <span class="n">parameters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span>
+                    <span class="n">trajId</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">T</span><span class="o">.</span><span class="n">setCheckFile</span><span class="p">(</span><span class="n">trajChkFile</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">nTrajRestored</span></div>
+
+
+
+<div class="viewcode-block" id="Database._check_database_consistency">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database._check_database_consistency">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_database_consistency</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check the restart database consistency.&quot;&quot;&quot;</span>
+        <span class="c1"># Open and load header</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">ET</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headerFile</span><span class="p">())</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="n">headerfromxml</span> <span class="o">=</span> <span class="n">xml_to_dict</span><span class="p">(</span><span class="n">root</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="o">.</span><span class="n">name</span><span class="p">()</span> <span class="o">!=</span> <span class="n">headerfromxml</span><span class="p">[</span><span class="s2">&quot;model_t&quot;</span><span class="p">]:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trying to restore a TAMS with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="o">.</span><span class="n">name</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>\
+                      <span class="sa">f</span><span class="s2">&quot;model from database with </span><span class="si">{</span><span class="n">headerfromxml</span><span class="p">[</span><span class="s1">&#39;model_t&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> model !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DatabaseError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+        <span class="c1"># Parameters stored in the DB override</span>
+        <span class="c1"># newly provided parameters.</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="si">}</span><span class="s2">/input_params.toml&quot;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">readInParams</span> <span class="o">=</span> <span class="n">toml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">readInParams</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.name">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accessor to DB name.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span></div>
+
+
+<div class="viewcode-block" id="Database.save">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.save">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accessor to DB save bool.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save</span></div>
+
+
+<div class="viewcode-block" id="Database.appendTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.appendTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">appendTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_traj</span><span class="p">:</span> <span class="n">Trajectory</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a Trajectory to the internal list.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            a_traj: the trajectory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a_traj</span><span class="p">)</span>
+
+        <span class="c1"># Also adds it to the pool file.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pool_db</span><span class="o">.</span><span class="n">add_trajectory</span><span class="p">(</span><span class="n">a_traj</span><span class="o">.</span><span class="n">checkFile</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="Database.trajList">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.trajList">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">trajList</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Trajectory</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Access to the trajectory list.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span></div>
+
+
+<div class="viewcode-block" id="Database.getTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.getTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Trajectory</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Access to a given trajectory.&quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Database.overwriteTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.overwriteTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">overwriteTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                      <span class="n">traj</span><span class="p">:</span> <span class="n">Trajectory</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Deep copy a trajectory into internal list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">traj</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.headerFile">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.headerFile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">headerFile</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper returning the DB header file.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/header.xml&quot;</span></div>
+
+
+<div class="viewcode-block" id="Database.poolFile">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.poolFile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">poolFile</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper returning the DB trajectory pool file.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">/trajPool.db&quot;</span></div>
+
+
+<div class="viewcode-block" id="Database.isEmpty">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.isEmpty">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">isEmpty</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if database is empty.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trajListLen</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="Database.trajListLen">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.trajListLen">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">trajListLen</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Length of the trajectory list.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.updateTrajList">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.updateTrajList">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">updateTrajList</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a_trajList</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Trajectory</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Overwrite the trajectory list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span> <span class="o">=</span> <span class="n">a_trajList</span></div>
+
+
+<div class="viewcode-block" id="Database.weights">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.weights">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Splitting iterations weights.&quot;&quot;&quot;</span>
+        <span class="k">return</span>  <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span></div>
+
+
+<div class="viewcode-block" id="Database.appendWeight">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.appendWeight">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">appendWeight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a weight to internal list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.biases">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.biases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">biases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Splitting iterations biases.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span></div>
+
+
+<div class="viewcode-block" id="Database.appendBias">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.appendBias">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">appendBias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bias</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a bias to internal list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bias</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.kSplit">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.kSplit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kSplit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Splitting iteration counter.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span></div>
+
+
+<div class="viewcode-block" id="Database.reset_ongoing">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.reset_ongoing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset_ongoing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the list of trajectories undergoing branching.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ongoing</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Database.get_ongoing">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.get_ongoing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_ongoing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the list of trajectories undergoing branching or None.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ongoing</span></div>
+
+
+<div class="viewcode-block" id="Database.setKSplit">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.setKSplit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setKSplit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ksplit</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set splitting iteration counter.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span> <span class="o">=</span> <span class="n">ksplit</span></div>
+
+
+<div class="viewcode-block" id="Database.countEndedTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.countEndedTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">countEndedTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of trajectories that ended.&quot;&quot;&quot;</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">hasEnded</span><span class="p">():</span>
+                <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="Database.countConvergedTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.countConvergedTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">countConvergedTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of trajectories that converged.&quot;&quot;&quot;</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">isConverged</span><span class="p">():</span>
+                <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="Database.getTransitionProbability">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.getTransitionProbability">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getTransitionProbability</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the transition probability.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">countEndedTraj</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TAMS initialization still ongoing, probability estimate not available yet&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span><span class="p">)):</span>
+                <span class="n">W</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_l_bias</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">trans_prob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">countConvergedTraj</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">W</span>
+            <span class="k">return</span> <span class="n">trans_prob</span></div>
+
+
+
+<div class="viewcode-block" id="Database.info">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print database info to screen.&quot;&quot;&quot;</span>
+        <span class="n">version</span><span class="p">,</span> <span class="n">db_date</span><span class="p">,</span> <span class="n">db_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readHeader</span><span class="p">()</span>
+        <span class="n">db_date_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_date</span><span class="p">)</span>
+        <span class="n">prettyLine</span> <span class="o">=</span> <span class="s2">&quot;####################################################&quot;</span>
+        <span class="n">inf_tbl</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">prettyLine</span><span class="si">}</span>
+<span class="s2">            # TAMS v</span><span class="si">{</span><span class="n">version</span><span class="si">:</span><span class="s2">17s</span><span class="si">}</span><span class="s2"> trajectory database      #</span>
+<span class="s2">            # Date: </span><span class="si">{</span><span class="n">db_date_str</span><span class="si">:</span><span class="s2">42s</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Model: </span><span class="si">{</span><span class="n">db_model</span><span class="si">:</span><span class="s2">41s</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">prettyLine</span><span class="si">}</span>
+<span class="s2">            # Requested # of traj: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_ntraj</span><span class="si">:</span><span class="s2">27</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Requested # of splitting iter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_nsplititer</span><span class="si">:</span><span class="s2">17</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Number of &#39;Ended&#39; trajectories: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">countEndedTraj</span><span class="p">()</span><span class="si">:</span><span class="s2">16</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Number of &#39;Converged&#39; trajectories: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">countConvergedTraj</span><span class="p">()</span><span class="si">:</span><span class="s2">12</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Current splitting iter counter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_ksplit</span><span class="si">:</span><span class="s2">16</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            # Transition probability: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">getTransitionProbability</span><span class="p">()</span><span class="si">:</span><span class="s2">24</span><span class="si">}</span><span class="s2"> #</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">prettyLine</span><span class="si">}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">inf_tbl</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Database.plotScoreFunctions">
+<a class="viewcode-back" href="../../autoapi/pytams/database/index.html#pytams.database.Database.plotScoreFunctions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plotScoreFunctions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">fname</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the score as function of time for all trajectories.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">fname</span><span class="p">:</span>
+            <span class="n">pltfile</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span> <span class="o">+</span> <span class="s2">&quot;_scores.png&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pltfile</span> <span class="o">=</span> <span class="n">fname</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trajs_db</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">getTimeArr</span><span class="p">(),</span> <span class="n">T</span><span class="o">.</span><span class="n">getScoreArr</span><span class="p">(),</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$Time$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-large&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$Score \; [-]$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-large&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-large&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-large&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;dotted&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span> <span class="c1"># to fit everything in the prescribed area</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">pltfile</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

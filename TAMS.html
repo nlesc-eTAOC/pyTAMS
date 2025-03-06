@@ -1,0 +1,150 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theory and implementation &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="_static/theme.css?v=df66b05f" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage" href="Controls.html" />
+    <link rel="prev" title="Welcome to pyTAMS’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Theory and implementation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction-to-tams">Introduction to TAMS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pytams-implementation"><cite>pyTAMS</cite> implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#d-double-well-example">2D double well example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Theory and implementation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/TAMS.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="theory-and-implementation">
+<span id="sec-tams"></span><h1>Theory and implementation<a class="headerlink" href="#theory-and-implementation" title="Link to this heading"></a></h1>
+<section id="introduction-to-tams">
+<h2>Introduction to TAMS<a class="headerlink" href="#introduction-to-tams" title="Link to this heading"></a></h2>
+<p>Trajectory-adaptive Multi-level Sampling (TAMS) is concerned with the simulation of rare
+events associated with a dynamical process. A rare event is an event with a non-zero, but
+very small probability. The probability is so low that naively sampling the stochastic
+process outcome with a Monte-Carlo approach yields no reliable estimate of the probability
+within a reasonable simulation time.</p>
+<p>Let’s consider a random process <span class="math notranslate nohighlight">\(X \in R^N\)</span> and a measurable set <span class="math notranslate nohighlight">\(Y\)</span>. We want to estimate the probability:</p>
+<div class="math notranslate nohighlight">
+\[p = P(X \in Y)\]</div>
+<p>In a naive MC approach, we draw <span class="math notranslate nohighlight">\(K\)</span> i.i.d samples to get the estimate:</p>
+<div class="math notranslate nohighlight">
+\[\hat{p} = \frac{1}{K} \sum_{i=1}^K \boldsymbol{1}_Y(X_i)\]</div>
+<p>An analysis of the normalized variance of this method shows that the estimator is getting worse when <span class="math notranslate nohighlight">\(p\)</span> goes to zero,
+and <span class="math notranslate nohighlight">\(K\)</span> needs to be of the order of <span class="math notranslate nohighlight">\(1/p\)</span>, becoming computationally too expensive for very small <span class="math notranslate nohighlight">\(p\)</span>.</p>
+</section>
+<section id="pytams-implementation">
+<h2><cite>pyTAMS</cite> implementation<a class="headerlink" href="#pytams-implementation" title="Link to this heading"></a></h2>
+<p><cite>pyTAMS</cite> implements the TAMS algorithm while encapsulating all the model-specific
+functionalities into an Abstract Base Class (ABC). By decoupling the physics from the
+TAMS algorithm, it becomes easier to extend the algorithm to new physics.</p>
+<p>In particular, <cite>pyTAMS</cite> aims at tacking computationally expensive stochastic models, such as
+high-dimensional dynamical systems appearing in climate modeling or fluid dynamics, which requires
+High Performance Computing (HPC) platform to be used.</p>
+</section>
+<section id="d-double-well-example">
+<h2>2D double well example<a class="headerlink" href="#d-double-well-example" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to pyTAMS’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Controls.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

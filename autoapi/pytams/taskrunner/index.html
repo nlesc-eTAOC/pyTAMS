@@ -1,0 +1,445 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.taskrunner &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="pytams.trajectory" href="../trajectory/index.html" />
+    <link rel="prev" title="pytams.tams" href="../tams/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">pytams</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../database/index.html">pytams.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../fmodel/index.html">pytams.fmodel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../sqldb/index.html">pytams.sqldb</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../tams/index.html">pytams.tams</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">pytams.taskrunner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../trajectory/index.html">pytams.trajectory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../utils/index.html">pytams.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../xmlutils/index.html">pytams.xmlutils</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.taskrunner</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/pytams/taskrunner/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pytams.taskrunner">
+<span id="pytams-taskrunner"></span><h1>pytams.taskrunner<a class="headerlink" href="#module-pytams.taskrunner" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.taskrunner._logger" title="pytams.taskrunner._logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.taskrunner.RunnerError" title="pytams.taskrunner.RunnerError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RunnerError</span></code></a></p></td>
+<td><p>Exception class for the runner.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.taskrunner.WorkerLoggerPlugin" title="pytams.taskrunner.WorkerLoggerPlugin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorkerLoggerPlugin</span></code></a></p></td>
+<td><p>A plugin to configure logging on each worker.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pytams.taskrunner.BaseRunner" title="pytams.taskrunner.BaseRunner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseRunner</span></code></a></p></td>
+<td><p>An ABC for the task runners.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.taskrunner.AsIORunner" title="pytams.taskrunner.AsIORunner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AsIORunner</span></code></a></p></td>
+<td><p>A task runner class based on asyncIO.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pytams.taskrunner.DaskRunner" title="pytams.taskrunner.DaskRunner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DaskRunner</span></code></a></p></td>
+<td><p>A task runner class based on Dask.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.taskrunner.get_runner_type" title="pytams.taskrunner.get_runner_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_runner_type</span></code></a>(→ type[BaseRunner])</p></td>
+<td><p>Create an engine from parameters.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="pytams.taskrunner._logger">
+<span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">_logger</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner._logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.taskrunner.WorkerLoggerPlugin">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">WorkerLoggerPlugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#WorkerLoggerPlugin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.WorkerLoggerPlugin" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">dask.distributed.WorkerPlugin</span></code></p>
+<p>A plugin to configure logging on each worker.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.WorkerLoggerPlugin._params">
+<span class="sig-name descname"><span class="pre">_params</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#WorkerLoggerPlugin._params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.WorkerLoggerPlugin._params" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.WorkerLoggerPlugin.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">worker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dask.distributed.worker.Worker</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#WorkerLoggerPlugin.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.WorkerLoggerPlugin.setup" title="Link to this definition"></a></dt>
+<dd><p>Configure logging on the worker.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>worker</strong> – the dask worker</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="pytams.taskrunner.RunnerError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">RunnerError</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#RunnerError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.RunnerError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Exception class for the runner.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">BaseRunner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">async_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner" title="Link to this definition"></a></dt>
+<dd><p>An ABC for the task runners.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner.__enter__">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pytams.taskrunner.BaseRunner" title="pytams.taskrunner.BaseRunner"><span class="pre">BaseRunner</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner.__enter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner.__enter__" title="Link to this definition"></a></dt>
+<dd><p>To enable use of with.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner.__exit__">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner.__exit__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner.__exit__" title="Link to this definition"></a></dt>
+<dd><p>Executed leaving with scope.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner.make_promise">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">make_promise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner.make_promise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner.make_promise" title="Link to this definition"></a></dt>
+<dd><p>Log a new task to the list of task to tackle.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner.execute_promises">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">execute_promises</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner.execute_promises"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner.execute_promises" title="Link to this definition"></a></dt>
+<dd><p>Execute the list of promises.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.BaseRunner.n_workers">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_workers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#BaseRunner.n_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.BaseRunner.n_workers" title="Link to this definition"></a></dt>
+<dd><p>Return the number of workers in the runner.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">AsIORunner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">async_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytams.taskrunner.BaseRunner" title="pytams.taskrunner.BaseRunner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseRunner</span></code></a></p>
+<p>A task runner class based on asyncIO.</p>
+<p>An runner that relies on asyncio to schedule
+a tasks concurently in worker processes.
+Tasks are added to an internal queue from
+which worker can take them and put the results
+back into result queue.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._params">
+<span class="sig-name descname"><span class="pre">_params</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._params" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._queue">
+<span class="sig-name descname"><span class="pre">_queue</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.13)"><span class="pre">asyncio.Queue</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._queue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._queue" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._rqueue">
+<span class="sig-name descname"><span class="pre">_rqueue</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.13)"><span class="pre">asyncio.Queue</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._rqueue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._rqueue" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._n_workers">
+<span class="sig-name descname"><span class="pre">_n_workers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._n_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._n_workers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._sync_worker">
+<span class="sig-name descname"><span class="pre">_sync_worker</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._sync_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._sync_worker" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._async_worker">
+<span class="sig-name descname"><span class="pre">_async_worker</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._async_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._async_worker" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._loop">
+<span class="sig-name descname"><span class="pre">_loop</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.AbstractEventLoop" title="(in Python v3.13)"><span class="pre">asyncio.AbstractEventLoop</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._loop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._loop" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._executor">
+<span class="sig-name descname"><span class="pre">_executor</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor" title="(in Python v3.13)"><span class="pre">concurrent.futures.Executor</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._executor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._executor" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner._workers">
+<span class="sig-name descname"><span class="pre">_workers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/asyncio-task.html#asyncio.Task" title="(in Python v3.13)"><span class="pre">asyncio.Task</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner._workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner._workers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pytams.taskrunner.AsIORunner" title="pytams.taskrunner.AsIORunner"><span class="pre">AsIORunner</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.__enter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.__enter__" title="Link to this definition"></a></dt>
+<dd><p>To enable use of with.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.__exit__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.__exit__" title="Link to this definition"></a></dt>
+<dd><p>Executed leaving with scope.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.add_task">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.add_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.add_task" title="Link to this definition"></a></dt>
+<dd><p>Append a task to the queue.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.make_promise">
+<span class="sig-name descname"><span class="pre">make_promise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.make_promise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.make_promise" title="Link to this definition"></a></dt>
+<dd><p>A synchronous wrapper to add_task.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.run_tasks">
+<em class="property"><span class="pre">async</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run_tasks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.run_tasks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.run_tasks" title="Link to this definition"></a></dt>
+<dd><p>Create worker tasks and run.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.execute_promises">
+<span class="sig-name descname"><span class="pre">execute_promises</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.execute_promises"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.execute_promises" title="Link to this definition"></a></dt>
+<dd><p>A synchronous wrapper to run_tasks.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.AsIORunner.n_workers">
+<span class="sig-name descname"><span class="pre">n_workers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#AsIORunner.n_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.AsIORunner.n_workers" title="Link to this definition"></a></dt>
+<dd><p>Return the number of workers in the runner.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">DaskRunner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sync_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">async_wk</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pytams.taskrunner.BaseRunner" title="pytams.taskrunner.BaseRunner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseRunner</span></code></a></p>
+<p>A task runner class based on Dask.</p>
+<p>An runner that relies on dask to schedule
+a tasks concurently in workers.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.dask_backend">
+<span class="sig-name descname"><span class="pre">dask_backend</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.dask_backend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.dask_backend" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner._n_workers">
+<span class="sig-name descname"><span class="pre">_n_workers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner._n_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner._n_workers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner._sync_worker">
+<span class="sig-name descname"><span class="pre">_sync_worker</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner._sync_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner._sync_worker" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner._async_worker">
+<span class="sig-name descname"><span class="pre">_async_worker</span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner._async_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner._async_worker" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner._tlist">
+<span class="sig-name descname"><span class="pre">_tlist</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></em><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner._tlist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner._tlist" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.__enter__">
+<span class="sig-name descname"><span class="pre">__enter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pytams.taskrunner.DaskRunner" title="pytams.taskrunner.DaskRunner"><span class="pre">DaskRunner</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.__enter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.__enter__" title="Link to this definition"></a></dt>
+<dd><p>To enable use of with.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.__exit__">
+<span class="sig-name descname"><span class="pre">__exit__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.__exit__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.__exit__" title="Link to this definition"></a></dt>
+<dd><p>Executed leaving with scope.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.make_promise">
+<span class="sig-name descname"><span class="pre">make_promise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.make_promise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.make_promise" title="Link to this definition"></a></dt>
+<dd><p>Append a task to the internal task list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.just_delay">
+<span class="sig-name descname"><span class="pre">just_delay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.just_delay"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.just_delay" title="Link to this definition"></a></dt>
+<dd><p>Delay an object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.execute_promises">
+<span class="sig-name descname"><span class="pre">execute_promises</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Any</span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.execute_promises"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.execute_promises" title="Link to this definition"></a></dt>
+<dd><p>Execute a list of promises.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>list_of_p</strong> – a list of dask promises</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list with the return argument of each promised task.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Exception if compute fails</strong><strong> (</strong><strong>raise internal error</strong><strong>)</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.taskrunner.DaskRunner.n_workers">
+<span class="sig-name descname"><span class="pre">n_workers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#DaskRunner.n_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.DaskRunner.n_workers" title="Link to this definition"></a></dt>
+<dd><p>Return the number of workers in the runner.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pytams.taskrunner.get_runner_type">
+<span class="sig-prename descclassname"><span class="pre">pytams.taskrunner.</span></span><span class="sig-name descname"><span class="pre">get_runner_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.13)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pytams.taskrunner.BaseRunner" title="pytams.taskrunner.BaseRunner"><span class="pre">BaseRunner</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/taskrunner.html#get_runner_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.taskrunner.get_runner_type" title="Link to this definition"></a></dt>
+<dd><p>Create an engine from parameters.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../tams/index.html" class="btn btn-neutral float-left" title="pytams.tams" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../trajectory/index.html" class="btn btn-neutral float-right" title="pytams.trajectory" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

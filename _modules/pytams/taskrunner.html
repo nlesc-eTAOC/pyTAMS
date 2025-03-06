@@ -1,0 +1,545 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.taskrunner &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.taskrunner</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.taskrunner</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ntpath</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABCMeta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">dask</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dask.distributed</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dask.distributed</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerPlugin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dask.distributed.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dask_jobqueue</span><span class="w"> </span><span class="kn">import</span> <span class="n">SLURMCluster</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
+
+<div class="viewcode-block" id="_logger">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner._logger">[docs]</a>
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="WorkerLoggerPlugin">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.WorkerLoggerPlugin">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WorkerLoggerPlugin</span><span class="p">(</span><span class="n">WorkerPlugin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A plugin to configure logging on each worker.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">params</span> <span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Init function pass in the params dict.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="WorkerLoggerPlugin._params">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.WorkerLoggerPlugin._params">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">params</span></div>
+
+
+<div class="viewcode-block" id="WorkerLoggerPlugin.setup">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.WorkerLoggerPlugin.setup">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">worker</span> <span class="p">:</span> <span class="n">Worker</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure logging on the worker.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            worker: the dask worker</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Configure logging on each worker</span>
+        <span class="n">setup_logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="RunnerError">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.RunnerError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RunnerError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception class for the runner.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="BaseRunner">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BaseRunner</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An ABC for the task runners.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                 <span class="n">sync_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">async_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">n_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A dummy init method.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="BaseRunner.__enter__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.__enter__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BaseRunner</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;To enable use of with.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="BaseRunner.__exit__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.__exit__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executed leaving with scope.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="BaseRunner.make_promise">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.make_promise">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_promise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Log a new task to the list of task to tackle.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="BaseRunner.execute_promises">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.execute_promises">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_promises</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute the list of promises.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+<div class="viewcode-block" id="BaseRunner.n_workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.n_workers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of workers in the runner.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="AsIORunner">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AsIORunner</span><span class="p">(</span><span class="n">BaseRunner</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A task runner class based on asyncIO.</span>
+
+<span class="sd">    An runner that relies on asyncio to schedule</span>
+<span class="sd">    a tasks concurently in worker processes.</span>
+<span class="sd">    Tasks are added to an internal queue from</span>
+<span class="sd">    which worker can take them and put the results</span>
+<span class="sd">    back into result queue.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                 <span class="n">sync_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">async_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">n_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Init the task runner.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: a dictionary of parameters</span>
+<span class="sd">            sync_wk: a synchronous worker function</span>
+<span class="sd">            async_wk: an asynchronous worker function</span>
+<span class="sd">            n_workers: number of workers</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AsIORunner._params">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._params">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">params</span></div>
+
+<div class="viewcode-block" id="AsIORunner._queue">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._queue">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span> <span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AsIORunner._rqueue">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._rqueue">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rqueue</span> <span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AsIORunner._n_workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._n_workers">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span> <span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">n_workers</span></div>
+
+<div class="viewcode-block" id="AsIORunner._sync_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._sync_worker">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sync_worker</span> <span class="o">=</span> <span class="n">sync_wk</span></div>
+
+<div class="viewcode-block" id="AsIORunner._async_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._async_worker">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_async_worker</span> <span class="o">=</span> <span class="n">async_wk</span></div>
+
+<div class="viewcode-block" id="AsIORunner._loop">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._loop">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span> <span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">AbstractEventLoop</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="AsIORunner._executor">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._executor">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span> <span class="p">:</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">Executor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="AsIORunner._workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner._workers">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.__enter__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.__enter__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsIORunner</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;To enable use of with.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">new_event_loop</span><span class="p">()</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.__exit__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.__exit__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executed leaving with scope.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="o">.</span><span class="n">shutdown_asyncgens</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.add_task">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.add_task">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">add_task</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a task to the queue.&quot;&quot;&quot;</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">task</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.make_promise">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.make_promise">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_promise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A synchronous wrapper to add_task.&quot;&quot;&quot;</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span><span class="n">task</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.run_tasks">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.run_tasks">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_tasks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create worker tasks and run.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span> <span class="o">=</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span><span class="p">,</span>
+                                                                    <span class="n">initializer</span><span class="o">=</span><span class="n">setup_logger</span><span class="p">,</span>
+                                                                    <span class="n">initargs</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="p">,))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_async_worker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="p">,</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">_rqueue</span><span class="p">,</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span><span class="p">)]</span>
+
+        <span class="c1"># Wait until all tasks are processed</span>
+        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queue</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rqueue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rqueue</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="AsIORunner.execute_promises">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.execute_promises">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_promises</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A synchronous wrapper to run_tasks.&quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_tasks</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Error in AsIORunner while executing promises.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="AsIORunner.n_workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.n_workers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of workers in the runner.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span></div>
+</div>
+
+
+<div class="viewcode-block" id="DaskRunner">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DaskRunner</span><span class="p">(</span><span class="n">BaseRunner</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A task runner class based on Dask.</span>
+
+<span class="sd">    An runner that relies on dask to schedule</span>
+<span class="sd">    a tasks concurently in workers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                 <span class="n">sync_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">async_wk</span> <span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+                 <span class="n">n_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Start the Dask cluster and client.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            params: a dictionary with params</span>
+<span class="sd">            sync_wk: a synchronous worker function</span>
+<span class="sd">            async_wk: an asynchronous worker function</span>
+<span class="sd">            n_workers: number of workers</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dask_dict</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dask&quot;</span><span class="p">,{})</span>
+<div class="viewcode-block" id="DaskRunner.dask_backend">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.dask_backend">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dask_backend</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DaskRunner._n_workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner._n_workers">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span> <span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">n_workers</span></div>
+
+<div class="viewcode-block" id="DaskRunner._sync_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner._sync_worker">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sync_worker</span> <span class="o">=</span> <span class="n">sync_wk</span></div>
+
+<div class="viewcode-block" id="DaskRunner._async_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner._async_worker">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_async_worker</span> <span class="o">=</span> <span class="n">async_wk</span></div>
+
+<div class="viewcode-block" id="DaskRunner._tlist">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner._tlist">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tlist</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dask_backend</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">threads_per_worker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dask_backend</span> <span class="o">==</span> <span class="s2">&quot;slurm&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;slurm_config_file&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span><span class="p">):</span>
+                    <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Specified slurm_config_file do not exists: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">RunnerError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+                <span class="n">config_file</span> <span class="o">=</span> <span class="n">ntpath</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span><span class="p">)</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">slurm_config_file</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;~/.config/dask/</span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span> <span class="o">=</span> <span class="n">SLURMCluster</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_queue</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;queue&quot;</span><span class="p">,</span> <span class="s2">&quot;regular&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_ntasks</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ntasks_per_job&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_ntasks_per_node</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ntasks_per_node&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dask_ntasks</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_nworker_ncore</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ncores_per_worker&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_prologue</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;job_prologue&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dask_walltime</span> <span class="o">=</span> <span class="n">dask_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;worker_walltime&quot;</span><span class="p">,</span> <span class="s2">&quot;04:00:00&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span> <span class="o">=</span> <span class="n">SLURMCluster</span><span class="p">(</span>
+                    <span class="n">queue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_queue</span><span class="p">,</span>
+                    <span class="n">cores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_nworker_ncore</span><span class="p">,</span>
+                    <span class="n">memory</span><span class="o">=</span><span class="s1">&#39;144GB&#39;</span><span class="p">,</span>
+                    <span class="n">walltime</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_walltime</span><span class="p">,</span>
+                    <span class="n">processes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">interface</span><span class="o">=</span><span class="s1">&#39;ib0&#39;</span><span class="p">,</span>
+                    <span class="n">job_script_prologue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_prologue</span><span class="p">,</span>
+                    <span class="n">job_extra_directives</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;--ntasks=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_ntasks</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                          <span class="sa">f</span><span class="s2">&quot;--tasks-per-node=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_ntasks_per_node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;--exclusive&quot;</span><span class="p">],</span>
+                    <span class="n">job_directives_skip</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;--cpus-per-task=&#39;</span><span class="p">,</span> <span class="s1">&#39;--mem&#39;</span><span class="p">],</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unknown [dask] backend: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dask_backend</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">RunnerError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+        <span class="c1"># Setup the worker logging</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">register_plugin</span><span class="p">(</span><span class="n">WorkerLoggerPlugin</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+
+<div class="viewcode-block" id="DaskRunner.__enter__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.__enter__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DaskRunner</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;To enable use of with.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="DaskRunner.__exit__">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.__exit__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executed leaving with scope.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cluster</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="DaskRunner.make_promise">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.make_promise">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_promise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a task to the internal task list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dask</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sync_worker</span><span class="p">)(</span><span class="o">*</span><span class="n">task</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="DaskRunner.just_delay">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.just_delay">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">just_delay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span> <span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delay an object.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">dask</span><span class="o">.</span><span class="n">delayed</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DaskRunner.execute_promises">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.execute_promises">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_promises</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute a list of promises.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            list_of_p: a list of dask promises</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A list with the return argument of each promised task.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception if compute fails (raise internal error)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dask</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_tlist</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Error in DaskRunner while executing promises.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tlist</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+
+<div class="viewcode-block" id="DaskRunner.n_workers">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.n_workers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of workers in the runner.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_workers</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="get_runner_type">
+<a class="viewcode-back" href="../../autoapi/pytams/taskrunner/index.html#pytams.taskrunner.get_runner_type">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_runner_type</span><span class="p">(</span><span class="n">params</span> <span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseRunner</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an engine from parameters.&quot;&quot;&quot;</span>
+    <span class="n">runner_map</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;dask&quot;</span><span class="p">:</span> <span class="n">DaskRunner</span><span class="p">,</span>
+        <span class="s2">&quot;asyncio&quot;</span><span class="p">:</span> <span class="n">AsIORunner</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">runner_str</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;runner&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">runner_str</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">runner_map</span><span class="p">:</span>
+        <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unable to get </span><span class="si">{</span><span class="n">runner_str</span><span class="si">}</span><span class="s2"> runner.&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">RunnerError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">runner_map</span><span class="p">[</span><span class="n">runner_str</span><span class="p">]</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

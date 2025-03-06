@@ -1,0 +1,241 @@
+pytams.tams
+===========
+
+.. py:module:: pytams.tams
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.tams._logger
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.tams.TAMSError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.tams.TAMS
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.tams.parse_cl_args
+   pytams.tams.traj_advance_with_exception
+   pytams.tams.pool_worker
+   pytams.tams.pool_worker_async
+   pytams.tams.ms_worker
+   pytams.tams.ms_worker_async
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:exception:: TAMSError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for TAMS.
+
+
+.. py:function:: parse_cl_args(a_args: Optional[list[str]] = None) -> argparse.Namespace
+
+   Parse provided list or default CL argv.
+
+   :param a_args: optional list of options
+
+
+.. py:class:: TAMS(fmodel_t: Any, a_args: Optional[list[str]] = None)
+
+   A class implementing TAMS.
+
+   Hold a Trajectory database and mechanisms to
+   populate, explore and IO the database.
+
+
+   .. py:attribute:: _fmodel_t
+
+
+   .. py:attribute:: _nTraj
+      :type:  int
+
+
+   .. py:attribute:: _nSplitIter
+      :type:  int
+
+
+   .. py:attribute:: _wallTime
+      :type:  float
+
+
+   .. py:attribute:: _plot_diags
+
+
+   .. py:attribute:: _init_pool_only
+
+
+   .. py:attribute:: _tdb
+
+
+   .. py:attribute:: _startTime
+      :type:  float
+
+
+   .. py:method:: nTraj() -> int
+
+      Return the number of trajectory used for TAMS.
+
+
+
+   .. py:method:: elapsed_time() -> float
+
+      Return the elapsed wallclock time.
+
+      Since the initialization of TAMS [seconds].
+
+      :returns: TAMS elapse time.
+
+
+
+   .. py:method:: remaining_walltime() -> float
+
+      Return the remaining wallclock time.
+
+      [seconds]
+
+      :returns: TAMS remaining wall time.
+
+
+
+   .. py:method:: out_of_time() -> bool
+
+      Return true if insufficient walltime remains.
+
+      :returns: boolean indicating wall time availability.
+
+
+
+   .. py:method:: init_trajectory_pool() -> None
+
+      Initialize the trajectory pool.
+
+
+
+   .. py:method:: generate_trajectory_pool() -> None
+
+      Schedule the generation of a pool of stochastic trajectories.
+
+
+
+   .. py:method:: check_exit_splitting_loop(k: int) -> tuple[bool, numpy.ndarray]
+
+      Check for exit criterion of the splitting loop.
+
+      :param k: loop counter
+
+      :returns: bool to trigger splitting loop break
+                array of maximas accros all trajectories
+
+
+
+   .. py:method:: finished_ongoing_splitting() -> None
+
+      Check and finish unfinished splitting iterations.
+
+
+
+   .. py:method:: get_restart_at_random(min_idx_list: list[int]) -> list[int]
+
+      Get a list of trajectory index to restart from at random.
+
+
+
+   .. py:method:: do_multilevel_splitting() -> None
+
+      Schedule splitting of the initial pool of stochastic trajectories.
+
+
+
+   .. py:method:: compute_probability() -> float
+
+      Compute the probability using TAMS.
+
+      :returns: the transition probability
+
+
+
+.. py:function:: traj_advance_with_exception(traj: pytams.trajectory.Trajectory, wall_time: float, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   Advance a trajectory with exception handling.
+
+   :param traj: a trajectory
+   :param wall_time: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of the database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: pool_worker(traj: pytams.trajectory.Trajectory, wall_time_info: float, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   A worker to generate each initial trajectory.
+
+   :param traj: a trajectory
+   :param wall_time_info: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of the database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: pool_worker_async(queue: asyncio.Queue[Tuple[pytams.trajectory.Trajectory, float, bool, str]], res_queue: asyncio.Queue[pytams.trajectory.Trajectory], executor: concurrent.futures.Executor) -> None
+   :async:
+
+
+   A worker to generate each initial trajectory.
+
+   :param queue: a queue from which to get tasks
+   :param res_queue: a queue to put the results in
+   :param executor: an executor to launch the work in
+
+
+.. py:function:: ms_worker(t_end: float, fromTraj: pytams.trajectory.Trajectory, rstId: int, min_val: float, wall_time_info: float, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   A worker to restart trajectories.
+
+   :param t_end: a final time
+   :param fromTraj: a trajectory to restart from
+   :param rstId: Id of the trajectory being worked on
+   :param min_val: the value of the score function to restart from
+   :param wall_time_info: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of DB to save the traj in (Opt)
+
+
+.. py:function:: ms_worker_async(queue: asyncio.Queue[Any], res_queue: asyncio.Queue[pytams.trajectory.Trajectory], executor: concurrent.futures.Executor) -> None
+   :async:
+
+
+   An async worker to restart trajectories.
+
+   :param queue: an asyncio queue to get work from
+   :param res_queue: an asyncio queue to put results in
+   :param executor: an executor
+
+

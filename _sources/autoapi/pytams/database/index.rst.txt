@@ -1,0 +1,307 @@
+pytams.database
+===============
+
+.. py:module:: pytams.database
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.database._logger
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.database.DatabaseError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.database.Database
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:exception:: DatabaseError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for TAMS Database.
+
+
+.. py:class:: Database(fmodel_t: Any, params: dict, ntraj: Optional[int] = None, nsplititer: Optional[int] = None)
+
+   A database class for TAMS.
+
+
+   .. py:attribute:: _fmodel_t
+
+
+   .. py:attribute:: _verbose
+      :value: False
+
+
+
+   .. py:attribute:: _save
+      :value: False
+
+
+
+   .. py:attribute:: _load
+      :type:  Union[str, None]
+      :value: None
+
+
+
+   .. py:attribute:: _parameters
+
+
+   .. py:attribute:: _trajs_db
+      :type:  list[pytams.trajectory.Trajectory]
+      :value: []
+
+
+
+   .. py:attribute:: _ksplit
+      :value: 0
+
+
+
+   .. py:attribute:: _l_bias
+      :type:  list[int]
+      :value: []
+
+
+
+   .. py:attribute:: _weights
+      :type:  list[float]
+      :value: [1.0]
+
+
+
+   .. py:attribute:: _ongoing
+      :value: None
+
+
+
+   .. py:attribute:: _prefix
+
+
+   .. py:attribute:: _format
+
+
+   .. py:attribute:: _name
+      :value: 'Uninferable.tdb'
+
+
+
+   .. py:method:: _setUpTree() -> None
+
+      Initialize the trajectory database tree.
+
+
+
+   .. py:method:: _writeMetadata() -> None
+
+      Write the database Metadata to disk.
+
+
+
+   .. py:method:: _readHeader() -> tuple[str, datetime.datetime, str]
+
+      Read the database Metadata to header.
+
+
+
+   .. py:method:: saveSplittingData(ongoing_trajs: Optional[list[int]] = None) -> None
+
+      Write splitting data.
+
+
+
+   .. py:method:: _readSplittingData() -> None
+
+      Read splitting data.
+
+
+
+   .. py:method:: _restoreTrajDB() -> None
+
+      Initialize TAMS from a stored trajectory database.
+
+
+
+   .. py:method:: loadTrajectoryDB(dbFile: str) -> int
+
+      Load trajectories stored into the database.
+
+      :param dbFile: the database file
+
+      :returns: number of trajectories loaded
+
+
+
+   .. py:method:: _check_database_consistency() -> None
+
+      Check the restart database consistency.
+
+
+
+   .. py:method:: name() -> str
+
+      Accessor to DB name.
+
+
+
+   .. py:method:: save() -> bool
+
+      Accessor to DB save bool.
+
+
+
+   .. py:method:: appendTraj(a_traj: pytams.trajectory.Trajectory) -> None
+
+      Append a Trajectory to the internal list.
+
+      :param a_traj: the trajectory
+
+
+
+   .. py:method:: trajList() -> list[pytams.trajectory.Trajectory]
+
+      Access to the trajectory list.
+
+
+
+   .. py:method:: getTraj(idx: int) -> pytams.trajectory.Trajectory
+
+      Access to a given trajectory.
+
+
+
+   .. py:method:: overwriteTraj(idx: int, traj: pytams.trajectory.Trajectory) -> None
+
+      Deep copy a trajectory into internal list.
+
+
+
+   .. py:method:: headerFile() -> str
+
+      Helper returning the DB header file.
+
+
+
+   .. py:method:: poolFile() -> str
+
+      Helper returning the DB trajectory pool file.
+
+
+
+   .. py:method:: isEmpty() -> bool
+
+      Check if database is empty.
+
+
+
+   .. py:method:: trajListLen() -> int
+
+      Length of the trajectory list.
+
+
+
+   .. py:method:: updateTrajList(a_trajList: list[pytams.trajectory.Trajectory]) -> None
+
+      Overwrite the trajectory list.
+
+
+
+   .. py:method:: weights() -> list[float]
+
+      Splitting iterations weights.
+
+
+
+   .. py:method:: appendWeight(weight: float) -> None
+
+      Append a weight to internal list.
+
+
+
+   .. py:method:: biases() -> list[int]
+
+      Splitting iterations biases.
+
+
+
+   .. py:method:: appendBias(bias: int) -> None
+
+      Append a bias to internal list.
+
+
+
+   .. py:method:: kSplit() -> int
+
+      Splitting iteration counter.
+
+
+
+   .. py:method:: reset_ongoing() -> None
+
+      Reset the list of trajectories undergoing branching.
+
+
+
+   .. py:method:: get_ongoing() -> Union[list[int], None]
+
+      Return the list of trajectories undergoing branching or None.
+
+
+
+   .. py:method:: setKSplit(ksplit: int) -> None
+
+      Set splitting iteration counter.
+
+
+
+   .. py:method:: countEndedTraj() -> int
+
+      Return the number of trajectories that ended.
+
+
+
+   .. py:method:: countConvergedTraj() -> int
+
+      Return the number of trajectories that converged.
+
+
+
+   .. py:method:: getTransitionProbability() -> float
+
+      Return the transition probability.
+
+
+
+   .. py:method:: info() -> None
+
+      Print database info to screen.
+
+
+
+   .. py:method:: plotScoreFunctions(fname: Optional[str] = None) -> None
+
+      Plot the score as function of time for all trajectories.
+
+
+

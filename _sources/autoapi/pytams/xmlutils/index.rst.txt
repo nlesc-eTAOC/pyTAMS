@@ -1,0 +1,130 @@
+pytams.xmlutils
+===============
+
+.. py:module:: pytams.xmlutils
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.xmlutils._logger
+   pytams.xmlutils.POD_cast_dict
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.xmlutils.XMLUtilsError
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.xmlutils.manualCastSnap
+   pytams.xmlutils.manualCastSnapNoise
+   pytams.xmlutils.manualCast
+   pytams.xmlutils.manualCastStr
+   pytams.xmlutils.dict_to_xml
+   pytams.xmlutils.xml_to_dict
+   pytams.xmlutils.get_val_type
+   pytams.xmlutils.new_element
+   pytams.xmlutils.make_xml_snapshot
+   pytams.xmlutils.read_xml_snapshot
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:exception:: XMLUtilsError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for the xmlutils.
+
+
+.. py:function:: manualCastSnap(elem: xml.etree.ElementTree.Element) -> Any
+
+   Manually cast XML snapshot state.
+
+
+.. py:function:: manualCastSnapNoise(elem: xml.etree.ElementTree.Element) -> Any
+
+   Manually cast XML snapshot noise.
+
+
+.. py:function:: manualCast(elem: xml.etree.ElementTree.Element) -> Any
+
+   Manually cast XML elements reads.
+
+
+.. py:data:: POD_cast_dict
+   :type:  Dict[str, Callable]
+
+.. py:function:: manualCastStr(type_str: str, elem_text: str) -> Any
+
+   Manually cast from strings.
+
+
+.. py:function:: dict_to_xml(tag: str, d: dict) -> xml.etree.ElementTree.Element
+
+   Return an Element from a dictionnary.
+
+   :param tag: a root tag
+   :param d: a dictionary
+
+
+.. py:function:: xml_to_dict(elem: xml.etree.ElementTree.Element | None) -> dict
+
+   Return an dictionnary an Element.
+
+   :param elem: an etree element
+
+   :returns: a dictionary containing the element entries
+
+
+.. py:function:: get_val_type(val: Any) -> str
+
+   Return the type of val.
+
+   :param val: a value
+
+   :returns: val type
+
+
+.. py:function:: new_element(key: str, val: Any) -> xml.etree.ElementTree.Element
+
+   Return an Element from two args.
+
+   :param key: the element key
+   :param val: the element value
+
+   :returns: an ElementTree element
+
+
+.. py:function:: make_xml_snapshot(idx: int, time: float, score: float, noise: Any, state: Any) -> xml.etree.ElementTree.Element
+
+   Return a snapshot in XML elemt format.
+
+   :param idx: snapshot index
+   :param time: the time stamp
+   :param score: the snapshot score function
+   :param noise: the stochastic noise
+   :param state: the associated state
+
+
+.. py:function:: read_xml_snapshot(snap: xml.etree.ElementTree.Element) -> tuple[float, float, Any, Any]
+
+   Return snapshot data from an XML snapshot elemt.
+
+   :param snap: an XML snapshot elemt
+
+
