@@ -22,12 +22,6 @@ class WallTimeLimit(Exception):
 
     pass
 
-class ForwardModelAdvance(Exception):
-    """Exception for forward model advance fail."""
-
-    pass
-
-
 def formTrajID(n: int) -> str:
     """Helper to assemble a trajectory ID string."""
     return f"traj{n:06}"
@@ -185,7 +179,7 @@ class Trajectory:
 
         try:
             dt = self._fmodel.advance(self._dt, self._stoichForcingAmpl)
-        except ForwardModelAdvance:
+        except Exception:
             err_msg = f"ForwardModel advance error at step {self._step:08}"
             _logger.error(err_msg)
             raise

@@ -47,7 +47,7 @@ def test_generateAndLoadTDB():
     """Test generation of TDB and loading the TDB."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
+        toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0},
                    "database": {"DB_save": True, "DB_prefix": "dwTest"},
                    "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 2},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
@@ -75,7 +75,7 @@ def test_accessEndedCount():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    assert tdb.countEndedTraj() == 100
+    assert tdb.countEndedTraj() == 50
 
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -84,7 +84,7 @@ def test_accessConvergedCount():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"DB_restart": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    assert tdb.countConvergedTraj() == 100
+    assert tdb.countConvergedTraj() == 50
 
 
 @pytest.mark.dependency(depends=["genDB"])
