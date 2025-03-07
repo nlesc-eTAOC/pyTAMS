@@ -4,7 +4,6 @@ import concurrent.futures
 import functools
 import logging
 import time
-from typing import Any
 from typing import Tuple
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
@@ -88,7 +87,7 @@ def pool_worker(traj: Trajectory,
     return traj
 
 
-async def pool_worker_async(
+async def worker_async(
     queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
     res_queue : asyncio.Queue[Trajectory],
     executor : concurrent.futures.Executor) -> None:
@@ -102,11 +101,11 @@ async def pool_worker_async(
     while True:
         func, *work_unit = await queue.get()
         loop = asyncio.get_running_loop()
-        updated_traj = await loop.run_in_executor(
+        traj = await loop.run_in_executor(
             executor,
             functools.partial(func, *work_unit)
         )
-        await res_queue.put(updated_traj)
+        await res_queue.put(traj)
         queue.task_done()
 
 def ms_worker(
@@ -155,25 +154,3 @@ def ms_worker(
         return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
 
     return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
-
-async def ms_worker_async(
-    queue : asyncio.Queue[Any],
-    res_queue : asyncio.Queue[Trajectory],
-    executor : concurrent.futures.Executor,
-) -> None:
-    """An async worker to restart trajectories.
-
-    Args:
-        queue: an asyncio queue to get work from
-        res_queue: an asyncio queue to put results in
-        executor: an executor
-    """
-    while True:
-        func, *work_unit = await queue.get()
-        loop = asyncio.get_running_loop()
-        restarted_traj = await loop.run_in_executor(
-            executor,
-            functools.partial(func, *work_unit)
-        )
-        await res_queue.put(restarted_traj)
-        queue.task_done()

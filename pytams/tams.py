@@ -13,9 +13,7 @@ from pytams.trajectory import Trajectory
 from pytams.utils import get_min_scored
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker
-from pytams.worker import ms_worker_async
 from pytams.worker import pool_worker
-from pytams.worker import pool_worker_async
 
 _logger = logging.getLogger(__name__)
 
@@ -197,7 +195,6 @@ class TAMS:
 
         with get_runner_type(self._parameters)(self._parameters,
                                                pool_worker,
-                                               pool_worker_async,
                                                self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
             for T in self._tdb.trajList():
                 task = [T,
@@ -270,7 +267,6 @@ class TAMS:
             _logger.info(inf_msg)
             with get_runner_type(self._parameters)(self._parameters,
                                                    pool_worker,
-                                                   pool_worker_async,
                                                    self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
                 for i in ongoing_list:
                     T = self._tdb.getTraj(i)
@@ -345,7 +341,6 @@ class TAMS:
 
         with get_runner_type(self._parameters)(self._parameters,
                                                ms_worker,
-                                               ms_worker_async,
                                                self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
             while k <= self._tdb.nSplitIter():
                 inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
