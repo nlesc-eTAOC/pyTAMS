@@ -204,6 +204,24 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Model-specific post trajectory restart hook."""
         pass
 
+    @final
+    def post_trajectory_restore_hook(self,
+                                     step : int,
+                                     time : float) -> None:
+        """Model post trajectory restore hook.
+
+        Args:
+            step: the current step counter
+            time: the time of the simulation
+        """
+        self._step = step
+        self._time = time
+        self._trajectory_restore_hook()
+
+    def _trajectory_restore_hook(self) -> None:
+        """Model-specific post trajectory restore hook."""
+        pass
+
     def _clear_model(self) -> Any:
         """Clear the concrete forward model internals."""
         pass
