@@ -87,7 +87,6 @@ def pool_worker(traj: Trajectory,
 
 
 def ms_worker(
-    t_end: float,
     fromTraj: Trajectory,
     rstId: int,
     min_val: float,
@@ -98,7 +97,6 @@ def ms_worker(
     """A worker to restart trajectories.
 
     Args:
-        t_end: a final time
         fromTraj: a trajectory to restart from
         rstId: Id of the trajectory being worked on
         min_val: the value of the score function to restart from

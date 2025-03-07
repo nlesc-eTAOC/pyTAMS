@@ -367,8 +367,7 @@ class TAMS:
 
                 # Assemble a list of promises
                 for i in range(len(min_idx_list)):
-                    task = [1.0e9,
-                            self._tdb.getTraj(rest_idx[i]),
+                    task = [self._tdb.getTraj(rest_idx[i]),
                             self._tdb.getTraj(min_idx_list[i]).id(),
                             min_vals[i],
                             self._startTime+self._wallTime,

@@ -56,7 +56,7 @@ def test_run_ms_worker():
                                   "targetscore": 0.25}}
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance()
-    b_test = ms_worker(0.01, t_test,
+    b_test = ms_worker(t_test,
                        2, 0.049,
                        time.monotonic() + 10.0,
                        False, "testDB")
@@ -75,7 +75,7 @@ def test_run_ms_worker_outoftime(caplog : pytest.LogCaptureFixture):
     setup_logger(parameters)
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance()
-    _ = ms_worker(10.0, t_test,
+    _ = ms_worker(t_test,
                   2, 0.1,
                   time.monotonic() + 0.1,
                   False, "testDB")
@@ -92,7 +92,7 @@ def test_run_ms_worker_advanceerror():
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.01)
     with pytest.raises(RuntimeError):
-        _ = ms_worker(10.0, t_test,
+        _ = ms_worker(t_test,
                       5, 0.04,
                       time.monotonic() + 1.0,
                       False, "testDB")
