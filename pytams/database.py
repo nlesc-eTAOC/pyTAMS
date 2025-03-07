@@ -1,3 +1,4 @@
+"""A database class for TAMS."""
 import copy
 import logging
 import os
@@ -27,14 +28,46 @@ class DatabaseError(Exception):
 
 
 class Database:
-    """A database class for TAMS."""
+    """A database class for TAMS.
+
+    The database class for TAMS is a container for
+    all the trajectory and splitting data. When the
+    user requires to store the database, a local folder is
+    created holding a number of readable files, any output
+    from the model and an SQL file used to lock/release
+    trajectories as the TAMS algorithm proceeds.
+
+    The readable files are currently in an XML format.
+
+    A database can be loaded independently from the TAMS
+    algorithm and used for post-processing.
+
+    Attributes:
+        _fmodel_t: the forward model type
+        _save: boolean to trigger saving the database to disk
+        _load: a path to an existing database to restore
+        _parameters: the dictionary of parameters
+        _trajs_db: the list of trajectories
+        _ksplit: the current splitting iteration
+        _l_bias: the list of bias
+        _weights: the list of weights
+        _ongoing: the list of ongoing branches if unfinished splitting iteration.
+    """
 
     def __init__(self,
                  fmodel_t: Any,
                  params: dict,
                  ntraj: Optional[int] = None,
                  nsplititer: Optional[int] = None) -> None:
-        """Init a TAMS database.
+        """Initialize a TAMS database.
+
+        Initialize in-memory TAMS database, loading data
+        from an existing database if provided.
+
+        To prevent overriding an existing database by mistake,
+        if a database folder with the same name already exists,
+        if will be copied to a new folder with a random name unless
+        that same folder is also specified as a restart database.
 
         Args:
             fmodel_t: the forward model type
@@ -45,7 +78,6 @@ class Database:
         self._fmodel_t = fmodel_t
 
         # Metadata
-        self._verbose = False
         self._save = False
         self._load : Union[str,None] = None
         self._parameters = params
@@ -80,6 +112,28 @@ class Database:
             self._ntraj = ntraj
             self._nsplititer = nsplititer
             self._setUpTree()
+
+    def nTraj(self) -> int:
+        """Return the number of trajectory used for TAMS.
+
+        Note that this is the requested number of trajectory, not
+        the current length of the trajectory pool.
+
+        Return:
+            number of trajectory
+        """
+        return self._ntraj
+
+    def nSplitIter(self) -> int:
+        """Return the number of splitting iteration used for TAMS.
+
+        Note that this is the requested number of splitting iteration, not
+        the current splitting iteration.
+
+        Return:
+            number of splitting iteration
+        """
+        return self._nsplititer
 
     def _setUpTree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -116,6 +170,8 @@ class Database:
             mdata.append(new_element("pyTAMS_version", version(__package__)))
             mdata.append(new_element("date", datetime.now()))
             mdata.append(new_element("model_t", self._fmodel_t.name()))
+            mdata.append(new_element("ntraj", self._ntraj))
+            mdata.append(new_element("nsplititer", self._nsplititer))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(headerFile)
@@ -141,6 +197,7 @@ class Database:
                 pyTAMS_version = datafromxml["pyTAMS_version"]
                 db_date = datafromxml["date"]
                 db_model = datafromxml["model_t"]
+
                 return pyTAMS_version, db_date, db_model
             else:
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
@@ -151,7 +208,11 @@ class Database:
 
     def saveSplittingData(self,
                           ongoing_trajs: Optional[list[int]] = None) -> None:
-        """Write splitting data."""
+        """Write splitting data to the database.
+
+        Args:
+            ongoing_trajs: an optional list of ongoing trajectories
+        """
         if not self._save:
             return
 
@@ -228,8 +289,8 @@ class Database:
         # Counter for number of trajectory loaded
         nTrajRestored = 0
 
-        self._ntraj = db_handle.get_trajectory_count()
-        for n in range(self._ntraj):
+        ntraj_in_db = db_handle.get_trajectory_count()
+        for n in range(ntraj_in_db):
             trajChkFile = db_handle.fetch_trajectory(n)
             if os.path.exists(trajChkFile):
                 nTrajRestored += 1
@@ -253,7 +314,14 @@ class Database:
 
 
     def _check_database_consistency(self) -> None:
-        """Check the restart database consistency."""
+        """Check the restart database consistency.
+
+        Perform some basic checks on the consistency between the
+        input file and the database being loaded.
+
+        Return:
+            DatabaseError if the consistency check fails
+        """
         # Open and load header
         tree = ET.parse(self.headerFile())
         root = tree.getroot()
@@ -264,6 +332,9 @@ class Database:
             _logger.error(err_msg)
             raise DatabaseError(err_msg)
 
+        self._ntraj = headerfromxml["ntraj"]
+        self._nsplititer = headerfromxml["nsplititer"]
+
         # Parameters stored in the DB override
         # newly provided parameters.
         with open(f"{self._load}/input_params.toml", 'r') as f:
@@ -271,11 +342,19 @@ class Database:
         self._parameters.update(readInParams)
 
     def name(self) -> str:
-        """Accessor to DB name."""
+        """Accessor to DB name.
+
+        Return:
+            DB name
+        """
         return self._name
 
     def save(self) -> bool:
-        """Accessor to DB save bool."""
+        """Accessor to DB save bool.
+
+        Return:
+            Save bool
+        """
         return self._save
 
     def appendTraj(self, a_traj: Trajectory) -> None:
@@ -286,43 +365,95 @@ class Database:
         """
         self._trajs_db.append(a_traj)
 
-        # Also adds it to the pool file.
+        # Also adds it to the SQL pool file.
         if self._save:
             self._pool_db.add_trajectory(a_traj.checkFile())
 
     def trajList(self) -> list[Trajectory]:
-        """Access to the trajectory list."""
+        """Access to the trajectory list.
+
+        Return:
+            Trajectory list
+        """
         return self._trajs_db
 
     def getTraj(self, idx: int) -> Trajectory:
-        """Access to a given trajectory."""
-        assert(idx < len(self._trajs_db))
+        """Access to a given trajectory.
+
+        Args:
+            idx: the index
+
+        Return:
+            Trajectory
+
+        Raises:
+            ValueError if idx is out of range
+        """
+        if (idx < 0 or
+            idx >= len(self._trajs_db)):
+            err_msg = f"Trying to access a non existing trajectory {idx} !"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
         return self._trajs_db[idx]
 
     def overwriteTraj(self,
                       idx: int,
                       traj: Trajectory) -> None:
-        """Deep copy a trajectory into internal list."""
+        """Deep copy a trajectory into internal list.
+
+        Args:
+            idx: the index of the trajectory to override
+            traj: the new trajectory
+
+        Raises:
+            ValueError if idx is out of range
+        """
+        if (idx < 0 or
+            idx >= len(self._trajs_db)):
+            err_msg = f"Trying to override a non existing trajectory {idx} !"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
         self._trajs_db[idx] = copy.deepcopy(traj)
 
     def headerFile(self) -> str:
-        """Helper returning the DB header file."""
+        """Helper returning the DB header file.
+
+        Return:
+            Header file
+        """
         return f"{self._name}/header.xml"
 
     def poolFile(self) -> str:
-        """Helper returning the DB trajectory pool file."""
+        """Helper returning the DB trajectory pool file.
+
+        Return:
+            Pool file
+        """
         return f"{self._name}/trajPool.db"
 
     def isEmpty(self) -> bool:
-        """Check if database is empty."""
+        """Check if list of trajectories is empty.
+
+        Return:
+            True if the list of trajectories is empty
+        """
         return self.trajListLen() == 0
 
     def trajListLen(self) -> int:
-        """Length of the trajectory list."""
+        """Length of the trajectory list.
+
+        Return:
+            Trajectory list length
+        """
         return len(self._trajs_db)
 
-    def updateTrajList(self, a_trajList: list[Trajectory]) -> None:
-        """Overwrite the trajectory list."""
+    def updateTrajList(self,
+                       a_trajList: list[Trajectory]) -> None:
+        """Overwrite the trajectory list.
+
+        Args:
+            a_trajList: the new trajectory list
+        """
         self._trajs_db = a_trajList
 
     def weights(self) -> list[float]:
