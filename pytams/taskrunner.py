@@ -15,6 +15,7 @@ from dask.distributed import WorkerPlugin
 from dask.distributed.worker import Worker
 from dask_jobqueue import SLURMCluster
 from pytams.utils import setup_logger
+from pytams.worker import worker_async
 
 _logger = logging.getLogger(__name__)
 
@@ -48,7 +49,6 @@ class BaseRunner(metaclass=ABCMeta):
     def __init__(self,
                  params: dict,
                  sync_wk : Callable,
-                 async_wk : Callable,
                  n_workers: int = 1,
                  ):
         """A dummy init method."""
@@ -93,7 +93,6 @@ class AsIORunner(BaseRunner):
     def __init__(self,
                  params: dict,
                  sync_wk : Callable,
-                 async_wk : Callable,
                  n_workers: int = 1,
                  ):
         """Init the task runner.
@@ -109,7 +108,7 @@ class AsIORunner(BaseRunner):
         self._rqueue : asyncio.Queue[Any] = asyncio.Queue()
         self._n_workers : int = n_workers
         self._sync_worker = sync_wk
-        self._async_worker = async_wk
+        self._async_worker = worker_async
         self._loop : asyncio.AbstractEventLoop | None = None
         self._executor : concurrent.futures.Executor | None = None
         self._workers : list[asyncio.Task[Any]] | None = None
@@ -134,7 +133,7 @@ class AsIORunner(BaseRunner):
 
     async def add_task(self, task : list[Any]) -> None:
         """Append a task to the queue."""
-        await self._queue.put(task)
+        await self._queue.put([self._sync_worker] + task)
 
     def make_promise(self, task : list[Any]) -> None:
         """A synchronous wrapper to add_task."""
@@ -188,7 +187,6 @@ class DaskRunner(BaseRunner):
     def __init__(self,
                  params: dict,
                  sync_wk : Callable,
-                 async_wk : Callable,
                  n_workers: int = 1,
                  ):
         """Start the Dask cluster and client.
@@ -203,7 +201,6 @@ class DaskRunner(BaseRunner):
         self.dask_backend = dask_dict.get("backend", "local")
         self._n_workers : int = n_workers
         self._sync_worker = sync_wk
-        self._async_worker = async_wk
         self._tlist : list[Any] = []
         if self.dask_backend == "local":
             self.client = Client(threads_per_worker=1, n_workers=self._n_workers)
