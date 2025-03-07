@@ -1,3 +1,4 @@
+"""A base class for the stochastic forward model."""
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Any
@@ -5,19 +6,7 @@ from typing import Optional
 from typing import final
 
 
-class ForwardModelError(Exception):
-    """Exception class for the forward model."""
-
-    pass
-
-
-class BaseClassCallError(ForwardModelError):
-    """BaseClass ForwardModel method called !"""
-
-    pass
-
-
-class AdvanceError(ForwardModelError):
+class AdvanceError(Exception):
     """Concrete ForwardModel _advance error !"""
 
     pass
@@ -26,11 +15,25 @@ class AdvanceError(ForwardModelError):
 class ForwardModelBaseClass(metaclass=ABCMeta):
     """A base class for the stochastic forward model.
 
-    Implement the core methods required of the forward
-    model within the TAMS context. Exception are thrown
-    if required functions are not overritten in actual model.
-    """
+    pyTAMS relies on a separation of the stochastic model
+    encapsulating the physics of interest and the TAMS
+    algorithm itself. The ForwardModelBaseClass defines
+    the API the TAMS algorithm requires from the stochastic
+    model.
 
+    Concrete model classes must implement all the abstract
+    functions defined in this base class.
+
+    The base class handles some components needed by TAMS,
+    so that the user does not have to ensure compatibility
+    with TAMS requirements.
+
+    Attributes:
+        _prescribed_noise: whether the noise is provided or need to be generated
+        _noise: the noise to be used in the next model step
+        _step: the current stochastic step counter
+        _time: the current stochastic time
+    """
 
     @final
     def __init__(self,
@@ -38,8 +41,14 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
                  ioprefix: Optional[str] = None):
         """Base class __init__ method.
 
-        The base forwardmodel class handles some components
-        needed by TAMS regardless of the model.
+        The ABC init method calls the concrete class init method
+        while performing some common initializations. Additionally,
+        this method create/append to a model dictionary to the
+        parameter dictionary to ensure the 'deterministic' parameter
+        is always available in the model dictionary.
+
+        Upon initializing the model, a first call to _make_noise
+        is made to ensure the proper type is generated.
 
         Args:
             params: an optional dict containing parameters
@@ -71,18 +80,21 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
                 forcingAmpl: float) -> float:
         """Base class advance function of the model.
 
-        The base class advance function update the internal
-        step counter and manage the generation (or reuse)
-        of the stochastic noise.
+        This is the advance function called by TAMS internals. It
+        handles updating the model time and step counter, as well as
+        reusing or generating noise only when needed.
         It also handles exceptions.
 
         Args:
             dt: the time step size over which to advance
             forcingAmpl: stochastic multiplicator
+
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
         # Get noise for the next model step
+        # only if the noise has not been prescribed by
+        # other mechanism already (rewinding trajectory for example).
         if not self._prescribed_noise:
             self._noise = self._make_noise()
 
@@ -128,7 +140,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         Args:
             params: an optional dict containing parameters
-            ioprefix: an optional string defining run folder (TOCHECK)
+            ioprefix: an optional string defining run folder
         """
         pass
 
@@ -141,6 +153,8 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
                  forcingAmpl: float) -> float:
         """Concrete class advance function.
 
+        This is the model-specific advance function.
+
         Args:
             step: the current step counter
             time: the starting time of the advance call
@@ -150,27 +164,27 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
-        raise BaseClassCallError("Calling base class _advance() method !")
+        pass
 
     @abstractmethod
     def getCurState(self) -> Any:
         """Return the current state of the model."""
-        raise BaseClassCallError("Calling base class getCurState method !")
+        pass
 
     @abstractmethod
     def setCurState(self, state : Any) -> Any:
         """Set the current state of the model."""
-        raise BaseClassCallError("Calling base class setCurState method !")
+        pass
 
     @abstractmethod
     def score(self) -> Any:
         """Return the model's current state score."""
-        raise BaseClassCallError("Calling base class score method !")
+        pass
 
     @abstractmethod
     def _make_noise(self) -> Any:
         """Return the model's latest noise increment."""
-        raise BaseClassCallError("Calling base class _make_noise method !")
+        pass
 
     @final
     def post_trajectory_restart_hook(self,
