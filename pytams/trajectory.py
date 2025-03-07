@@ -270,6 +270,10 @@ class Trajectory:
         if need_update:
             restTraj.updateMetadata()
 
+        # Enable the model to perform tweaks
+        # after a trajectory restore
+        restTraj._fmodel.post_trajectory_restore_hook(len(restTraj._snaps), restTraj._t_cur)
+
         return restTraj
 
     @classmethod
