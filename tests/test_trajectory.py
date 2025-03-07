@@ -33,7 +33,8 @@ def test_initBaseClassError():
 def test_initBlankTraj():
     """Test blank trajectory creation."""
     fmodel = SimpleFModel
-    parameters = {}
+    parameters = {"trajectory" : {"end_time": 2.0,
+                                  "step_size": 0.01}}
     t_test = Trajectory(fmodel, parameters, 1)
     assert t_test.id() == 1
     assert t_test.idstr() == "traj000001"
@@ -54,7 +55,8 @@ def test_initParametrizedTraj():
 def test_restartEmptyTraj():
     """Test (empty) trajectory restart."""
     fmodel = SimpleFModel
-    parameters = {}
+    parameters = {"trajectory" : {"end_time": 2.0,
+                                  "step_size": 0.01}}
     t_test = Trajectory(fmodel, parameters, 1)
     rst_test = Trajectory.restartFromTraj(t_test, 2, 0.1)
     assert rst_test.ctime() == 0.0
@@ -122,7 +124,7 @@ def test_sparseSimpleTraj():
     parameters = {"trajectory" : {"end_time": 0.04,
                                   "step_size": 0.001,
                                   "targetscore": 0.25,
-                                  "sparse_int": 5}}
+                                  "sparse_freq": 5}}
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.012)
     assert isclose(t_test.scoreMax(), 0.12, abs_tol=1e-9)
@@ -138,7 +140,7 @@ def test_storeAndRestartSparseSimpleTraj():
     parameters = {"trajectory" : {"end_time": 0.04,
                                   "step_size": 0.001,
                                   "targetscore": 0.25,
-                                  "sparse_int": 5}}
+                                  "sparse_freq": 5}}
     t_test = Trajectory(fmodel, parameters, 1)
     t_test.advance(0.013)
     assert isclose(t_test.scoreMax(), 0.13, abs_tol=1e-9)
