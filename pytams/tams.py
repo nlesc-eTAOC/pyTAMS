@@ -99,7 +99,7 @@ class TAMS:
         setup_logger(self._parameters)
 
         # Parse user-inputs
-        tams_subdict = self.parameters["tams"]
+        tams_subdict = self._parameters["tams"]
         if ("ntrajectories" not in tams_subdict or
             "nsplititer" not in tams_subdict):
             err_msg = "TAMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
