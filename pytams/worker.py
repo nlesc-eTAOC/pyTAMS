@@ -100,11 +100,11 @@ async def pool_worker_async(
         executor: an executor to launch the work in
     """
     while True:
-        traj, wall_time_info, saveDB, nameDB = await queue.get()
+        func, *work_unit = await queue.get()
         loop = asyncio.get_running_loop()
         updated_traj = await loop.run_in_executor(
             executor,
-            functools.partial(pool_worker, traj, wall_time_info, saveDB, nameDB)
+            functools.partial(func, *work_unit)
         )
         await res_queue.put(updated_traj)
         queue.task_done()
@@ -169,12 +169,11 @@ async def ms_worker_async(
         executor: an executor
     """
     while True:
-        t_end, fromTraj, rstId, min_val, wall_time_info, saveDB, nameDB = await queue.get()
+        func, *work_unit = await queue.get()
         loop = asyncio.get_running_loop()
         restarted_traj = await loop.run_in_executor(
             executor,
-            functools.partial(ms_worker, t_end, fromTraj, rstId, min_val,
-                              wall_time_info, saveDB, nameDB)
+            functools.partial(func, *work_unit)
         )
         await res_queue.put(restarted_traj)
         queue.task_done()

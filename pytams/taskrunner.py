@@ -134,7 +134,7 @@ class AsIORunner(BaseRunner):
 
     async def add_task(self, task : list[Any]) -> None:
         """Append a task to the queue."""
-        await self._queue.put(task)
+        await self._queue.put([self._sync_worker] + task)
 
     def make_promise(self, task : list[Any]) -> None:
         """A synchronous wrapper to add_task."""
