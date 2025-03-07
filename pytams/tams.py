@@ -50,6 +50,17 @@ class TAMS:
     type which encapsulate all the model-specific code, and
     an optional list of options.
 
+    The algorithm is roughly divided in two steps:
+    1. Initialization of the trajectory pool
+    2. Splitting iterations
+
+    Separate control of the parallelism is provided for
+    both steps.
+
+    All the algorithm data are contained in the TAMS database.
+    For control purposes, a walltime limit is also provided. It is
+    passed to working and lead to the termination of the algorithm
+    in a state that can be saved to disk and restarted at a later stage.
 
     Attributes:
         _fmodel_t: the forward model type
@@ -69,6 +80,9 @@ class TAMS:
         Args:
             fmodel_t: the forward model type
             a_args: optional list of options
+
+        Raises:
+            TAMSError: if the input file is not found
         """
         self._fmodel_t = fmodel_t
 
@@ -103,13 +117,20 @@ class TAMS:
             self.init_trajectory_pool()
 
     def nTraj(self) -> int:
-        """Return the number of trajectory used for TAMS."""
+        """Return the number of trajectory used for TAMS.
+
+        Note that this is the requested number of trajectory, not
+        the current length of the trajectory pool.
+
+        Return:
+            number of trajectory
+        """
         return self._tdb.nTraj()
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time.
 
-        Since the initialization of TAMS [seconds].
+        Since the initialization of the TAMS object [seconds].
 
         Returns:
            TAMS elapse time.
@@ -129,6 +150,9 @@ class TAMS:
     def out_of_time(self) -> bool:
         """Return true if insufficient walltime remains.
 
+        Allows for 5% slack to allows time for workers to finish
+        their work (especially with Dask+Slurm backend).
+
         Returns:
            boolean indicating wall time availability.
         """
@@ -136,8 +160,11 @@ class TAMS:
 
 
     def init_trajectory_pool(self) -> None:
-        """Initialize the trajectory pool."""
-        self.hasEnded = np.full((self._tdb.nTraj()), False)
+        """Initialize the trajectory pool.
+
+        Append the requested number of trajectories to the database.
+        Trajectories are initialized but not advanced.
+        """
         for n in range(self._tdb.nTraj()):
             T = Trajectory(
                     fmodel_t=self._fmodel_t,
@@ -148,7 +175,18 @@ class TAMS:
             self._tdb.appendTraj(T)
 
     def generate_trajectory_pool(self) -> None:
-        """Schedule the generation of a pool of stochastic trajectories."""
+        """Schedule the generation of a pool of stochastic trajectories.
+
+        Loop over all the trajectories in the database and schedule
+        advancing them to either end time or convergence with the
+        runner.
+
+        The runner will use the number of workers specified in the
+        input file under the runner section.
+
+        Raises:
+            Error if the runner fails
+        """
         inf_msg = f"Creating the initial pool of {self._tdb.nTraj()} trajectories"
         _logger.info(inf_msg)
 
@@ -246,8 +284,19 @@ class TAMS:
                 self._tdb.setKSplit(k)
 
 
-    def get_restart_at_random(self, min_idx_list : list[int]) -> list[int]:
-        """Get a list of trajectory index to restart from at random."""
+    def get_restart_at_random(self,
+                              min_idx_list : list[int]) -> list[int]:
+        """Get a list of trajectory index to restart from at random.
+
+        Select trajectories to restart from among the ones not
+        in min_idx_list.
+
+        Args:
+            min_idx_list: list of trajectory index to restart from
+
+        Returns:
+            list of trajectory index to restart from
+        """
         # Enable deterministic runs by setting the a (different) seed
         # for each splitting iteration
         if self._parameters.get("tams",{}).get("deterministic", False):
@@ -263,7 +312,23 @@ class TAMS:
 
 
     def do_multilevel_splitting(self) -> None:
-        """Schedule splitting of the initial pool of stochastic trajectories."""
+        """Schedule splitting of the initial pool of stochastic trajectories.
+
+        Perform the multi-level splitting iterations, possibly restarting multiple
+        trajectories at each iterations. All the trajectories in an iterations are
+        advanced together, such each iteration takes the maximum duration among
+        the branched trajectories.
+
+        If the walltime is exceeded, the splitting loop is stopped and ongoing
+        trajectories are flagged in the database in order to finish them upon
+        restart.
+
+        The runner will use the number of workers specified in the
+        input file under the runner section.
+
+        Raises:
+            Error if the runner fails
+        """
         inf_msg = "Using multi-level splitting to get the probability"
         _logger.info(inf_msg)
 
