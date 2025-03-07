@@ -50,7 +50,6 @@ def traj_advance_with_exception(traj: Trajectory,
 
     return traj
 
-
 def pool_worker(traj: Trajectory,
                 wall_time_info: float,
                 saveDB: bool,
@@ -86,27 +85,6 @@ def pool_worker(traj: Trajectory,
 
     return traj
 
-
-async def worker_async(
-    queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
-    res_queue : asyncio.Queue[Trajectory],
-    executor : concurrent.futures.Executor) -> None:
-    """A worker to generate each initial trajectory.
-
-    Args:
-        queue: a queue from which to get tasks
-        res_queue: a queue to put the results in
-        executor: an executor to launch the work in
-    """
-    while True:
-        func, *work_unit = await queue.get()
-        loop = asyncio.get_running_loop()
-        traj = await loop.run_in_executor(
-            executor,
-            functools.partial(func, *work_unit)
-        )
-        await res_queue.put(traj)
-        queue.task_done()
 
 def ms_worker(
     t_end: float,
@@ -154,3 +132,28 @@ def ms_worker(
         return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
 
     return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+
+
+async def worker_async(
+    queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
+    res_queue : asyncio.Queue[Trajectory],
+    executor : concurrent.futures.Executor) -> None:
+    """An async worker for the asyncio taskrunner.
+
+    It wraps the call to one of the above worker functions
+    with access to the queue.
+
+    Args:
+        queue: a queue from which to get tasks
+        res_queue: a queue to put the results in
+        executor: an executor to launch the work in
+    """
+    while True:
+        func, *work_unit = await queue.get()
+        loop = asyncio.get_running_loop()
+        traj = await loop.run_in_executor(
+            executor,
+            functools.partial(func, *work_unit)
+        )
+        await res_queue.put(traj)
+        queue.task_done()
