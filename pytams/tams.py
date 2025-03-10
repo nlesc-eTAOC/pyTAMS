@@ -1,8 +1,8 @@
 """The main TAMS class."""
 import argparse
+import datetime
 import logging
 import os
-import time
 from typing import Any
 from typing import Optional
 import numpy as np
@@ -62,7 +62,7 @@ class TAMS:
         _fmodel_t: the forward model type
         _parameters: the dictionary of parameters
         _wallTime: the walltime limit
-        _startTime: the start time
+        _startDate: the date the algorithm started
         _plot_diags: whether or not to plot diagnostics during splitting iterations
         _init_pool_only: whether or not to stop after initializing the trajectory pool
         _tdb: the trajectory database (containing all trajectories)
@@ -114,8 +114,12 @@ class TAMS:
                              nTraj,
                              nSplitIter)
 
-        # Initialize
-        self._startTime : float = time.monotonic()
+        # Time management uses UTC date
+        # to make sure workers are always in sync
+        self._startDate : datetime = datetime.datetime.utcnow()
+        self._endDate : datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
+
+        # Initialize trajectory pool
         if self._tdb.isEmpty():
             self.init_trajectory_pool()
 
@@ -138,7 +142,7 @@ class TAMS:
         Returns:
            TAMS elapse time.
         """
-        return time.monotonic() - self._startTime
+        return (datetime.datetime.utcnow() - self._startDate).total_seconds()
 
     def remaining_walltime(self) -> float:
         """Return the remaining wallclock time.
@@ -198,7 +202,7 @@ class TAMS:
                                                self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
             for T in self._tdb.trajList():
                 task = [T,
-                        self._startTime+self._wallTime,
+                        self._endDate,
                         self._tdb.save(),
                         self._tdb.name()]
                 runner.make_promise(task)
@@ -270,7 +274,7 @@ class TAMS:
                                                    self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
                 for i in ongoing_list:
                     T = self._tdb.getTraj(i)
-                    task = [T, self._startTime+self._wallTime, self._tdb.save(), self._tdb.name()]
+                    task = [T, self._endDate, self._tdb.save(), self._tdb.name()]
                     runner.make_promise(task)
                 finished_traj = runner.execute_promises()
 
@@ -370,7 +374,7 @@ class TAMS:
                     task = [self._tdb.getTraj(rest_idx[i]),
                             self._tdb.getTraj(min_idx_list[i]).id(),
                             min_vals[i],
-                            self._startTime+self._wallTime,
+                            self._endDate,
                             self._tdb.save(),
                             self._tdb.name()]
                     runner.make_promise(task)

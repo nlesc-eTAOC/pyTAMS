@@ -1,9 +1,9 @@
 """A set of functions used by TAMS workers."""
 import asyncio
 import concurrent.futures
+import datetime
 import functools
 import logging
-import time
 from typing import Tuple
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
@@ -12,14 +12,14 @@ from pytams.trajectory import WallTimeLimit
 _logger = logging.getLogger(__name__)
 
 def traj_advance_with_exception(traj: Trajectory,
-                                wall_time: float,
+                                walltime: float,
                                 saveDB: bool,
                                 nameDB: str) -> Trajectory:
     """Advance a trajectory with exception handling.
 
     Args:
         traj: a trajectory
-        wall_time: the time limit to advance the trajectory
+        walltime: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of the database
 
@@ -27,7 +27,7 @@ def traj_advance_with_exception(traj: Trajectory,
         The updated trajectory
     """
     try:
-        traj.advance(walltime=wall_time)
+        traj.advance(walltime=walltime)
 
     except WallTimeLimit:
         warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
@@ -51,14 +51,14 @@ def traj_advance_with_exception(traj: Trajectory,
     return traj
 
 def pool_worker(traj: Trajectory,
-                wall_time_info: float,
+                endDate: datetime,
                 saveDB: bool,
                 nameDB: str) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
         traj: a trajectory
-        wall_time_info: the time limit to advance the trajectory
+        endDate: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of the database
 
@@ -66,7 +66,7 @@ def pool_worker(traj: Trajectory,
         The updated trajectory
     """
     # Get wall time
-    wall_time = wall_time_info - time.monotonic()
+    wall_time = (endDate - datetime.datetime.utcnow()).total_seconds()
 
     if wall_time > 0.0 and not traj.hasEnded():
         # Fetch a handle to the trajectory in the database pool
@@ -90,7 +90,7 @@ def ms_worker(
     fromTraj: Trajectory,
     rstId: int,
     min_val: float,
-    wall_time_info: float,
+    endDate: datetime,
     saveDB: bool,
     nameDB: str,
 ) -> Trajectory:
@@ -100,12 +100,12 @@ def ms_worker(
         fromTraj: a trajectory to restart from
         rstId: Id of the trajectory being worked on
         min_val: the value of the score function to restart from
-        wall_time_info: the time limit to advance the trajectory
+        endDate: the time limit to advance the trajectory
         saveDB: a bool to save the trajectory to database
         nameDB: name of DB to save the traj in (Opt)
     """
     # Get wall time
-    wall_time = wall_time_info - time.monotonic()
+    wall_time = (endDate - datetime.datetime.utcnow()).total_seconds()
 
     if wall_time > 0.0 :
         # Fetch a handle to the trajectory we are branching in the database pool
