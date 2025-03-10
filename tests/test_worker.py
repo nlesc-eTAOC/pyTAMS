@@ -1,9 +1,8 @@
 """Tests for the pytams.worker functions."""
 
-import time
+import datetime
 from math import isclose
 import pytest
-import datetime
 from pytams.trajectory import Trajectory
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker

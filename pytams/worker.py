@@ -1,10 +1,9 @@
 """A set of functions used by TAMS workers."""
 import asyncio
 import concurrent.futures
+import datetime
 import functools
 import logging
-import time
-import datetime
 from typing import Tuple
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory

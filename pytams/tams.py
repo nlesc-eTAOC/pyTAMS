@@ -1,13 +1,12 @@
 """The main TAMS class."""
 import argparse
+import datetime
 import logging
 import os
-import time
 from typing import Any
 from typing import Optional
 import numpy as np
 import toml
-import datetime
 from pytams.database import Database
 from pytams.taskrunner import get_runner_type
 from pytams.trajectory import Trajectory
