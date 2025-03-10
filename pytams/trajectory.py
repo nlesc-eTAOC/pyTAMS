@@ -124,7 +124,9 @@ class Trajectory:
         """Return trajectory Id."""
         return formTrajID(self._tid)
 
-    def advance(self, t_end: float = 1.0e12, walltime: float = 1.0e12) -> None:
+    def advance(self,
+                t_end: float = 1.0e12,
+                walltime: float = 1.0e12) -> None:
         """Advance the trajectory to a prescribed end time.
 
         Args:
