@@ -1,0 +1,349 @@
+pytams.trajectory
+=================
+
+.. py:module:: pytams.trajectory
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.trajectory._logger
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.trajectory.WallTimeLimit
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.trajectory.Snapshot
+   pytams.trajectory.Trajectory
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.trajectory.formTrajID
+   pytams.trajectory.getIndexFromID
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:exception:: WallTimeLimit
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception for running into wall time limit.
+
+
+.. py:function:: formTrajID(n: int) -> str
+
+   Helper to assemble a trajectory ID string.
+
+
+.. py:function:: getIndexFromID(identity: str) -> int
+
+   Helper to get trajectory index from ID string.
+
+
+.. py:class:: Snapshot
+
+   A dataclass defining a snapshot.
+
+   Gathering what defines a snapshot into an object.
+
+   .. attribute:: time
+
+      snapshot time
+
+   .. attribute:: score
+
+      score function value
+
+   .. attribute:: noise
+
+      noise used to reach this snapshot
+
+   .. attribute:: state
+
+      model state
+
+
+   .. py:attribute:: time
+      :type:  float
+
+
+   .. py:attribute:: score
+      :type:  float
+
+
+   .. py:attribute:: noise
+      :type:  Any
+
+
+   .. py:attribute:: state
+      :type:  Any | None
+      :value: None
+
+
+
+   .. py:method:: hasState() -> bool
+
+      Check if snapshot has state.
+
+      :returns: True if state is not None
+      :rtype: bool
+
+
+
+.. py:class:: Trajectory(fmodel_t: Any, parameters: dict, trajId: int)
+
+   A class defining a stochastic trajectory.
+
+   Includes an instance of the forward model, current and end times, and
+   a list of the model snapshots for each new maximum of the
+   score function along the way.
+
+
+   .. py:attribute:: _parameters_full
+      :type:  dict
+
+
+   .. py:attribute:: _step
+      :type:  int
+      :value: 0
+
+
+
+   .. py:attribute:: _t_cur
+      :type:  float
+      :value: 0.0
+
+
+
+   .. py:attribute:: _t_end
+      :type:  float
+
+
+   .. py:attribute:: _dt
+      :type:  float
+
+
+   .. py:attribute:: _stoichForcingAmpl
+      :type:  float
+
+
+   .. py:attribute:: _convergedVal
+      :type:  float
+
+
+   .. py:attribute:: _sparse_state_int
+      :type:  int
+
+
+   .. py:attribute:: _sparse_state_beg
+      :type:  int
+
+
+   .. py:attribute:: _write_chkfile_all
+      :type:  bool
+
+
+   .. py:attribute:: _snaps
+      :type:  list[Snapshot]
+      :value: []
+
+
+
+   .. py:attribute:: _noise_backlog
+      :type:  list[Any]
+      :value: []
+
+
+
+   .. py:attribute:: _score_max
+      :type:  float
+      :value: 0.0
+
+
+
+   .. py:attribute:: _tid
+      :type:  int
+
+
+   .. py:attribute:: _checkFile
+      :type:  str
+      :value: 'Uninferable.xml'
+
+
+
+   .. py:attribute:: _has_ended
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: _has_converged
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: _fmodel
+
+
+   .. py:method:: setCheckFile(file: str) -> None
+
+      Setter of the trajectory checkFile.
+
+
+
+   .. py:method:: id() -> int
+
+      Return trajectory Id.
+
+
+
+   .. py:method:: idstr() -> str
+
+      Return trajectory Id.
+
+
+
+   .. py:method:: advance(t_end: float = 1000000000000.0, walltime: float = 1000000000000.0) -> None
+
+      Advance the trajectory to a prescribed end time.
+
+      :param t_end: the end time of the advance
+      :param walltime: a walltime limit to advance the model to t_end
+
+
+
+   .. py:method:: _one_step() -> Any
+
+      Perform a single step of the forward model.
+
+
+
+   .. py:method:: restoreFromChk(chkPoint: str, fmodel_t: Any, parameters: dict) -> Trajectory
+      :classmethod:
+
+
+      Return a trajectory restored from an XML chkfile.
+
+
+
+   .. py:method:: restartFromTraj(traj: Trajectory, rstId: int, score: float) -> Trajectory
+      :classmethod:
+
+
+      Create a new trajectory.
+
+      Loading the beginning of a provided trajectory
+      for all entries with score below a given score
+
+      :param traj: an already existing trajectory to restart from
+      :param rstId: the id of the trajectory being restarted
+      :param score: a threshold score
+
+
+
+   .. py:method:: store(traj_file: Optional[str] = None) -> None
+
+      Store the trajectory to an XML chkfile.
+
+
+
+   .. py:method:: updateMetadata() -> None
+
+      Update trajectory score/ending metadata.
+
+
+
+   .. py:method:: ctime() -> float
+
+      Return the current trajectory time.
+
+
+
+   .. py:method:: stepSize() -> float
+
+      Return the time step size.
+
+
+
+   .. py:method:: scoreMax() -> float
+
+      Return the maximum of the score function.
+
+
+
+   .. py:method:: isConverged() -> bool
+
+      Return True for converged trajectory.
+
+
+
+   .. py:method:: hasEnded() -> bool
+
+      Return True for terminated trajectory.
+
+
+
+   .. py:method:: hasStarted() -> bool
+
+      Return True if computation has started.
+
+
+
+   .. py:method:: checkFile() -> str
+
+      Return the trajectory check file name.
+
+
+
+   .. py:method:: getTimeArr() -> numpy.typing.NDArray[numpy.float64]
+
+      Return the trajectory time instants.
+
+
+
+   .. py:method:: getScoreArr() -> numpy.typing.NDArray[numpy.float64]
+
+      Return the trajectory scores.
+
+
+
+   .. py:method:: getNoiseArr() -> numpy.typing.NDArray[Any]
+
+      Return the trajectory noises.
+
+
+
+   .. py:method:: getLength() -> int
+
+      Return the trajectory length.
+
+
+
+   .. py:method:: getLastState() -> Any
+
+      Return the last state in the trajectory.
+
+
+

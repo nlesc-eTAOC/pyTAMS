@@ -1,0 +1,418 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.sqldb &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.sqldb</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.sqldb</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;A class for the trajectory pool as an SQL file.&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+
+<div class="viewcode-block" id="_logger">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb._logger">[docs]</a>
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="valid_statuses">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.valid_statuses">[docs]</a>
+<span class="n">valid_statuses</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;locked&quot;</span><span class="p">,</span>      <span class="c1"># Currently being worked on</span>
+                  <span class="s2">&quot;idle&quot;</span><span class="p">,</span>        <span class="c1"># Waiting</span>
+                  <span class="s2">&quot;completed&quot;</span><span class="p">]</span>   <span class="c1"># Finished</span></div>
+
+
+<div class="viewcode-block" id="SQLFile">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SQLFile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An SQL file.</span>
+
+<span class="sd">    Allows atomic access to an SQL database from all</span>
+<span class="sd">    the workers.</span>
+
+<span class="sd">    Note: TAMS works with Python indexing starting at 0,</span>
+<span class="sd">    while SQL indexing starts at 1. Trajectory ID is</span>
+<span class="sd">    updated accordingly when accessing/updating the DB.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        _file_name : The file name</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_name : The file name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SQLFile._file_name">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile._file_name">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_name</span> <span class="o">=</span> <span class="n">file_name</span></div>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_db</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SQLFile._init_db">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile._init_db">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_db</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the tables of the file.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError : If a connection to the DB could not be acquired</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="c1"># Create the trajectory table</span>
+        <span class="c1"># id, file, status</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE IF NOT EXISTS trajectories (</span>
+<span class="s2">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">            traj_file TEXT NOT NULL,</span>
+<span class="s2">            status TEXT NOT NULL DEFAULT &#39;idle&#39;</span>
+<span class="s2">        )</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SQLFile._connect">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile._connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a new SQLite connection.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An sqlite3.Connection</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError if no connection can be established</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file_name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unable to connect to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_file_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+
+<div class="viewcode-block" id="SQLFile.add_trajectory">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.add_trajectory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_trajectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">traj_file</span> <span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a new trajectory to the DB.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            traj_file : The trajectory file of that trajectory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        INSERT INTO trajectories (traj_file)</span>
+<span class="s2">        VALUES (?)</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">traj_file</span><span class="p">,))</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.lock_trajectory">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.lock_trajectory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">lock_trajectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="n">traj_id</span> <span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                        <span class="n">allow_completed_lock</span> <span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the status of a trajectory to &quot;locked&quot; if possible.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            traj_id : The trajectory id</span>
+<span class="sd">            allow_completed_lock : Allow to lock a &quot;completed&quot; trajectory</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            True if the trajectory was successfully locked, False otherwise</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError if the trajectory with the given id does not exist</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use atomic transaction</span>
+        <span class="c1"># Update only if current status allows it</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;BEGIN EXCLUSIVE TRANSACTION&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT status</span>
+<span class="s2">        FROM trajectories</span>
+<span class="s2">        WHERE id = ?</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">,))</span>
+        <span class="n">traj_data</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">traj_data</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">traj_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">allowed_status</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;idle&quot;</span><span class="p">,</span> <span class="s2">&quot;completed&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">allow_completed_lock</span> <span class="k">else</span> <span class="p">[</span><span class="s2">&quot;idle&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="n">allowed_status</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE trajectories SET status = ? WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;locked&quot;</span><span class="p">,</span> <span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.mark_trajectory_as_completed">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.mark_trajectory_as_completed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_trajectory_as_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                     <span class="n">traj_id</span> <span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the status of a trajectory to &quot;completed&quot; if possible.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            traj_id : The trajectory id</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError if the trajectory with the given id does not exist</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use atomic transaction</span>
+        <span class="c1"># Update only if current status allows it</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;BEGIN EXCLUSIVE TRANSACTION&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT status</span>
+<span class="s2">        FROM trajectories</span>
+<span class="s2">        WHERE id = ?</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">,))</span>
+        <span class="n">traj_data</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">traj_data</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">traj_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;locked&quot;</span><span class="p">]:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE trajectories SET status = ? WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;completed&quot;</span><span class="p">,</span> <span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">warn_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Attempting to mark completed Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2"> already in status </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.release_trajectory">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.release_trajectory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_trajectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">traj_id</span> <span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the status of a trajectory to &quot;idle&quot; if possible.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            traj_id : The trajectory id</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError if the trajectory with the given id does not exist</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use atomic transaction</span>
+        <span class="c1"># Update only if current status allows it</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;BEGIN EXCLUSIVE TRANSACTION&quot;</span><span class="p">)</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT status</span>
+<span class="s2">        FROM trajectories</span>
+<span class="s2">        WHERE id = ?</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">,))</span>
+        <span class="n">traj_data</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">traj_data</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">traj_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;locked&quot;</span><span class="p">]:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE trajectories SET status = ? WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;idle&quot;</span><span class="p">,</span> <span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">warn_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Attempting to release </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2"> Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.get_trajectory_count">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_trajectory_count">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_trajectory_count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of trajectories in the DB.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The number of trajectories</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT COUNT() FROM trajectories&quot;</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.fetch_trajectory">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.fetch_trajectory">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_trajectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">traj_id</span> <span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the trajectory file of a trajectory.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            traj_id : The trajectory id</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            The trajectory file</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError if the trajectory with the given id does not exist</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT traj_file</span>
+<span class="s2">        FROM trajectories</span>
+<span class="s2">        WHERE id = ?</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">traj_id</span><span class="o">+</span><span class="mi">1</span><span class="p">,))</span>
+        <span class="n">traj_data</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">traj_data</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">traj_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj_id</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SQLFile.dump_file_json">
+<a class="viewcode-back" href="../../autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.dump_file_json">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">dump_file_json</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dump the content of the trajectory table to a json file.&quot;&quot;&quot;</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">trajs</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;SELECT * FROM trajectories&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trajs</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">t</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,281 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.worker &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.worker</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.worker</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;A set of functions used by TAMS workers.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.sqldb</span><span class="w"> </span><span class="kn">import</span> <span class="n">SQLFile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.trajectory</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trajectory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.trajectory</span><span class="w"> </span><span class="kn">import</span> <span class="n">WallTimeLimit</span>
+
+<div class="viewcode-block" id="_logger">
+<a class="viewcode-back" href="../../autoapi/pytams/worker/index.html#pytams.worker._logger">[docs]</a>
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="traj_advance_with_exception">
+<a class="viewcode-back" href="../../autoapi/pytams/worker/index.html#pytams.worker.traj_advance_with_exception">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">traj_advance_with_exception</span><span class="p">(</span><span class="n">traj</span><span class="p">:</span> <span class="n">Trajectory</span><span class="p">,</span>
+                                <span class="n">walltime</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                <span class="n">saveDB</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                <span class="n">nameDB</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Trajectory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Advance a trajectory with exception handling.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        traj: a trajectory</span>
+<span class="sd">        walltime: the time limit to advance the trajectory</span>
+<span class="sd">        saveDB: a bool to save the trajectory to database</span>
+<span class="sd">        nameDB: name of the database</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The updated trajectory</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">traj</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="n">walltime</span><span class="o">=</span><span class="n">walltime</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="n">WallTimeLimit</span><span class="p">:</span>
+        <span class="n">warn_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2"> advance ran out of time !&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Trajectory </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2"> advance ran into an error !&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+        <span class="k">raise</span>
+
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">saveDB</span><span class="p">:</span>
+            <span class="n">pool_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;./</span><span class="si">{</span><span class="n">nameDB</span><span class="si">}</span><span class="s2">/trajPool.db&quot;</span>
+            <span class="n">sqlpool</span> <span class="o">=</span> <span class="n">SQLFile</span><span class="p">(</span><span class="n">pool_file</span><span class="p">)</span>
+            <span class="n">traj</span><span class="o">.</span><span class="n">store</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">traj</span><span class="o">.</span><span class="n">hasEnded</span><span class="p">():</span>
+                <span class="n">sqlpool</span><span class="o">.</span><span class="n">mark_trajectory_as_completed</span><span class="p">(</span><span class="n">traj</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sqlpool</span><span class="o">.</span><span class="n">release_trajectory</span><span class="p">(</span><span class="n">traj</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">traj</span></div>
+
+
+<div class="viewcode-block" id="pool_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/worker/index.html#pytams.worker.pool_worker">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pool_worker</span><span class="p">(</span><span class="n">traj</span><span class="p">:</span> <span class="n">Trajectory</span><span class="p">,</span>
+                <span class="n">endDate</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+                <span class="n">saveDB</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                <span class="n">nameDB</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Trajectory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A worker to generate each initial trajectory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        traj: a trajectory</span>
+<span class="sd">        endDate: the time limit to advance the trajectory</span>
+<span class="sd">        saveDB: a bool to save the trajectory to database</span>
+<span class="sd">        nameDB: name of the database</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The updated trajectory</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get wall time</span>
+    <span class="n">wall_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">endDate</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">wall_time</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">traj</span><span class="o">.</span><span class="n">hasEnded</span><span class="p">():</span>
+        <span class="c1"># Fetch a handle to the trajectory in the database pool</span>
+        <span class="c1"># Try to lock the trajectory</span>
+        <span class="k">if</span> <span class="n">saveDB</span><span class="p">:</span>
+            <span class="n">pool_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;./</span><span class="si">{</span><span class="n">nameDB</span><span class="si">}</span><span class="s2">/trajPool.db&quot;</span>
+            <span class="n">sqlpool</span> <span class="o">=</span> <span class="n">SQLFile</span><span class="p">(</span><span class="n">pool_file</span><span class="p">)</span>
+            <span class="n">get_to_work</span> <span class="o">=</span> <span class="n">sqlpool</span><span class="o">.</span><span class="n">lock_trajectory</span><span class="p">(</span><span class="n">traj</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">get_to_work</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">traj</span>
+
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Advancing </span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2"> [time left: </span><span class="si">{</span><span class="n">wall_time</span><span class="si">}</span><span class="s2">]&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">traj_advance_with_exception</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">wall_time</span><span class="p">,</span> <span class="n">saveDB</span><span class="p">,</span> <span class="n">nameDB</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">traj</span></div>
+
+
+
+<div class="viewcode-block" id="ms_worker">
+<a class="viewcode-back" href="../../autoapi/pytams/worker/index.html#pytams.worker.ms_worker">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ms_worker</span><span class="p">(</span>
+    <span class="n">fromTraj</span><span class="p">:</span> <span class="n">Trajectory</span><span class="p">,</span>
+    <span class="n">rstId</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">min_val</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">endDate</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+    <span class="n">saveDB</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">nameDB</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Trajectory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A worker to restart trajectories.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fromTraj: a trajectory to restart from</span>
+<span class="sd">        rstId: Id of the trajectory being worked on</span>
+<span class="sd">        min_val: the value of the score function to restart from</span>
+<span class="sd">        endDate: the time limit to advance the trajectory</span>
+<span class="sd">        saveDB: a bool to save the trajectory to database</span>
+<span class="sd">        nameDB: name of DB to save the traj in (Opt)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get wall time</span>
+    <span class="n">wall_time</span> <span class="o">=</span> <span class="p">(</span><span class="n">endDate</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">())</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">wall_time</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="p">:</span>
+        <span class="c1"># Fetch a handle to the trajectory we are branching in the database pool</span>
+        <span class="c1"># Try to lock the trajectory</span>
+        <span class="k">if</span> <span class="n">saveDB</span><span class="p">:</span>
+            <span class="n">pool_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;./</span><span class="si">{</span><span class="n">nameDB</span><span class="si">}</span><span class="s2">/trajPool.db&quot;</span>
+            <span class="n">sqlpool</span> <span class="o">=</span> <span class="n">SQLFile</span><span class="p">(</span><span class="n">pool_file</span><span class="p">)</span>
+            <span class="n">get_to_work</span> <span class="o">=</span> <span class="n">sqlpool</span><span class="o">.</span><span class="n">lock_trajectory</span><span class="p">(</span><span class="n">rstId</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">get_to_work</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unable to lock trajectory </span><span class="si">{</span><span class="n">rstId</span><span class="si">}</span><span class="s2"> for branching&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Restarting [</span><span class="si">{</span><span class="n">rstId</span><span class="si">}</span><span class="s2">] from </span><span class="si">{</span><span class="n">fromTraj</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2"> [time left: </span><span class="si">{</span><span class="n">wall_time</span><span class="si">}</span><span class="s2">]&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="n">traj</span> <span class="o">=</span> <span class="n">Trajectory</span><span class="o">.</span><span class="n">restartFromTraj</span><span class="p">(</span><span class="n">fromTraj</span><span class="p">,</span> <span class="n">rstId</span><span class="p">,</span> <span class="n">min_val</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">saveDB</span><span class="p">:</span>
+            <span class="n">traj</span><span class="o">.</span><span class="n">setCheckFile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">nameDB</span><span class="si">}</span><span class="s2">/trajectories/</span><span class="si">{</span><span class="n">traj</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">traj_advance_with_exception</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">wall_time</span><span class="p">,</span> <span class="n">saveDB</span><span class="p">,</span> <span class="n">nameDB</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Trajectory</span><span class="o">.</span><span class="n">restartFromTraj</span><span class="p">(</span><span class="n">fromTraj</span><span class="p">,</span> <span class="n">rstId</span><span class="p">,</span> <span class="n">min_val</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="worker_async">
+<a class="viewcode-back" href="../../autoapi/pytams/worker/index.html#pytams.worker.worker_async">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">worker_async</span><span class="p">(</span>
+    <span class="n">queue</span> <span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">Trajectory</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="n">res_queue</span> <span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">[</span><span class="n">Trajectory</span><span class="p">],</span>
+    <span class="n">executor</span> <span class="p">:</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">Executor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An async worker for the asyncio taskrunner.</span>
+
+<span class="sd">    It wraps the call to one of the above worker functions</span>
+<span class="sd">    with access to the queue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        queue: a queue from which to get tasks</span>
+<span class="sd">        res_queue: a queue to put the results in</span>
+<span class="sd">        executor: an executor to launch the work in</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">work_unit</span> <span class="o">=</span> <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
+        <span class="n">traj</span> <span class="o">=</span> <span class="k">await</span> <span class="n">loop</span><span class="o">.</span><span class="n">run_in_executor</span><span class="p">(</span>
+            <span class="n">executor</span><span class="p">,</span>
+            <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">work_unit</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">await</span> <span class="n">res_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">traj</span><span class="p">)</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

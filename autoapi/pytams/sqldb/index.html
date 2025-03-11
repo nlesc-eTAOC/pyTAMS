@@ -1,0 +1,314 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.sqldb &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="pytams.tams" href="../tams/index.html" />
+    <link rel="prev" title="pytams.fmodel" href="../fmodel/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">pytams</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../database/index.html">pytams.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../fmodel/index.html">pytams.fmodel</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">pytams.sqldb</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../tams/index.html">pytams.tams</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../taskrunner/index.html">pytams.taskrunner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../trajectory/index.html">pytams.trajectory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../utils/index.html">pytams.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../worker/index.html">pytams.worker</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../xmlutils/index.html">pytams.xmlutils</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.sqldb</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/pytams/sqldb/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pytams.sqldb">
+<span id="pytams-sqldb"></span><h1>pytams.sqldb<a class="headerlink" href="#module-pytams.sqldb" title="Link to this heading"></a></h1>
+<p>A class for the trajectory pool as an SQL file.</p>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.sqldb._logger" title="pytams.sqldb._logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pytams.sqldb.valid_statuses" title="pytams.sqldb.valid_statuses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">valid_statuses</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.sqldb.SQLFile" title="pytams.sqldb.SQLFile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SQLFile</span></code></a></p></td>
+<td><p>An SQL file.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="pytams.sqldb._logger">
+<span class="sig-prename descclassname"><span class="pre">pytams.sqldb.</span></span><span class="sig-name descname"><span class="pre">_logger</span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb._logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="pytams.sqldb.valid_statuses">
+<span class="sig-prename descclassname"><span class="pre">pytams.sqldb.</span></span><span class="sig-name descname"><span class="pre">valid_statuses</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['locked',</span> <span class="pre">'idle',</span> <span class="pre">'completed']</span></em><a class="reference internal" href="../../../_modules/pytams/sqldb.html#valid_statuses"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.valid_statuses" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.sqldb.</span></span><span class="sig-name descname"><span class="pre">SQLFile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile" title="Link to this definition"></a></dt>
+<dd><p>An SQL file.</p>
+<p>Allows atomic access to an SQL database from all
+the workers.</p>
+<p>Note: TAMS works with Python indexing starting at 0,
+while SQL indexing starts at 1. Trajectory ID is
+updated accordingly when accessing/updating the DB.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile._file_name">
+<span class="sig-name descname"><span class="pre">_file_name</span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile._file_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile._file_name" title="Link to this definition"></a></dt>
+<dd><p>The file name</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">_file_name</span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile._file_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile._init_db">
+<span class="sig-name descname"><span class="pre">_init_db</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile._init_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile._init_db" title="Link to this definition"></a></dt>
+<dd><p>Initialize the tables of the file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.13)"><strong>RuntimeError</strong></a> – If a connection to the DB could not be acquired</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile._connect">
+<span class="sig-name descname"><span class="pre">_connect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection" title="(in Python v3.13)"><span class="pre">sqlite3.Connection</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile._connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile._connect" title="Link to this definition"></a></dt>
+<dd><p>Create a new SQLite connection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An sqlite3.Connection</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError if no connection can be established</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.add_trajectory">
+<span class="sig-name descname"><span class="pre">add_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.add_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.add_trajectory" title="Link to this definition"></a></dt>
+<dd><p>Add a new trajectory to the DB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>traj_file</strong> – The trajectory file of that trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.lock_trajectory">
+<span class="sig-name descname"><span class="pre">lock_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_completed_lock</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.lock_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.lock_trajectory" title="Link to this definition"></a></dt>
+<dd><p>Set the status of a trajectory to “locked” if possible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>traj_id</strong> – The trajectory id</p></li>
+<li><p><strong>allow_completed_lock</strong> – Allow to lock a “completed” trajectory</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the trajectory was successfully locked, False otherwise</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError if the trajectory with the given id does not exist</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.mark_trajectory_as_completed">
+<span class="sig-name descname"><span class="pre">mark_trajectory_as_completed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.mark_trajectory_as_completed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.mark_trajectory_as_completed" title="Link to this definition"></a></dt>
+<dd><p>Set the status of a trajectory to “completed” if possible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>traj_id</strong> – The trajectory id</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError if the trajectory with the given id does not exist</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.release_trajectory">
+<span class="sig-name descname"><span class="pre">release_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.release_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.release_trajectory" title="Link to this definition"></a></dt>
+<dd><p>Set the status of a trajectory to “idle” if possible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>traj_id</strong> – The trajectory id</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError if the trajectory with the given id does not exist</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.get_trajectory_count">
+<span class="sig-name descname"><span class="pre">get_trajectory_count</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.get_trajectory_count"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.get_trajectory_count" title="Link to this definition"></a></dt>
+<dd><p>Get the number of trajectories in the DB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The number of trajectories</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.fetch_trajectory">
+<span class="sig-name descname"><span class="pre">fetch_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.fetch_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.fetch_trajectory" title="Link to this definition"></a></dt>
+<dd><p>Get the trajectory file of a trajectory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>traj_id</strong> – The trajectory id</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The trajectory file</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError if the trajectory with the given id does not exist</strong> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.sqldb.SQLFile.dump_file_json">
+<span class="sig-name descname"><span class="pre">dump_file_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/sqldb.html#SQLFile.dump_file_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.sqldb.SQLFile.dump_file_json" title="Link to this definition"></a></dt>
+<dd><p>Dump the content of the trajectory table to a json file.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../fmodel/index.html" class="btn btn-neutral float-left" title="pytams.fmodel" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../tams/index.html" class="btn btn-neutral float-right" title="pytams.tams" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

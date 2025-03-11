@@ -1,0 +1,635 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.tams &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../pytams.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.tams</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pytams.tams</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;The main TAMS class.&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">toml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.database</span><span class="w"> </span><span class="kn">import</span> <span class="n">Database</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.taskrunner</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_runner_type</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.trajectory</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trajectory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_min_scored</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">ms_worker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pytams.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">pool_worker</span>
+
+<div class="viewcode-block" id="_logger">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams._logger">[docs]</a>
+<span class="n">_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TAMSError">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMSError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TAMSError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception class for TAMS.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="parse_cl_args">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.parse_cl_args">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_cl_args</span><span class="p">(</span><span class="n">a_args</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse provided list or default CL argv.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        a_args: optional list of options</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-i&quot;</span><span class="p">,</span> <span class="s2">&quot;--input&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;pyTAMS input .toml file&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;input.toml&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">a_args</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">a_args</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">args</span></div>
+
+
+<div class="viewcode-block" id="TAMS">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TAMS</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class implementing TAMS.</span>
+
+<span class="sd">    The interface to TAMS, implementing the main steps of</span>
+<span class="sd">    the algorithm.</span>
+
+<span class="sd">    Initialization of the TAMS class requires a forward model</span>
+<span class="sd">    type which encapsulate all the model-specific code, and</span>
+<span class="sd">    an optional list of options.</span>
+
+<span class="sd">    The algorithm is roughly divided in two steps:</span>
+<span class="sd">    1. Initialization of the trajectory pool</span>
+<span class="sd">    2. Splitting iterations</span>
+
+<span class="sd">    Separate control of the parallelism is provided for</span>
+<span class="sd">    both steps.</span>
+
+<span class="sd">    All the algorithm data are contained in the TAMS database.</span>
+<span class="sd">    For control purposes, a walltime limit is also provided. It is</span>
+<span class="sd">    passed to working and lead to the termination of the algorithm</span>
+<span class="sd">    in a state that can be saved to disk and restarted at a later stage.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        _fmodel_t: the forward model type</span>
+<span class="sd">        _parameters: the dictionary of parameters</span>
+<span class="sd">        _wallTime: the walltime limit</span>
+<span class="sd">        _startDate: the date the algorithm started</span>
+<span class="sd">        _plot_diags: whether or not to plot diagnostics during splitting iterations</span>
+<span class="sd">        _init_pool_only: whether or not to stop after initializing the trajectory pool</span>
+<span class="sd">        _tdb: the trajectory database (containing all trajectories)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fmodel_t</span> <span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                 <span class="n">a_args</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a TAMS run.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            fmodel_t: the forward model type</span>
+<span class="sd">            a_args: optional list of options</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TAMSError: if the input file is not found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TAMS._fmodel_t">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._fmodel_t">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span> <span class="o">=</span> <span class="n">fmodel_t</span></div>
+
+
+        <span class="n">input_file</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">parse_cl_args</span><span class="p">(</span><span class="n">a_args</span><span class="o">=</span><span class="n">a_args</span><span class="p">))[</span><span class="s2">&quot;input&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">input_file</span><span class="p">)):</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Could not find the </span><span class="si">{</span><span class="n">input_file</span><span class="si">}</span><span class="s2"> TAMS input file !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">TAMSError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">toml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="c1"># Setup logger</span>
+        <span class="n">setup_logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)</span>
+
+        <span class="c1"># Parse user-inputs</span>
+        <span class="n">tams_subdict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">[</span><span class="s2">&quot;tams&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="s2">&quot;ntrajectories&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tams_subdict</span> <span class="ow">or</span>
+            <span class="s2">&quot;nsplititer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tams_subdict</span><span class="p">):</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;TAMS &#39;ntrajectories&#39; and &#39;nsplititer&#39; must be specified in the input file !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>
+
+        <span class="n">nTraj</span> <span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">tams_subdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ntrajectories&quot;</span><span class="p">)</span>
+        <span class="n">nSplitIter</span> <span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">tams_subdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nsplititer&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="TAMS._wallTime">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._wallTime">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_wallTime</span> <span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">tams_subdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;walltime&quot;</span><span class="p">,</span> <span class="mf">24.0</span><span class="o">*</span><span class="mf">3600.0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TAMS._plot_diags">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._plot_diags">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plot_diags</span> <span class="o">=</span> <span class="n">tams_subdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;diagnostics&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TAMS._init_pool_only">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._init_pool_only">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_pool_only</span> <span class="o">=</span> <span class="n">tams_subdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pool_only&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
+
+
+        <span class="c1"># Database</span>
+<div class="viewcode-block" id="TAMS._tdb">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._tdb">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span> <span class="o">=</span> <span class="n">Database</span><span class="p">(</span><span class="n">fmodel_t</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span>
+                             <span class="n">nTraj</span><span class="p">,</span>
+                             <span class="n">nSplitIter</span><span class="p">)</span></div>
+
+
+        <span class="c1"># Time management uses UTC date</span>
+        <span class="c1"># to make sure workers are always in sync</span>
+<div class="viewcode-block" id="TAMS._startDate">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._startDate">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_startDate</span> <span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="TAMS._endDate">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS._endDate">[docs]</a>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_endDate</span> <span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_startDate</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_wallTime</span><span class="p">)</span></div>
+
+
+        <span class="c1"># Initialize trajectory pool</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">isEmpty</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_trajectory_pool</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TAMS.nTraj">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.nTraj">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nTraj</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the number of trajectory used for TAMS.</span>
+
+<span class="sd">        Note that this is the requested number of trajectory, not</span>
+<span class="sd">        the current length of the trajectory pool.</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            number of trajectory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TAMS.elapsed_time">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.elapsed_time">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">elapsed_time</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the elapsed wallclock time.</span>
+
+<span class="sd">        Since the initialization of the TAMS object [seconds].</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">           TAMS elapse time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_startDate</span><span class="p">)</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TAMS.remaining_walltime">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.remaining_walltime">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remaining_walltime</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the remaining wallclock time.</span>
+
+<span class="sd">        [seconds]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">           TAMS remaining wall time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wallTime</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TAMS.out_of_time">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.out_of_time">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">out_of_time</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return true if insufficient walltime remains.</span>
+
+<span class="sd">        Allows for 5% slack to allows time for workers to finish</span>
+<span class="sd">        their work (especially with Dask+Slurm backend).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">           boolean indicating wall time availability.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">remaining_walltime</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wallTime</span></div>
+
+
+
+<div class="viewcode-block" id="TAMS.init_trajectory_pool">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.init_trajectory_pool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">init_trajectory_pool</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the trajectory pool.</span>
+
+<span class="sd">        Append the requested number of trajectories to the database.</span>
+<span class="sd">        Trajectories are initialized but not advanced.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()):</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="n">Trajectory</span><span class="p">(</span>
+                    <span class="n">fmodel_t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="p">,</span>
+                    <span class="n">parameters</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span>
+                    <span class="n">trajId</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="n">T</span><span class="o">.</span><span class="n">setCheckFile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;./</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">name</span><span class="p">()</span><span class="si">}</span><span class="s2">/trajectories/</span><span class="si">{</span><span class="n">T</span><span class="o">.</span><span class="n">idstr</span><span class="p">()</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">appendTraj</span><span class="p">(</span><span class="n">T</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TAMS.generate_trajectory_pool">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.generate_trajectory_pool">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_trajectory_pool</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Schedule the generation of a pool of stochastic trajectories.</span>
+
+<span class="sd">        Loop over all the trajectories in the database and schedule</span>
+<span class="sd">        advancing them to either end time or convergence with the</span>
+<span class="sd">        runner.</span>
+
+<span class="sd">        The runner will use the number of workers specified in the</span>
+<span class="sd">        input file under the runner section.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Error if the runner fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Creating the initial pool of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()</span><span class="si">}</span><span class="s2"> trajectories&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">get_runner_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span>
+                                               <span class="n">pool_worker</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;runner&quot;</span><span class="p">,{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nworker_init&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajList</span><span class="p">():</span>
+                <span class="n">task</span> <span class="o">=</span> <span class="p">[</span><span class="n">T</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_endDate</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">save</span><span class="p">(),</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">name</span><span class="p">()]</span>
+                <span class="n">runner</span><span class="o">.</span><span class="n">make_promise</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">t_list</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_promises</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to generate the initial pool of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()</span><span class="si">}</span><span class="s2"> trajectories&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                <span class="k">raise</span>
+
+        <span class="c1"># Re-order list since runner does not guarantee order</span>
+        <span class="c1"># And update list of trajectories in the database</span>
+        <span class="n">t_list</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">updateTrajList</span><span class="p">(</span><span class="n">t_list</span><span class="p">)</span>
+
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Run time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">()</span><span class="si">}</span><span class="s2"> s&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TAMS.check_exit_splitting_loop">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.check_exit_splitting_loop">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_exit_splitting_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check for exit criterion of the splitting loop.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            k: loop counter</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool to trigger splitting loop break</span>
+<span class="sd">            array of maximas accros all trajectories</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check for walltime</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_time</span><span class="p">():</span>
+            <span class="n">warn_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Ran out of time after </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> splitting iterations&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Gather max score from all trajectories</span>
+        <span class="c1"># and check for early convergence</span>
+        <span class="n">allConverged</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">maxes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajListLen</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajListLen</span><span class="p">()):</span>
+            <span class="n">maxes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">getTraj</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">scoreMax</span><span class="p">()</span>
+            <span class="n">allConverged</span> <span class="o">=</span> <span class="n">allConverged</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">getTraj</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">isConverged</span><span class="p">()</span>
+
+        <span class="c1"># Exit if our work is done</span>
+        <span class="k">if</span> <span class="n">allConverged</span><span class="p">:</span>
+            <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;All trajectories converged after </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> splitting iterations&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Exit if splitting is stalled</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">maxes</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">maxes</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">1e-10</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Splitting is stalling with all trajectories stuck at a score_max: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">maxes</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">TAMSError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">maxes</span></div>
+
+
+<div class="viewcode-block" id="TAMS.finished_ongoing_splitting">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.finished_ongoing_splitting">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">finished_ongoing_splitting</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check and finish unfinished splitting iterations.&quot;&quot;&quot;</span>
+        <span class="c1"># Check the database for unfinished splitting iteration when restarting.</span>
+        <span class="c1"># At this point, branching has been done, but advancing to final</span>
+        <span class="c1"># time is still ongoing.</span>
+        <span class="n">ongoing_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">get_ongoing</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ongoing_list</span><span class="p">:</span>
+            <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Unfinished splitting iteration detected, traj </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">get_ongoing</span><span class="p">()</span><span class="si">}</span><span class="s2"> need(s) finishing&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">get_runner_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span>
+                                                   <span class="n">pool_worker</span><span class="p">,</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;runner&quot;</span><span class="p">,{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nworker_init&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ongoing_list</span><span class="p">:</span>
+                    <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">getTraj</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                    <span class="n">task</span> <span class="o">=</span> <span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_endDate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">save</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">name</span><span class="p">()]</span>
+                    <span class="n">runner</span><span class="o">.</span><span class="n">make_promise</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+                <span class="n">finished_traj</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_promises</span><span class="p">()</span>
+
+                <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="n">finished_traj</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">overwriteTraj</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">T</span><span class="p">)</span>
+
+                <span class="c1"># Clear list of ongoing branches</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">reset_ongoing</span><span class="p">()</span>
+
+                <span class="c1"># increment splitting index</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">kSplit</span><span class="p">()</span> <span class="o">+</span> <span class="n">runner</span><span class="o">.</span><span class="n">n_workers</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">setKSplit</span><span class="p">(</span><span class="n">k</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="TAMS.get_restart_at_random">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.get_restart_at_random">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_restart_at_random</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                              <span class="n">min_idx_list</span> <span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of trajectory index to restart from at random.</span>
+
+<span class="sd">        Select trajectories to restart from among the ones not</span>
+<span class="sd">        in min_idx_list.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            min_idx_list: list of trajectory index to restart from</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list of trajectory index to restart from</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Enable deterministic runs by setting the a (different) seed</span>
+        <span class="c1"># for each splitting iteration</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tams&quot;</span><span class="p">,{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;deterministic&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">kSplit</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">()</span>
+        <span class="n">rest_idx</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">)):</span>
+            <span class="n">rest_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_idx_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">while</span> <span class="n">rest_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">min_idx_list</span><span class="p">:</span>
+                <span class="n">rest_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">integers</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajListLen</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">rest_idx</span></div>
+
+
+
+<div class="viewcode-block" id="TAMS.do_multilevel_splitting">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.do_multilevel_splitting">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">do_multilevel_splitting</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Schedule splitting of the initial pool of stochastic trajectories.</span>
+
+<span class="sd">        Perform the multi-level splitting iterations, possibly restarting multiple</span>
+<span class="sd">        trajectories at each iterations. All the trajectories in an iterations are</span>
+<span class="sd">        advanced together, such each iteration takes the maximum duration among</span>
+<span class="sd">        the branched trajectories.</span>
+
+<span class="sd">        If the walltime is exceeded, the splitting loop is stopped and ongoing</span>
+<span class="sd">        trajectories are flagged in the database in order to finish them upon</span>
+<span class="sd">        restart.</span>
+
+<span class="sd">        The runner will use the number of workers specified in the</span>
+<span class="sd">        input file under the runner section.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Error if the runner fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="s2">&quot;Using multi-level splitting to get the probability&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="c1"># Finish any unfinished splitting iteration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished_ongoing_splitting</span><span class="p">()</span>
+
+        <span class="c1"># Initialize splitting iterations counter</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">kSplit</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="n">get_runner_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="p">,</span>
+                                               <span class="n">ms_worker</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;runner&quot;</span><span class="p">,{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nworker_iter&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nSplitIter</span><span class="p">():</span>
+                <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Starting TAMS iter. </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> with </span><span class="si">{</span><span class="n">runner</span><span class="o">.</span><span class="n">n_workers</span><span class="p">()</span><span class="si">}</span><span class="s2"> workers&quot;</span>
+                <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+                <span class="c1"># Check for early exit conditions</span>
+                <span class="n">early_exit</span><span class="p">,</span> <span class="n">maxes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_exit_splitting_loop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">early_exit</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="c1"># Plot trajectory database scores</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_diags</span><span class="p">:</span>
+                    <span class="n">pltfile</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Score_k</span><span class="si">{</span><span class="n">k</span><span class="si">:</span><span class="s2">05</span><span class="si">}</span><span class="s2">.png&quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">plotScoreFunctions</span><span class="p">(</span><span class="n">pltfile</span><span class="p">)</span>
+
+                <span class="c1"># Get the nworker lower scored trajectories</span>
+                <span class="c1"># or more if equal score</span>
+                <span class="n">min_idx_list</span><span class="p">,</span> <span class="n">min_vals</span> <span class="o">=</span> <span class="n">get_min_scored</span><span class="p">(</span><span class="n">maxes</span><span class="p">,</span> <span class="n">runner</span><span class="o">.</span><span class="n">n_workers</span><span class="p">())</span>
+
+                <span class="c1"># Randomly select trajectory to branch from</span>
+                <span class="n">rest_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_restart_at_random</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">appendBias</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">appendWeight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">weights</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">biases</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()))</span>
+
+                <span class="c1"># Assemble a list of promises</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">)):</span>
+                    <span class="n">task</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">getTraj</span><span class="p">(</span><span class="n">rest_idx</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">getTraj</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span>
+                            <span class="n">min_vals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_endDate</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">save</span><span class="p">(),</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">name</span><span class="p">()]</span>
+                    <span class="n">runner</span><span class="o">.</span><span class="n">make_promise</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+                <span class="n">restartedTrajs</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">execute_promises</span><span class="p">()</span>
+
+                <span class="c1"># Update the trajectory database</span>
+                <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="n">restartedTrajs</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">overwriteTraj</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">T</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_time</span><span class="p">():</span>
+                    <span class="c1"># Save splitting data with ongoing trajectories</span>
+                    <span class="c1"># but do not increment splitting index yet</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">saveSplittingData</span><span class="p">(</span><span class="n">min_idx_list</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Update the trajectory database, increment splitting index</span>
+                    <span class="n">k</span> <span class="o">=</span> <span class="n">k</span> <span class="o">+</span> <span class="n">runner</span><span class="o">.</span><span class="n">n_workers</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">setKSplit</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">saveSplittingData</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TAMS.compute_probability">
+<a class="viewcode-back" href="../../autoapi/pytams/tams/index.html#pytams.tams.TAMS.compute_probability">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_probability</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the probability using TAMS.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            the transition probability</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Computing </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_fmodel_t</span><span class="o">.</span><span class="n">name</span><span class="p">()</span><span class="si">}</span><span class="s2"> rare event probability using TAMS&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="c1"># Skip pool stage if splitting iterative</span>
+        <span class="c1"># process has started</span>
+        <span class="n">skip_pool</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">kSplit</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="c1"># Generate the initial trajectory pool</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_pool</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">generate_trajectory_pool</span><span class="p">()</span>
+
+        <span class="c1"># Check for early convergence</span>
+        <span class="n">allConverged</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajList</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">T</span><span class="o">.</span><span class="n">isConverged</span><span class="p">():</span>
+                <span class="n">allConverged</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_pool</span> <span class="ow">and</span> <span class="n">allConverged</span><span class="p">:</span>
+            <span class="n">inf_msg</span> <span class="o">=</span> <span class="s2">&quot;All trajectories converged prior to splitting !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mf">1.0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_time</span><span class="p">():</span>
+            <span class="n">warn_msg</span> <span class="o">=</span> <span class="s2">&quot;Ran out of walltime ! Exiting now.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init_pool_only</span><span class="p">:</span>
+            <span class="n">warn_msg</span> <span class="o">=</span> <span class="s2">&quot;Stopping after the pool stage !&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span>
+
+        <span class="c1"># Perform multilevel splitting</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">do_multilevel_splitting</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_of_time</span><span class="p">():</span>
+            <span class="n">warn_msg</span> <span class="o">=</span> <span class="s2">&quot;Ran out of walltime ! Exiting now.&quot;</span>
+            <span class="n">_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">warn_msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span>
+
+        <span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">nTraj</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">weights</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">biases</span><span class="p">())):</span>
+            <span class="n">W</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">biases</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">weights</span><span class="p">()[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="c1"># Compute how many traj. converged</span>
+        <span class="n">successCount</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">trajList</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">isConverged</span><span class="p">():</span>
+                <span class="n">successCount</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">trans_prob</span> <span class="o">=</span> <span class="n">successCount</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tdb</span><span class="o">.</span><span class="n">weights</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">W</span>
+
+        <span class="n">inf_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Run time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">()</span><span class="si">}</span><span class="s2"> s&quot;</span>
+        <span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">inf_msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">trans_prob</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

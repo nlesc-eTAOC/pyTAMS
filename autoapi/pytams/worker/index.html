@@ -1,0 +1,248 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.worker &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="pytams.xmlutils" href="../xmlutils/index.html" />
+    <link rel="prev" title="pytams.utils" href="../utils/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">pytams</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../database/index.html">pytams.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../fmodel/index.html">pytams.fmodel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../sqldb/index.html">pytams.sqldb</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../tams/index.html">pytams.tams</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../taskrunner/index.html">pytams.taskrunner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../trajectory/index.html">pytams.trajectory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../utils/index.html">pytams.utils</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">pytams.worker</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../xmlutils/index.html">pytams.xmlutils</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.worker</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/pytams/worker/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pytams.worker">
+<span id="pytams-worker"></span><h1>pytams.worker<a class="headerlink" href="#module-pytams.worker" title="Link to this heading"></a></h1>
+<p>A set of functions used by TAMS workers.</p>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.worker._logger" title="pytams.worker._logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.worker.traj_advance_with_exception" title="pytams.worker.traj_advance_with_exception"><code class="xref py py-obj docutils literal notranslate"><span class="pre">traj_advance_with_exception</span></code></a>(→ pytams.trajectory.Trajectory)</p></td>
+<td><p>Advance a trajectory with exception handling.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pytams.worker.pool_worker" title="pytams.worker.pool_worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pool_worker</span></code></a>(→ pytams.trajectory.Trajectory)</p></td>
+<td><p>A worker to generate each initial trajectory.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.worker.ms_worker" title="pytams.worker.ms_worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ms_worker</span></code></a>(→ pytams.trajectory.Trajectory)</p></td>
+<td><p>A worker to restart trajectories.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pytams.worker.worker_async" title="pytams.worker.worker_async"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker_async</span></code></a>(→ None)</p></td>
+<td><p>An async worker for the asyncio taskrunner.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="pytams.worker._logger">
+<span class="sig-prename descclassname"><span class="pre">pytams.worker.</span></span><span class="sig-name descname"><span class="pre">_logger</span></span><a class="reference internal" href="../../../_modules/pytams/worker.html#_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.worker._logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pytams.worker.traj_advance_with_exception">
+<span class="sig-prename descclassname"><span class="pre">pytams.worker.</span></span><span class="sig-name descname"><span class="pre">traj_advance_with_exception</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">walltime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">saveDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">nameDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/worker.html#traj_advance_with_exception"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.worker.traj_advance_with_exception" title="Link to this definition"></a></dt>
+<dd><p>Advance a trajectory with exception handling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>traj</strong> – a trajectory</p></li>
+<li><p><strong>walltime</strong> – the time limit to advance the trajectory</p></li>
+<li><p><strong>saveDB</strong> – a bool to save the trajectory to database</p></li>
+<li><p><strong>nameDB</strong> – name of the database</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pytams.worker.pool_worker">
+<span class="sig-prename descclassname"><span class="pre">pytams.worker.</span></span><span class="sig-name descname"><span class="pre">pool_worker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">traj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">endDate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saveDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">nameDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/worker.html#pool_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.worker.pool_worker" title="Link to this definition"></a></dt>
+<dd><p>A worker to generate each initial trajectory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>traj</strong> – a trajectory</p></li>
+<li><p><strong>endDate</strong> – the time limit to advance the trajectory</p></li>
+<li><p><strong>saveDB</strong> – a bool to save the trajectory to database</p></li>
+<li><p><strong>nameDB</strong> – name of the database</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pytams.worker.ms_worker">
+<span class="sig-prename descclassname"><span class="pre">pytams.worker.</span></span><span class="sig-name descname"><span class="pre">ms_worker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fromTraj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rstId</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">endDate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saveDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">nameDB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/worker.html#ms_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.worker.ms_worker" title="Link to this definition"></a></dt>
+<dd><p>A worker to restart trajectories.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fromTraj</strong> – a trajectory to restart from</p></li>
+<li><p><strong>rstId</strong> – Id of the trajectory being worked on</p></li>
+<li><p><strong>min_val</strong> – the value of the score function to restart from</p></li>
+<li><p><strong>endDate</strong> – the time limit to advance the trajectory</p></li>
+<li><p><strong>saveDB</strong> – a bool to save the trajectory to database</p></li>
+<li><p><strong>nameDB</strong> – name of DB to save the traj in (Opt)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pytams.worker.worker_async">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.worker.</span></span><span class="sig-name descname"><span class="pre">worker_async</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.13)"><span class="pre">asyncio.Queue</span></a><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res_queue</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/asyncio-queue.html#asyncio.Queue" title="(in Python v3.13)"><span class="pre">asyncio.Queue</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">executor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Executor" title="(in Python v3.13)"><span class="pre">concurrent.futures.Executor</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/worker.html#worker_async"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.worker.worker_async" title="Link to this definition"></a></dt>
+<dd><p>An async worker for the asyncio taskrunner.</p>
+<p>It wraps the call to one of the above worker functions
+with access to the queue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queue</strong> – a queue from which to get tasks</p></li>
+<li><p><strong>res_queue</strong> – a queue to put the results in</p></li>
+<li><p><strong>executor</strong> – an executor to launch the work in</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../utils/index.html" class="btn btn-neutral float-left" title="pytams.utils" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../xmlutils/index.html" class="btn btn-neutral float-right" title="pytams.xmlutils" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

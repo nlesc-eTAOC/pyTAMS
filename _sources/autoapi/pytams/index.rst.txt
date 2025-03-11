@@ -1,0 +1,53 @@
+pytams
+======
+
+.. py:module:: pytams
+
+.. autoapi-nested-parse::
+
+   Documentation about pyTAMS.
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pytams/database/index
+   /autoapi/pytams/fmodel/index
+   /autoapi/pytams/sqldb/index
+   /autoapi/pytams/tams/index
+   /autoapi/pytams/taskrunner/index
+   /autoapi/pytams/trajectory/index
+   /autoapi/pytams/utils/index
+   /autoapi/pytams/worker/index
+   /autoapi/pytams/xmlutils/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.__author__
+   pytams.__email__
+   pytams.__version__
+
+
+Package Contents
+----------------
+
+.. py:data:: __author__
+   :value: 'Lucas Esclapez'
+
+
+.. py:data:: __email__
+   :value: 'l.esclapez@esciencecenter.nl'
+
+
+.. py:data:: __version__
+   :value: '0.0.3'
+
+

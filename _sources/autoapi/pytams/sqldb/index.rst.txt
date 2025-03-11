@@ -1,0 +1,141 @@
+pytams.sqldb
+============
+
+.. py:module:: pytams.sqldb
+
+.. autoapi-nested-parse::
+
+   A class for the trajectory pool as an SQL file.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.sqldb._logger
+   pytams.sqldb.valid_statuses
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.sqldb.SQLFile
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:data:: valid_statuses
+   :value: ['locked', 'idle', 'completed']
+
+
+.. py:class:: SQLFile(file_name: str)
+
+   An SQL file.
+
+   Allows atomic access to an SQL database from all
+   the workers.
+
+   Note: TAMS works with Python indexing starting at 0,
+   while SQL indexing starts at 1. Trajectory ID is
+   updated accordingly when accessing/updating the DB.
+
+   .. attribute:: _file_name
+
+      The file name
+
+
+   .. py:attribute:: _file_name
+
+
+   .. py:method:: _init_db() -> None
+
+      Initialize the tables of the file.
+
+      :raises RuntimeError: If a connection to the DB could not be acquired
+
+
+
+   .. py:method:: _connect() -> sqlite3.Connection
+
+      Create a new SQLite connection.
+
+      :returns: An sqlite3.Connection
+
+      :raises RuntimeError if no connection can be established:
+
+
+
+   .. py:method:: add_trajectory(traj_file: str) -> None
+
+      Add a new trajectory to the DB.
+
+      :param traj_file: The trajectory file of that trajectory
+
+
+
+   .. py:method:: lock_trajectory(traj_id: int, allow_completed_lock: bool = False) -> bool
+
+      Set the status of a trajectory to "locked" if possible.
+
+      :param traj_id: The trajectory id
+      :param allow_completed_lock: Allow to lock a "completed" trajectory
+
+      :returns: True if the trajectory was successfully locked, False otherwise
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: mark_trajectory_as_completed(traj_id: int) -> None
+
+      Set the status of a trajectory to "completed" if possible.
+
+      :param traj_id: The trajectory id
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: release_trajectory(traj_id: int) -> None
+
+      Set the status of a trajectory to "idle" if possible.
+
+      :param traj_id: The trajectory id
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: get_trajectory_count() -> int
+
+      Get the number of trajectories in the DB.
+
+      :returns: The number of trajectories
+
+
+
+   .. py:method:: fetch_trajectory(traj_id: int) -> str | None
+
+      Get the trajectory file of a trajectory.
+
+      :param traj_id: The trajectory id
+
+      :returns: The trajectory file
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: dump_file_json() -> None
+
+      Dump the content of the trajectory table to a json file.
+
+
+

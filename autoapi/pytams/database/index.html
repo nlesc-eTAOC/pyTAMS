@@ -1,0 +1,617 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pytams.database &mdash; pyTAMS 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/theme.css?v=df66b05f" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="pytams.fmodel" href="../fmodel/index.html" />
+    <link rel="prev" title="pytams" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            pyTAMS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User corner:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../TAMS.html">Theory and implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../Controls.html">Usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer corner:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">pytams</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">pytams.database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../fmodel/index.html">pytams.fmodel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../sqldb/index.html">pytams.sqldb</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../tams/index.html">pytams.tams</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../taskrunner/index.html">pytams.taskrunner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../trajectory/index.html">pytams.trajectory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../utils/index.html">pytams.utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../worker/index.html">pytams.worker</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../xmlutils/index.html">pytams.xmlutils</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">pyTAMS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">pytams</a></li>
+      <li class="breadcrumb-item active">pytams.database</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../_sources/autoapi/pytams/database/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-pytams.database">
+<span id="pytams-database"></span><h1>pytams.database<a class="headerlink" href="#module-pytams.database" title="Link to this heading"></a></h1>
+<p>A database class for TAMS.</p>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.database._logger" title="pytams.database._logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.database.DatabaseError" title="pytams.database.DatabaseError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DatabaseError</span></code></a></p></td>
+<td><p>Exception class for TAMS Database.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pytams.database.Database" title="pytams.database.Database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Database</span></code></a></p></td>
+<td><p>A database class for TAMS.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="pytams.database._logger">
+<span class="sig-prename descclassname"><span class="pre">pytams.database.</span></span><span class="sig-name descname"><span class="pre">_logger</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database._logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="pytams.database.DatabaseError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.database.</span></span><span class="sig-name descname"><span class="pre">DatabaseError</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#DatabaseError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.DatabaseError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Exception class for TAMS Database.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytams.database.Database">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytams.database.</span></span><span class="sig-name descname"><span class="pre">Database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmodel_t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntraj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsplititer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pytams/database.html#Database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database" title="Link to this definition"></a></dt>
+<dd><p>A database class for TAMS.</p>
+<p>The database class for TAMS is a container for
+all the trajectory and splitting data. When the
+user requires to store the database, a local folder is
+created holding a number of readable files, any output
+from the model and an SQL file used to lock/release
+trajectories as the TAMS algorithm proceeds.</p>
+<p>The readable files are currently in an XML format.</p>
+<p>A database can be loaded independently from the TAMS
+algorithm and used for post-processing.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._fmodel_t">
+<span class="sig-name descname"><span class="pre">_fmodel_t</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._fmodel_t"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._fmodel_t" title="Link to this definition"></a></dt>
+<dd><p>the forward model type</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._save">
+<span class="sig-name descname"><span class="pre">_save</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._save" title="Link to this definition"></a></dt>
+<dd><p>boolean to trigger saving the database to disk</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._load">
+<span class="sig-name descname"><span class="pre">_load</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._load" title="Link to this definition"></a></dt>
+<dd><p>a path to an existing database to restore</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._parameters">
+<span class="sig-name descname"><span class="pre">_parameters</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._parameters" title="Link to this definition"></a></dt>
+<dd><p>the dictionary of parameters</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._trajs_db">
+<span class="sig-name descname"><span class="pre">_trajs_db</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._trajs_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._trajs_db" title="Link to this definition"></a></dt>
+<dd><p>the list of trajectories</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._ksplit">
+<span class="sig-name descname"><span class="pre">_ksplit</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._ksplit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._ksplit" title="Link to this definition"></a></dt>
+<dd><p>the current splitting iteration</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._l_bias">
+<span class="sig-name descname"><span class="pre">_l_bias</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._l_bias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._l_bias" title="Link to this definition"></a></dt>
+<dd><p>the list of bias</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._weights">
+<span class="sig-name descname"><span class="pre">_weights</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._weights" title="Link to this definition"></a></dt>
+<dd><p>the list of weights</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._ongoing">
+<span class="sig-name descname"><span class="pre">_ongoing</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._ongoing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._ongoing" title="Link to this definition"></a></dt>
+<dd><p>the list of ongoing branches if unfinished splitting iteration.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">_fmodel_t</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._fmodel_t"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id1">
+<span class="sig-name descname"><span class="pre">_save</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id2">
+<span class="sig-name descname"><span class="pre">_load</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id3">
+<span class="sig-name descname"><span class="pre">_parameters</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id3" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id4">
+<span class="sig-name descname"><span class="pre">_trajs_db</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._trajs_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id4" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id5">
+<span class="sig-name descname"><span class="pre">_ksplit</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._ksplit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id5" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id6">
+<span class="sig-name descname"><span class="pre">_l_bias</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._l_bias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id6" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id7">
+<span class="sig-name descname"><span class="pre">_weights</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[1.0]</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id7" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id8">
+<span class="sig-name descname"><span class="pre">_ongoing</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._ongoing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id8" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._prefix">
+<span class="sig-name descname"><span class="pre">_prefix</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._prefix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._prefix" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._format">
+<span class="sig-name descname"><span class="pre">_format</span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._format" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pytams.database.Database._name">
+<span class="sig-name descname"><span class="pre">_name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Uninferable.tdb'</span></em><a class="reference internal" href="../../../_modules/pytams/database.html#Database._name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.nTraj">
+<span class="sig-name descname"><span class="pre">nTraj</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.nTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.nTraj" title="Link to this definition"></a></dt>
+<dd><p>Return the number of trajectory used for TAMS.</p>
+<p>Note that this is the requested number of trajectory, not
+the current length of the trajectory pool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number of trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.nSplitIter">
+<span class="sig-name descname"><span class="pre">nSplitIter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.nSplitIter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.nSplitIter" title="Link to this definition"></a></dt>
+<dd><p>Return the number of splitting iteration used for TAMS.</p>
+<p>Note that this is the requested number of splitting iteration, not
+the current splitting iteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>number of splitting iteration</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._setUpTree">
+<span class="sig-name descname"><span class="pre">_setUpTree</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._setUpTree"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._setUpTree" title="Link to this definition"></a></dt>
+<dd><p>Initialize the trajectory database tree.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._writeMetadata">
+<span class="sig-name descname"><span class="pre">_writeMetadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._writeMetadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._writeMetadata" title="Link to this definition"></a></dt>
+<dd><p>Write the database Metadata to disk.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._readHeader">
+<span class="sig-name descname"><span class="pre">_readHeader</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.13)"><span class="pre">datetime.datetime</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._readHeader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._readHeader" title="Link to this definition"></a></dt>
+<dd><p>Read the database Metadata to header.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.saveSplittingData">
+<span class="sig-name descname"><span class="pre">saveSplittingData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ongoing_trajs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.saveSplittingData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.saveSplittingData" title="Link to this definition"></a></dt>
+<dd><p>Write splitting data to the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ongoing_trajs</strong> – an optional list of ongoing trajectories</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._readSplittingData">
+<span class="sig-name descname"><span class="pre">_readSplittingData</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._readSplittingData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._readSplittingData" title="Link to this definition"></a></dt>
+<dd><p>Read splitting data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._restoreTrajDB">
+<span class="sig-name descname"><span class="pre">_restoreTrajDB</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._restoreTrajDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._restoreTrajDB" title="Link to this definition"></a></dt>
+<dd><p>Initialize TAMS from a stored trajectory database.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.loadTrajectoryDB">
+<span class="sig-name descname"><span class="pre">loadTrajectoryDB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dbFile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.loadTrajectoryDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.loadTrajectoryDB" title="Link to this definition"></a></dt>
+<dd><p>Load trajectories stored into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dbFile</strong> – the database file</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>number of trajectories loaded</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database._check_database_consistency">
+<span class="sig-name descname"><span class="pre">_check_database_consistency</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database._check_database_consistency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database._check_database_consistency" title="Link to this definition"></a></dt>
+<dd><p>Check the restart database consistency.</p>
+<p>Perform some basic checks on the consistency between the
+input file and the database being loaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DatabaseError if the consistency check fails</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.name" title="Link to this definition"></a></dt>
+<dd><p>Accessor to DB name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DB name</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.save" title="Link to this definition"></a></dt>
+<dd><p>Accessor to DB save bool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Save bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.appendTraj">
+<span class="sig-name descname"><span class="pre">appendTraj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_traj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.appendTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.appendTraj" title="Link to this definition"></a></dt>
+<dd><p>Append a Trajectory to the internal list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>a_traj</strong> – the trajectory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.trajList">
+<span class="sig-name descname"><span class="pre">trajList</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.trajList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.trajList" title="Link to this definition"></a></dt>
+<dd><p>Access to the trajectory list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Trajectory list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.getTraj">
+<span class="sig-name descname"><span class="pre">getTraj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.getTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.getTraj" title="Link to this definition"></a></dt>
+<dd><p>Access to a given trajectory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>idx</strong> – the index</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Trajectory</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError if idx is out</strong><strong> of </strong><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#range" title="(in Python v3.13)"><strong>range</strong></a> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.overwriteTraj">
+<span class="sig-name descname"><span class="pre">overwriteTraj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">traj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.overwriteTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.overwriteTraj" title="Link to this definition"></a></dt>
+<dd><p>Deep copy a trajectory into internal list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idx</strong> – the index of the trajectory to override</p></li>
+<li><p><strong>traj</strong> – the new trajectory</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError if idx is out</strong><strong> of </strong><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#range" title="(in Python v3.13)"><strong>range</strong></a> – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.headerFile">
+<span class="sig-name descname"><span class="pre">headerFile</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.headerFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.headerFile" title="Link to this definition"></a></dt>
+<dd><p>Helper returning the DB header file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Header file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.poolFile">
+<span class="sig-name descname"><span class="pre">poolFile</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.poolFile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.poolFile" title="Link to this definition"></a></dt>
+<dd><p>Helper returning the DB trajectory pool file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pool file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.isEmpty">
+<span class="sig-name descname"><span class="pre">isEmpty</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.isEmpty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.isEmpty" title="Link to this definition"></a></dt>
+<dd><p>Check if list of trajectories is empty.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if the list of trajectories is empty</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.trajListLen">
+<span class="sig-name descname"><span class="pre">trajListLen</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.trajListLen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.trajListLen" title="Link to this definition"></a></dt>
+<dd><p>Length of the trajectory list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Trajectory list length</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.updateTrajList">
+<span class="sig-name descname"><span class="pre">updateTrajList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a_trajList</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../trajectory/index.html#pytams.trajectory.Trajectory" title="pytams.trajectory.Trajectory"><span class="pre">pytams.trajectory.Trajectory</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.updateTrajList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.updateTrajList" title="Link to this definition"></a></dt>
+<dd><p>Overwrite the trajectory list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>a_trajList</strong> – the new trajectory list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.weights">
+<span class="sig-name descname"><span class="pre">weights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.weights" title="Link to this definition"></a></dt>
+<dd><p>Splitting iterations weights.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.appendWeight">
+<span class="sig-name descname"><span class="pre">appendWeight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.appendWeight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.appendWeight" title="Link to this definition"></a></dt>
+<dd><p>Append a weight to internal list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.biases">
+<span class="sig-name descname"><span class="pre">biases</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.biases"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.biases" title="Link to this definition"></a></dt>
+<dd><p>Splitting iterations biases.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.appendBias">
+<span class="sig-name descname"><span class="pre">appendBias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bias</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.appendBias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.appendBias" title="Link to this definition"></a></dt>
+<dd><p>Append a bias to internal list.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.kSplit">
+<span class="sig-name descname"><span class="pre">kSplit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.kSplit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.kSplit" title="Link to this definition"></a></dt>
+<dd><p>Splitting iteration counter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.reset_ongoing">
+<span class="sig-name descname"><span class="pre">reset_ongoing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.reset_ongoing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.reset_ongoing" title="Link to this definition"></a></dt>
+<dd><p>Reset the list of trajectories undergoing branching.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.get_ongoing">
+<span class="sig-name descname"><span class="pre">get_ongoing</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.get_ongoing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.get_ongoing" title="Link to this definition"></a></dt>
+<dd><p>Return the list of trajectories undergoing branching or None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.setKSplit">
+<span class="sig-name descname"><span class="pre">setKSplit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ksplit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.setKSplit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.setKSplit" title="Link to this definition"></a></dt>
+<dd><p>Set splitting iteration counter.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.countEndedTraj">
+<span class="sig-name descname"><span class="pre">countEndedTraj</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.countEndedTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.countEndedTraj" title="Link to this definition"></a></dt>
+<dd><p>Return the number of trajectories that ended.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.countConvergedTraj">
+<span class="sig-name descname"><span class="pre">countConvergedTraj</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.countConvergedTraj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.countConvergedTraj" title="Link to this definition"></a></dt>
+<dd><p>Return the number of trajectories that converged.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.getTransitionProbability">
+<span class="sig-name descname"><span class="pre">getTransitionProbability</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.getTransitionProbability"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.getTransitionProbability" title="Link to this definition"></a></dt>
+<dd><p>Return the transition probability.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.info">
+<span class="sig-name descname"><span class="pre">info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.info" title="Link to this definition"></a></dt>
+<dd><p>Print database info to screen.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytams.database.Database.plotScoreFunctions">
+<span class="sig-name descname"><span class="pre">plotScoreFunctions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../../_modules/pytams/database.html#Database.plotScoreFunctions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pytams.database.Database.plotScoreFunctions" title="Link to this definition"></a></dt>
+<dd><p>Plot the score as function of time for all trajectories.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="pytams" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../fmodel/index.html" class="btn btn-neutral float-right" title="pytams.fmodel" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Netherlands eScience Center.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

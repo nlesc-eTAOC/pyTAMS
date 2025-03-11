@@ -1,0 +1,235 @@
+pytams.fmodel
+=============
+
+.. py:module:: pytams.fmodel
+
+.. autoapi-nested-parse::
+
+   A base class for the stochastic forward model.
+
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.fmodel.AdvanceError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.fmodel.ForwardModelBaseClass
+
+
+Module Contents
+---------------
+
+.. py:exception:: AdvanceError
+
+   Bases: :py:obj:`Exception`
+
+
+   Concrete ForwardModel _advance error !
+
+
+.. py:class:: ForwardModelBaseClass(params: dict, ioprefix: Optional[str] = None)
+
+   A base class for the stochastic forward model.
+
+   pyTAMS relies on a separation of the stochastic model
+   encapsulating the physics of interest and the TAMS
+   algorithm itself. The ForwardModelBaseClass defines
+   the API the TAMS algorithm requires from the stochastic
+   model.
+
+   Concrete model classes must implement all the abstract
+   functions defined in this base class.
+
+   The base class handles some components needed by TAMS,
+   so that the user does not have to ensure compatibility
+   with TAMS requirements.
+
+   .. attribute:: _prescribed_noise
+
+      whether the noise is provided or need to be generated
+
+   .. attribute:: _noise
+
+      the noise to be used in the next model step
+
+   .. attribute:: _step
+
+      the current stochastic step counter
+
+   .. attribute:: _time
+
+      the current stochastic time
+
+
+   .. py:attribute:: _prescribed_noise
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: _noise
+      :type:  Any
+      :value: None
+
+
+
+   .. py:attribute:: _step
+      :type:  int
+      :value: 0
+
+
+
+   .. py:attribute:: _time
+      :type:  float
+      :value: 0.0
+
+
+
+   .. py:method:: advance(dt: float, forcingAmpl: float) -> float
+
+      Base class advance function of the model.
+
+      This is the advance function called by TAMS internals. It
+      handles updating the model time and step counter, as well as
+      reusing or generating noise only when needed.
+      It also handles exceptions.
+
+      :param dt: the time step size over which to advance
+      :param forcingAmpl: stochastic multiplicator
+
+      :returns: Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+
+
+
+   .. py:method:: getNoise() -> Any
+
+      Return the model's latest noise increment.
+
+
+
+   .. py:method:: setNoise(a_noise: Any) -> None
+
+      Set the model's next noise increment.
+
+
+
+   .. py:method:: clear() -> None
+
+      Destroy internal data.
+
+
+
+   .. py:method:: _init_model(params: Optional[dict] = None, ioprefix: Optional[str] = None) -> None
+      :abstractmethod:
+
+
+      Concrete class specific initialization.
+
+      :param params: an optional dict containing parameters
+      :param ioprefix: an optional string defining run folder
+
+
+
+   .. py:method:: _advance(step: int, time: float, dt: float, noise: Any, forcingAmpl: float) -> float
+      :abstractmethod:
+
+
+      Concrete class advance function.
+
+      This is the model-specific advance function.
+
+      :param step: the current step counter
+      :param time: the starting time of the advance call
+      :param dt: the time step size over which to advance
+      :param noise: the noise to be used in the model step
+      :param forcingAmpl: stochastic multiplicator
+
+      :returns: Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+
+
+
+   .. py:method:: getCurState() -> Any
+      :abstractmethod:
+
+
+      Return the current state of the model.
+
+
+
+   .. py:method:: setCurState(state: Any) -> Any
+      :abstractmethod:
+
+
+      Set the current state of the model.
+
+
+
+   .. py:method:: score() -> Any
+      :abstractmethod:
+
+
+      Return the model's current state score.
+
+
+
+   .. py:method:: _make_noise() -> Any
+      :abstractmethod:
+
+
+      Return the model's latest noise increment.
+
+
+
+   .. py:method:: post_trajectory_restart_hook(step: int, time: float) -> None
+
+      Model post trajectory restart hook.
+
+      :param step: the current step counter
+      :param time: the time of the simulation
+
+
+
+   .. py:method:: _trajectory_restart_hook() -> None
+
+      Model-specific post trajectory restart hook.
+
+
+
+   .. py:method:: post_trajectory_restore_hook(step: int, time: float) -> None
+
+      Model post trajectory restore hook.
+
+      :param step: the current step counter
+      :param time: the time of the simulation
+
+
+
+   .. py:method:: _trajectory_restore_hook() -> None
+
+      Model-specific post trajectory restore hook.
+
+
+
+   .. py:method:: _clear_model() -> Any
+
+      Clear the concrete forward model internals.
+
+
+
+   .. py:method:: name() -> str
+      :classmethod:
+
+
+      Return a the model name.
+
+
+

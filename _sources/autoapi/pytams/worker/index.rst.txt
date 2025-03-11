@@ -1,0 +1,85 @@
+pytams.worker
+=============
+
+.. py:module:: pytams.worker
+
+.. autoapi-nested-parse::
+
+   A set of functions used by TAMS workers.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.worker._logger
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.worker.traj_advance_with_exception
+   pytams.worker.pool_worker
+   pytams.worker.ms_worker
+   pytams.worker.worker_async
+
+
+Module Contents
+---------------
+
+.. py:data:: _logger
+
+.. py:function:: traj_advance_with_exception(traj: pytams.trajectory.Trajectory, walltime: float, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   Advance a trajectory with exception handling.
+
+   :param traj: a trajectory
+   :param walltime: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of the database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: pool_worker(traj: pytams.trajectory.Trajectory, endDate: datetime, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   A worker to generate each initial trajectory.
+
+   :param traj: a trajectory
+   :param endDate: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of the database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: ms_worker(fromTraj: pytams.trajectory.Trajectory, rstId: int, min_val: float, endDate: datetime, saveDB: bool, nameDB: str) -> pytams.trajectory.Trajectory
+
+   A worker to restart trajectories.
+
+   :param fromTraj: a trajectory to restart from
+   :param rstId: Id of the trajectory being worked on
+   :param min_val: the value of the score function to restart from
+   :param endDate: the time limit to advance the trajectory
+   :param saveDB: a bool to save the trajectory to database
+   :param nameDB: name of DB to save the traj in (Opt)
+
+
+.. py:function:: worker_async(queue: asyncio.Queue[Tuple[pytams.trajectory.Trajectory, float, bool, str]], res_queue: asyncio.Queue[pytams.trajectory.Trajectory], executor: concurrent.futures.Executor) -> None
+   :async:
+
+
+   An async worker for the asyncio taskrunner.
+
+   It wraps the call to one of the above worker functions
+   with access to the queue.
+
+   :param queue: a queue from which to get tasks
+   :param res_queue: a queue to put the results in
+   :param executor: an executor to launch the work in
+
+
