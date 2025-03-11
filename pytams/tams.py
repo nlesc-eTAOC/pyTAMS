@@ -260,8 +260,13 @@ class TAMS:
 
         return False, maxes
 
-    def finished_ongoing_splitting(self) -> None:
-        """Check and finish unfinished splitting iterations."""
+    def finish_ongoing_splitting(self) -> None:
+        """Check and finish unfinished splitting iterations.
+
+        If the run was interupted during a splitting iteration,
+        the branched trajectory might not have ended yet. In that case,
+        a list of trajectories to finish is listed in the database.
+        """
         # Check the database for unfinished splitting iteration when restarting.
         # At this point, branching has been done, but advancing to final
         # time is still ongoing.
@@ -271,7 +276,7 @@ class TAMS:
             _logger.info(inf_msg)
             with get_runner_type(self._parameters)(self._parameters,
                                                    pool_worker,
-                                                   self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
+                                                   self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
                 for i in ongoing_list:
                     T = self._tdb.getTraj(i)
                     task = [T, self._endDate, self._tdb.save(), self._tdb.name()]
@@ -284,9 +289,10 @@ class TAMS:
                 # Clear list of ongoing branches
                 self._tdb.reset_ongoing()
 
-                # increment splitting index
+                # Increment splitting index
                 k = self._tdb.kSplit() + runner.n_workers()
                 self._tdb.setKSplit(k)
+                self._tdb.saveSplittingData()
 
 
     def get_restart_at_random(self,
@@ -338,7 +344,7 @@ class TAMS:
         _logger.info(inf_msg)
 
         # Finish any unfinished splitting iteration
-        self.finished_ongoing_splitting()
+        self.finish_ongoing_splitting()
 
         # Initialize splitting iterations counter
         k = self._tdb.kSplit()
