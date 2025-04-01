@@ -4,8 +4,9 @@ import concurrent.futures
 import datetime
 import functools
 import logging
+from pathlib import Path
 from typing import Tuple
-from pytams.sqldb import SQLFile
+from pytams.database import Database
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimit
 
@@ -13,15 +14,13 @@ _logger = logging.getLogger(__name__)
 
 def traj_advance_with_exception(traj: Trajectory,
                                 walltime: float,
-                                saveDB: bool,
-                                nameDB: str) -> Trajectory:
+                                a_db: Database | None) -> Trajectory:
     """Advance a trajectory with exception handling.
 
     Args:
         traj: a trajectory
         walltime: the time limit to advance the trajectory
-        saveDB: a bool to save the trajectory to database
-        nameDB: name of the database
+        a_db: a database
 
     Returns:
         The updated trajectory
@@ -33,34 +32,27 @@ def traj_advance_with_exception(traj: Trajectory,
         warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
         _logger.warning(warn_msg)
 
-    except Exception:
+    except Exception as e:
         err_msg = f"Trajectory {traj.idstr()} advance ran into an error !"
         _logger.error(err_msg)
-        raise
+        raise e
 
     finally:
-        if saveDB:
-            pool_file = f"./{nameDB}/trajPool.db"
-            sqlpool = SQLFile(pool_file)
-            traj.store()
-            if traj.hasEnded():
-                sqlpool.mark_trajectory_as_completed(traj.id())
-            else:
-                sqlpool.release_trajectory(traj.id())
+        if a_db:
+            a_db.unlock_trajectory(traj.id(), traj.hasEnded())
+            a_db.save_trajectory(traj)
 
     return traj
 
 def pool_worker(traj: Trajectory,
                 endDate: datetime,
-                saveDB: bool,
-                nameDB: str) -> Trajectory:
+                db_path: str | None = None) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
         traj: a trajectory
         endDate: the time limit to advance the trajectory
-        saveDB: a bool to save the trajectory to database
-        nameDB: name of the database
+        db_path: a path to a TAMS database or None
 
     Returns:
         The updated trajectory
@@ -69,19 +61,18 @@ def pool_worker(traj: Trajectory,
     wall_time = (endDate - datetime.datetime.utcnow()).total_seconds()
 
     if wall_time > 0.0 and not traj.hasEnded():
-        # Fetch a handle to the trajectory in the database pool
-        # Try to lock the trajectory
-        if saveDB:
-            pool_file = f"./{nameDB}/trajPool.db"
-            sqlpool = SQLFile(pool_file)
-            get_to_work = sqlpool.lock_trajectory(traj.id())
+        db = None
+        if db_path:
+            db = Database.load(Path(db_path))
+            # Try to lock the trajectory in the DB
+            get_to_work = db.lock_trajectory(traj.id())
             if not get_to_work:
                 return traj
 
         inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
+        traj = traj_advance_with_exception(traj, wall_time, db)
 
     return traj
 
@@ -91,8 +82,7 @@ def ms_worker(
     rstId: int,
     min_val: float,
     endDate: datetime,
-    saveDB: bool,
-    nameDB: str,
+    db_path: str | None = None,
 ) -> Trajectory:
     """A worker to restart trajectories.
 
@@ -101,19 +91,18 @@ def ms_worker(
         rstId: Id of the trajectory being worked on
         min_val: the value of the score function to restart from
         endDate: the time limit to advance the trajectory
-        saveDB: a bool to save the trajectory to database
-        nameDB: name of DB to save the traj in (Opt)
+        db_path: a database path or None
     """
     # Get wall time
     wall_time = (endDate - datetime.datetime.utcnow()).total_seconds()
 
     if wall_time > 0.0 :
-        # Fetch a handle to the trajectory we are branching in the database pool
-        # Try to lock the trajectory
-        if saveDB:
-            pool_file = f"./{nameDB}/trajPool.db"
-            sqlpool = SQLFile(pool_file)
-            get_to_work = sqlpool.lock_trajectory(rstId, True)
+        db = None
+        if db_path:
+            # Fetch a handle to the trajectory we are branching in the database pool
+            # Try to lock the trajectory in the DB
+            db = Database.load(Path(db_path))
+            get_to_work = db.lock_trajectory(rstId, True)
             if not get_to_work:
                 err_msg = f"Unable to lock trajectory {rstId} for branching"
                 _logger.error(err_msg)
@@ -124,13 +113,9 @@ def ms_worker(
 
         traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
 
-        if saveDB:
-            traj.setCheckFile(f"{nameDB}/trajectories/{traj.idstr()}.xml")
-
-        return traj_advance_with_exception(traj, wall_time, saveDB, nameDB)
+        return traj_advance_with_exception(traj, wall_time, db)
 
     return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
-
 
 async def worker_async(
     queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
