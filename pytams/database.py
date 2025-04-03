@@ -13,7 +13,6 @@ from typing import Any
 from typing import Optional
 from typing import Union
 import cloudpickle
-import dill
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
@@ -168,7 +167,7 @@ class Database:
             db_params["database"]["path"] = str(a_path)
         model_file = Path(a_path / "fmodel.pkl")
         with model_file.open("rb") as f:
-            model = dill.load(f)
+            model = cloudpickle.load(f)
 
         return cls(model, db_params)
 
