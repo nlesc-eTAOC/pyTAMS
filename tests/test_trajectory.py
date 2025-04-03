@@ -1,6 +1,6 @@
 """Tests for the pytams.trajectory class."""
-import os
 from math import isclose
+from pathlib import Path
 import pytest
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.trajectory import Snapshot
@@ -86,12 +86,14 @@ def test_storeAndRestoreSimpleTraj():
     t_test.advance(0.02)
     assert isclose(t_test.scoreMax(), 0.2, abs_tol=1e-9)
     assert t_test.isConverged() is False
-    t_test.store("test.xml")
-    assert os.path.exists("test.xml") is True
-    rst_test = Trajectory.restoreFromChk("test.xml", fmodel, parameters)
+    chkFile = Path("./test.xml")
+    t_test.store(chkFile)
+    assert chkFile.exists() is True
+    rst_test = Trajectory.restoreFromChk(chkFile, fmodel, parameters)
     assert isclose(rst_test.scoreMax(), 0.2, abs_tol=1e-9)
     rst_test.advance()
     assert rst_test.isConverged() is True
+    chkFile.unlink()
 
 
 def test_restartSimpleTraj():
@@ -145,12 +147,13 @@ def test_storeAndRestartSparseSimpleTraj():
     t_test.advance(0.013)
     assert isclose(t_test.scoreMax(), 0.13, abs_tol=1e-9)
     assert t_test.isConverged() is False
-    t_test.store("test.xml")
-    assert os.path.exists("test.xml") is True
-    rst_test = Trajectory.restoreFromChk("test.xml", fmodel, parameters)
+    chkFile = Path("./test.xml")
+    t_test.store(chkFile)
+    assert chkFile.exists() is True
+    rst_test = Trajectory.restoreFromChk(chkFile, fmodel, parameters)
     rst_test.advance()
     assert rst_test.isConverged() is True
-    os.remove("test.xml")
+    chkFile.unlink()
 
 def test_scoreMovingAverage():
     """Test using a moving average on a score array."""
