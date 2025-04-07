@@ -9,18 +9,12 @@ import numpy as np
 import toml
 from pytams.database import Database
 from pytams.taskrunner import get_runner_type
-from pytams.trajectory import Trajectory
 from pytams.utils import get_min_scored
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker
 from pytams.worker import pool_worker
 
 _logger = logging.getLogger(__name__)
-
-class TAMSError(Exception):
-    """Exception class for TAMS."""
-
-    pass
 
 def parse_cl_args(a_args: Optional[list[str]] = None) -> argparse.Namespace :
     """Parse provided list or default CL argv.
@@ -71,14 +65,14 @@ class TAMS:
     def __init__(self,
                  fmodel_t : Any,
                  a_args: Optional[list[str]] = None) -> None:
-        """Initialize a TAMS run.
+        """Initialize a TAMS object.
 
         Args:
             fmodel_t: the forward model type
             a_args: optional list of options
 
         Raises:
-            TAMSError: if the input file is not found
+            ValueError: if the input file is not found
         """
         self._fmodel_t = fmodel_t
 
@@ -86,7 +80,7 @@ class TAMS:
         if (not os.path.exists(input_file)):
             err_msg = f"Could not find the {input_file} TAMS input file !"
             _logger.error(err_msg)
-            raise TAMSError(err_msg)
+            raise ValueError(err_msg)
 
         with open(input_file, 'r') as f:
             self._parameters = toml.load(f)
@@ -113,6 +107,7 @@ class TAMS:
                              self._parameters,
                              nTraj,
                              nSplitIter)
+        self._tdb.load_data()
 
         # Time management uses UTC date
         # to make sure workers are always in sync
@@ -120,8 +115,8 @@ class TAMS:
         self._endDate : datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
 
         # Initialize trajectory pool
-        if self._tdb.isEmpty():
-            self.init_trajectory_pool()
+        if self._tdb.is_empty():
+            self._tdb.init_pool()
 
     def nTraj(self) -> int:
         """Return the number of trajectory used for TAMS.
@@ -166,21 +161,6 @@ class TAMS:
         return self.remaining_walltime() < 0.05 * self._wallTime
 
 
-    def init_trajectory_pool(self) -> None:
-        """Initialize the trajectory pool.
-
-        Append the requested number of trajectories to the database.
-        Trajectories are initialized but not advanced.
-        """
-        for n in range(self._tdb.nTraj()):
-            T = Trajectory(
-                    fmodel_t=self._fmodel_t,
-                    parameters=self._parameters,
-                    trajId=n,
-                )
-            T.setCheckFile(f"./{self._tdb.name()}/trajectories/{T.idstr()}.xml")
-            self._tdb.appendTraj(T)
-
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories.
 
@@ -200,11 +180,10 @@ class TAMS:
         with get_runner_type(self._parameters)(self._parameters,
                                                pool_worker,
                                                self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
-            for T in self._tdb.trajList():
+            for T in self._tdb.traj_list():
                 task = [T,
                         self._endDate,
-                        self._tdb.save(),
-                        self._tdb.name()]
+                        self._tdb.path()]
                 runner.make_promise(task)
 
             try:
@@ -217,7 +196,7 @@ class TAMS:
         # Re-order list since runner does not guarantee order
         # And update list of trajectories in the database
         t_list.sort(key=lambda t: t.id())
-        self._tdb.updateTrajList(t_list)
+        self._tdb.update_traj_list(t_list)
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -241,10 +220,10 @@ class TAMS:
         # Gather max score from all trajectories
         # and check for early convergence
         allConverged = True
-        maxes = np.zeros(self._tdb.trajListLen())
-        for i in range(self._tdb.trajListLen()):
-            maxes[i] = self._tdb.getTraj(i).scoreMax()
-            allConverged = allConverged and self._tdb.getTraj(i).isConverged()
+        maxes = np.zeros(self._tdb.traj_list_len())
+        for i in range(self._tdb.traj_list_len()):
+            maxes[i] = self._tdb.get_traj(i).scoreMax()
+            allConverged = allConverged and self._tdb.get_traj(i).isConverged()
 
         # Exit if our work is done
         if allConverged:
@@ -256,7 +235,7 @@ class TAMS:
         if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
             err_msg = f"Splitting is stalling with all trajectories stuck at a score_max: {np.amax(maxes)}"
             _logger.error(err_msg)
-            raise TAMSError(err_msg)
+            raise RuntimeError(err_msg)
 
         return False, maxes
 
@@ -278,13 +257,13 @@ class TAMS:
                                                    pool_worker,
                                                    self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
                 for i in ongoing_list:
-                    T = self._tdb.getTraj(i)
-                    task = [T, self._endDate, self._tdb.save(), self._tdb.name()]
+                    T = self._tdb.get_traj(i)
+                    task = [T, self._endDate, self._tdb.path()]
                     runner.make_promise(task)
                 finished_traj = runner.execute_promises()
 
                 for T in finished_traj:
-                    self._tdb.overwriteTraj(T.id(), T)
+                    self._tdb.overwrite_traj(T.id(), T)
 
                 # Clear list of ongoing branches
                 self._tdb.reset_ongoing()
@@ -292,7 +271,7 @@ class TAMS:
                 # Increment splitting index
                 k = self._tdb.kSplit() + runner.n_workers()
                 self._tdb.setKSplit(k)
-                self._tdb.saveSplittingData()
+                self._tdb.save_splitting_data()
 
 
     def get_restart_at_random(self,
@@ -318,7 +297,7 @@ class TAMS:
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
             while rest_idx[i] in min_idx_list:
-                rest_idx[i] = rng.integers(0, self._tdb.trajListLen())
+                rest_idx[i] = rng.integers(0, self._tdb.traj_list_len())
         return rest_idx
 
 
@@ -363,7 +342,7 @@ class TAMS:
                 # Plot trajectory database scores
                 if self._plot_diags:
                     pltfile = f"Score_k{k:05}.png"
-                    self._tdb.plotScoreFunctions(pltfile)
+                    self._tdb.plot_score_functions(pltfile)
 
                 # Get the nworker lower scored trajectories
                 # or more if equal score
@@ -372,34 +351,33 @@ class TAMS:
                 # Randomly select trajectory to branch from
                 rest_idx = self.get_restart_at_random(min_idx_list)
 
-                self._tdb.appendBias(len(min_idx_list))
-                self._tdb.appendWeight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._tdb.nTraj()))
+                self._tdb.append_bias(len(min_idx_list))
+                self._tdb.append_weight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._tdb.nTraj()))
 
                 # Assemble a list of promises
                 for i in range(len(min_idx_list)):
-                    task = [self._tdb.getTraj(rest_idx[i]),
-                            self._tdb.getTraj(min_idx_list[i]).id(),
+                    task = [self._tdb.get_traj(rest_idx[i]),
+                            self._tdb.get_traj(min_idx_list[i]),
                             min_vals[i],
                             self._endDate,
-                            self._tdb.save(),
-                            self._tdb.name()]
+                            self._tdb.path()]
                     runner.make_promise(task)
                 restartedTrajs = runner.execute_promises()
 
                 # Update the trajectory database
                 for T in restartedTrajs:
-                    self._tdb.overwriteTraj(T.id(), T)
+                    self._tdb.overwrite_traj(T.id(), T)
 
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
-                    self._tdb.saveSplittingData(min_idx_list)
+                    self._tdb.save_splitting_data(min_idx_list)
 
                 else:
                     # Update the trajectory database, increment splitting index
                     k = k + runner.n_workers()
                     self._tdb.setKSplit(k)
-                    self._tdb.saveSplittingData()
+                    self._tdb.save_splitting_data()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -420,7 +398,7 @@ class TAMS:
 
         # Check for early convergence
         allConverged = True
-        for T in self._tdb.trajList():
+        for T in self._tdb.traj_list():
             if not T.isConverged():
                 allConverged = False
                 break
@@ -441,7 +419,8 @@ class TAMS:
             return -1.0
 
         # Perform multilevel splitting
-        self.do_multilevel_splitting()
+        if not allConverged:
+            self.do_multilevel_splitting()
 
         if self.out_of_time():
             warn_msg = "Ran out of walltime ! Exiting now."
@@ -454,7 +433,7 @@ class TAMS:
 
         # Compute how many traj. converged
         successCount = 0
-        for T in self._tdb.trajList():
+        for T in self._tdb.traj_list():
             if T.isConverged():
                 successCount += 1
 

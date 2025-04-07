@@ -18,9 +18,9 @@ def test_run_pool_worker():
     parameters = {"trajectory" : {"end_time": 0.01,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=10.0)
-    t_test = pool_worker(t_test, enddate, False, "testDB")
+    t_test = pool_worker(t_test, enddate)
     assert isclose(t_test.scoreMax(), 0.1, abs_tol=1e-9)
     assert t_test.isConverged() is False
 
@@ -33,9 +33,9 @@ def test_run_pool_worker_outoftime(caplog : pytest.LogCaptureFixture):
                   "tams": {"loglevel": "DEBUG"},
                   "model": {"slow_factor": 0.003}}
     setup_logger(parameters)
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=0.1)
-    _ = pool_worker(t_test, enddate, False, "testDB")
+    _ = pool_worker(t_test, enddate)
     assert "advance ran out of time" in caplog.text
 
 def test_run_pool_worker_advanceerror():
@@ -47,9 +47,9 @@ def test_run_pool_worker_advanceerror():
                   "tams": {"loglevel": "DEBUG"}}
     setup_logger(parameters)
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=1.0)
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     with pytest.raises(RuntimeError):
-        _ = pool_worker(t_test, enddate, False, "testDB")
+        _ = pool_worker(t_test, enddate)
 
 def test_run_ms_worker():
     """Branch and advance trajectory through ms_worker."""
@@ -58,12 +58,12 @@ def test_run_ms_worker():
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=10.0)
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     t_test.advance()
+    rst_test = Trajectory(2, fmodel, parameters)
     b_test = ms_worker(t_test,
-                       2, 0.049,
-                       enddate,
-                       False, "testDB")
+                       rst_test, 0.049,
+                       enddate)
     assert b_test.id() == 2
     assert isclose(b_test.scoreMax(), 0.1, abs_tol=1e-9)
     assert b_test.isConverged() is False
@@ -77,13 +77,13 @@ def test_run_ms_worker_outoftime(caplog : pytest.LogCaptureFixture):
                   "tams": {"loglevel": "DEBUG"},
                   "model": {"slow_factor": 0.003}}
     setup_logger(parameters)
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     t_test.advance()
+    rst_test = Trajectory(2, fmodel, parameters)
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=0.1)
     _ = ms_worker(t_test,
-                  2, 0.1,
-                  enddate,
-                  False, "testDB")
+                  rst_test, 0.1,
+                  enddate)
     assert "advance ran out of time" in caplog.text
 
 def test_run_ms_worker_advanceerror():
@@ -95,10 +95,10 @@ def test_run_ms_worker_advanceerror():
                   "tams": {"loglevel": "DEBUG"}}
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=1.0)
     setup_logger(parameters)
-    t_test = Trajectory(fmodel, parameters, 1)
+    t_test = Trajectory(1, fmodel, parameters)
     t_test.advance(0.01)
+    rst_test = Trajectory(5, fmodel, parameters)
     with pytest.raises(RuntimeError):
         _ = ms_worker(t_test,
-                      5, 0.04,
-                      enddate,
-                      False, "testDB")
+                      rst_test, 0.04,
+                      enddate)

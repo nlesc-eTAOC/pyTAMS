@@ -4,6 +4,7 @@ import os
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import Optional
 import numpy as np
@@ -66,15 +67,17 @@ class Trajectory:
     """
 
     def __init__(self,
+                 trajId: int,
                  fmodel_t: Any,
                  parameters: dict,
-                 trajId: int) -> None:
+                 workdir: os.PathLike | None = None) -> None:
         """Create a trajectory.
 
         Args:
+            trajId: a int for the trajectory index
             fmodel_t: the forward model type
             parameters: a dictionary of input parameters
-            trajId: a int for the trajectory index
+            workdir: the working directory
         """
         # Stash away the full parameters dict
         self._parameters_full : dict = parameters
@@ -104,17 +107,32 @@ class Trajectory:
         self._score_max : float = 0.0
 
         self._tid : int = trajId
-        self._checkFile : str = f"{self.idstr()}.xml"
+        self._checkFile : os.PathLike = Path(f"{self.idstr()}.xml")
+        self._workdir : os.PathLike = Path(".") if workdir is None else workdir
 
         self._has_ended : bool = False
         self._has_converged : bool = False
 
         # Each trajectory have its own instance of the model
-        self._fmodel = fmodel_t(parameters, self.idstr())
+        self._fmodel = fmodel_t(parameters,
+                                self.idstr(),
+                                self._workdir)
 
-    def setCheckFile(self, file: str) -> None:
+    def setCheckFile(self, path: os.PathLike) -> None:
         """Setter of the trajectory checkFile."""
-        self._checkFile = file
+        self._checkFile = path
+
+    def setWorkDir(self, path: os.PathLike) -> None:
+        """Setter of the trajectory working directory.
+
+        And propagate the workdir to the forward model.
+        """
+        self._workdir = path
+        self._fmodel.setWorkDir(path)
+
+    def workDir(self) -> os.PathLike:
+        """Get the trajectory working directory."""
+        return self._workdir
 
     def id(self) -> int:
         """Return trajectory Id."""
@@ -226,20 +244,25 @@ class Trajectory:
     @classmethod
     def restoreFromChk(
         cls,
-        chkPoint: str,
+        chkPoint: os.PathLike,
         fmodel_t: Any,
         parameters: dict,
+        workdir: os.PathLike | None = None,
     ) -> Trajectory:
         """Return a trajectory restored from an XML chkfile."""
-        assert os.path.exists(chkPoint) is True
+        assert Path(chkPoint).exists() is True
 
         # Read in trajectory metadata
-        tree = ET.parse(chkPoint)
+        tree = ET.parse(chkPoint.absolute())
         root = tree.getroot()
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
+        restTraj = Trajectory(trajId=t_id,
+                              fmodel_t=fmodel_t,
+                              parameters=parameters,
+                              workdir = workdir,
+                              )
 
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
@@ -281,8 +304,8 @@ class Trajectory:
     @classmethod
     def restartFromTraj(
         cls,
-        traj: Trajectory,
-        rstId: int,
+        from_traj: Trajectory,
+        rst_traj: Trajectory,
         score: float,
     ) -> Trajectory:
         """Create a new trajectory.
@@ -291,17 +314,19 @@ class Trajectory:
         for all entries with score below a given score
 
         Args:
-            traj: an already existing trajectory to restart from
-            rstId: the id of the trajectory being restarted
+            from_traj: an already existing trajectory to restart from
+            rst_traj: the trajectory being restarted
             score: a threshold score
         """
         # Check for empty trajectory
-        if len(traj._snaps) == 0:
+        if len(from_traj._snaps) == 0:
             restTraj = Trajectory(
-                fmodel_t=type(traj._fmodel),
-                parameters=traj._parameters_full,
-                trajId=rstId,
+                trajId=rst_traj.id(),
+                fmodel_t=type(from_traj._fmodel),
+                parameters=from_traj._parameters_full,
+                workdir=rst_traj.workDir(),
             )
+            restTraj.setCheckFile(rst_traj.checkFile())
             return restTraj
 
         # To ensure that TAMS converges, branching occurs on
@@ -310,23 +335,27 @@ class Trajectory:
         # the target is encountered
         high_score_idx = 0
         last_snap_with_state = 0
-        while traj._snaps[high_score_idx].score <= score:
+        while from_traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
-            if (traj._snaps[high_score_idx].hasState()):
+            if (from_traj._snaps[high_score_idx].hasState()):
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
         restTraj = Trajectory(
-            fmodel_t=type(traj._fmodel), parameters=traj._parameters_full, trajId=rstId
+            trajId=rst_traj.id(),
+            fmodel_t=type(from_traj._fmodel),
+            parameters=from_traj._parameters_full,
+            workdir=rst_traj.workDir(),
         )
+        restTraj.setCheckFile(rst_traj.checkFile())
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
             if (k <= last_snap_with_state):
-                restTraj._snaps.append(traj._snaps[k])
+                restTraj._snaps.append(from_traj._snaps[k])
             else:
-                restTraj._noise_backlog.append(traj._snaps[k].noise)
+                restTraj._noise_backlog.append(from_traj._snaps[k].noise)
 
         # Update trajectory metadata
         restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
@@ -339,7 +368,7 @@ class Trajectory:
 
         return restTraj
 
-    def store(self, traj_file: Optional[str] = None) -> None:
+    def store(self, traj_file: Optional[os.PathLike] = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
@@ -363,9 +392,9 @@ class Trajectory:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
         if traj_file is not None:
-            tree.write(traj_file)
+            tree.write(traj_file.absolute())
         else:
-            tree.write(self._checkFile)
+            tree.write(self._checkFile.absolute())
 
     def updateMetadata(self) -> None:
         """Update trajectory score/ending metadata."""
@@ -403,7 +432,7 @@ class Trajectory:
         """Return True if computation has started."""
         return self._t_cur > 0.0
 
-    def checkFile(self) -> str:
+    def checkFile(self) -> os.PathLike:
         """Return the trajectory check file name."""
         return self._checkFile
 
