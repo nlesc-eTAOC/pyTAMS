@@ -115,8 +115,9 @@ def test_doublewellModelTAMS():
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
                    "runner": {"type" : "dask"},
+                   "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
@@ -129,8 +130,9 @@ def test_doublewellModelSaveTAMS():
         toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 100, "walltime": 500.0},
                    "runner": {"type" : "dask"},
                    "database": {"path": "dwTest.tdb"},
+                   "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.3, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.3}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
@@ -145,8 +147,9 @@ def test_doublewellDeterministicModelTAMS():
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400,
                             "walltime": 500.0, "deterministic": True},
                    "runner": {"type" : "asyncio"},
+                   "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.8, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba == 0.39663733322475747
@@ -161,9 +164,10 @@ def test_doublewellModel2WorkersTAMS():
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400,
                             "walltime": 500.0, "deterministic": True},
                    "runner": {"type" : "dask", "nworker_init": 2, "nworker_iter": 2},
+                   "model": {"noise_amplitude" : 0.8},
                    "database": {"path": "dwTest.tdb"},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.6}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba == 0.5238831403348925
@@ -178,8 +182,9 @@ def test_doublewellModel2WorkersRestoreTAMS():
         toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 2},
+                   "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.6, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.6}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
@@ -195,8 +200,8 @@ def test_doublewellVerySlowTAMS():
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "dask", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.1},
-                   "model": {"slow_factor": 0.2}}
+                                  "targetscore": 0.7},
+                   "model": {"slow_factor": 0.2, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -213,8 +218,8 @@ def test_doublewellSlowTAMS():
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.1},
-                   "model": {"slow_factor": 0.003}}
+                                  "targetscore": 0.7},
+                   "model": {"slow_factor": 0.003, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -230,8 +235,8 @@ def test_doublewellSlowRestoreTAMS():
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.7, "stoichforcing" : 0.1},
-                   "model": {"slow_factor": 0.003}}
+                                  "targetscore": 0.7},
+                   "model": {"slow_factor": 0.003, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()

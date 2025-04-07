@@ -396,7 +396,7 @@ class Database:
             if trajChkFile.exists():
                 nTrajRestored += 1
                 self.append_traj(
-                    Trajectory.restoreFromChk(
+                    Trajectory.restore_from_checkfile(
                         trajChkFile,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
@@ -451,7 +451,7 @@ class Database:
         if self._save:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
-            a_traj.setCheckFile(checkfile)
+            a_traj.set_checkfile(checkfile)
             if update_db:
                 self._pool_db.add_trajectory(checkfile_str)
 
@@ -619,7 +619,7 @@ class Database:
         """Return the number of trajectories that ended."""
         count = 0
         for T in self._trajs_db:
-            if T.hasEnded():
+            if T.has_ended():
                 count = count + 1
         return count
 
@@ -627,7 +627,7 @@ class Database:
         """Return the number of trajectories that converged."""
         count = 0
         for T in self._trajs_db:
-            if T.isConverged():
+            if T.is_converged():
                 count = count + 1
         return count
 
@@ -675,7 +675,7 @@ class Database:
 
         plt.figure(figsize=(10, 6))
         for T in self._trajs_db:
-            plt.plot(T.getTimeArr(), T.getScoreArr(), linewidth=0.8)
+            plt.plot(T.get_time_array(), T.get_score_array(), linewidth=0.8)
 
         plt.xlabel(r'$Time$', fontsize="x-large")
         plt.xlim(left=0.0)
