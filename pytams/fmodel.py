@@ -1,6 +1,8 @@
 """A base class for the stochastic forward model."""
+import os
 from abc import ABCMeta
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any
 from typing import Optional
 from typing import final
@@ -33,12 +35,14 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         _noise: the noise to be used in the next model step
         _step: the current stochastic step counter
         _time: the current stochastic time
+        _workdir: the working directory
     """
 
     @final
     def __init__(self,
                  params: dict,
-                 ioprefix: Optional[str] = None):
+                 ioprefix: Optional[str] = None,
+                 workdir: Optional[os.PathLike] = None):
         """Base class __init__ method.
 
         The ABC init method calls the concrete class init method
@@ -51,14 +55,16 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         is made to ensure the proper type is generated.
 
         Args:
-            params: an optional dict containing parameters
+            params: a dict containing parameters
             ioprefix: an optional string defining run folder
+            workdir: an optional path to the working directory
         """
         # Initialize common tooling
         self._prescribed_noise : bool = False
         self._noise : Any = None
         self._step : int = 0
         self._time : float = 0.0
+        self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
 
         # Add the deterministic parameter to the model dictionary
         # for clarity
@@ -131,6 +137,15 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     def clear(self) -> None:
         """Destroy internal data."""
         self._clear_model()
+
+    @final
+    def setWorkDir(self, workdir : os.PathLike) -> None:
+        """Setter of the model working directory.
+
+        Args:
+            workdir: the new working directory
+        """
+        self._workdir = workdir
 
     @abstractmethod
     def _init_model(self,
