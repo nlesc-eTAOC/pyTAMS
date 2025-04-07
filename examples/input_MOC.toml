@@ -1,23 +1,23 @@
 [tams]
 ntrajectories = 100
 nsplititer = 1000
-loglevel = "WARNING"
+loglevel = "INFO"
 
 
 [trajectory]
 end_time = 3153600000
 step_size = 86400
 targetscore = 1.00
+sparse_freq = 10
 stoichforcing = 0
 
 [model]
 test_param = "toto"
 
-[dask]
-nworker_init=6
+[runner]
+type = "asyncio"
+nworker_init=2
 nworker_iter=2
 
 [database]
-DB_save = false
-DB_prefix = "DW_3DTest"
-#DB_restart = "DW_3DTest.tdb"
+path = "MOCTest.tdb"
