@@ -18,6 +18,7 @@ import numpy as np
 import toml
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
+from pytams.trajectory import formTrajID
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -310,6 +311,17 @@ class Database:
                 _logger.error(err_msg)
                 raise DatabaseError(err_msg)
 
+    def init_pool(self) -> None:
+        """Initialize the requested number of trajectories."""
+        for n in range(self._ntraj):
+            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}") if self._save else None
+            T = Trajectory(
+                trajId=n,
+                fmodel_t=self._fmodel_t,
+                parameters=self._parameters,
+                workdir=workdir,
+            )
+            self.append_traj(T, True)
 
     def save_trajectory(self, traj: Trajectory) -> None:
         """Save a trajectory to disk in the database.
@@ -380,26 +392,26 @@ class Database:
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
             trajChkFile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
+            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}")
             if trajChkFile.exists():
                 nTrajRestored += 1
-                self._trajs_db.append(
+                self.append_traj(
                     Trajectory.restoreFromChk(
                         trajChkFile,
                         fmodel_t=self._fmodel_t,
-                        parameters=self._parameters
-                    )
+                        parameters=self._parameters,
+                        workdir=workdir,
+                    ),
+                    False,
                 )
-                #self._trajs_db[-1].setCheckFile(trajChkFile.relative_to(self._abs_path))
-                self._trajs_db[-1].setCheckFile(trajChkFile)
             else:
                 T = Trajectory(
+                    trajId=n,
                     fmodel_t=self._fmodel_t,
                     parameters=self._parameters,
-                    trajId=n,
+                    workdir=workdir,
                 )
-                #T.setCheckFile(trajChkFile.relative_to(self._abs_path))
-                T.setCheckFile(trajChkFile)
-                self._trajs_db.append(T)
+                self.append_traj(T, False)
 
         inf_msg = f"{nTrajRestored} trajectories loaded"
         _logger.info(inf_msg)
@@ -425,11 +437,14 @@ class Database:
         """
         return self._save
 
-    def append_traj(self, a_traj: Trajectory) -> None:
+    def append_traj(self,
+                    a_traj: Trajectory,
+                    update_db: bool) -> None:
         """Append a Trajectory to the internal list.
 
         Args:
             a_traj: the trajectory
+            update_db: True to update the SQL DB content
         """
         # Also adds it to the SQL pool file.
         # and set the checkfile
@@ -437,7 +452,8 @@ class Database:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.setCheckFile(checkfile)
-            self._pool_db.add_trajectory(checkfile_str)
+            if update_db:
+                self._pool_db.add_trajectory(checkfile_str)
 
         self._trajs_db.append(a_traj)
 

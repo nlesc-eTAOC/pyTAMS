@@ -9,18 +9,12 @@ import numpy as np
 import toml
 from pytams.database import Database
 from pytams.taskrunner import get_runner_type
-from pytams.trajectory import Trajectory
 from pytams.utils import get_min_scored
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker
 from pytams.worker import pool_worker
 
 _logger = logging.getLogger(__name__)
-
-class TAMSError(Exception):
-    """Exception class for TAMS."""
-
-    pass
 
 def parse_cl_args(a_args: Optional[list[str]] = None) -> argparse.Namespace :
     """Parse provided list or default CL argv.
@@ -71,14 +65,14 @@ class TAMS:
     def __init__(self,
                  fmodel_t : Any,
                  a_args: Optional[list[str]] = None) -> None:
-        """Initialize a TAMS run.
+        """Initialize a TAMS object.
 
         Args:
             fmodel_t: the forward model type
             a_args: optional list of options
 
         Raises:
-            TAMSError: if the input file is not found
+            ValueError: if the input file is not found
         """
         self._fmodel_t = fmodel_t
 
@@ -86,7 +80,7 @@ class TAMS:
         if (not os.path.exists(input_file)):
             err_msg = f"Could not find the {input_file} TAMS input file !"
             _logger.error(err_msg)
-            raise TAMSError(err_msg)
+            raise ValueError(err_msg)
 
         with open(input_file, 'r') as f:
             self._parameters = toml.load(f)
@@ -122,7 +116,7 @@ class TAMS:
 
         # Initialize trajectory pool
         if self._tdb.is_empty():
-            self.init_trajectory_pool()
+            self._tdb.init_pool()
 
     def nTraj(self) -> int:
         """Return the number of trajectory used for TAMS.
@@ -166,20 +160,6 @@ class TAMS:
         """
         return self.remaining_walltime() < 0.05 * self._wallTime
 
-
-    def init_trajectory_pool(self) -> None:
-        """Initialize the trajectory pool.
-
-        Append the requested number of trajectories to the database.
-        Trajectories are initialized but not advanced.
-        """
-        for n in range(self._tdb.nTraj()):
-            T = Trajectory(
-                    fmodel_t=self._fmodel_t,
-                    parameters=self._parameters,
-                    trajId=n,
-                )
-            self._tdb.append_traj(T)
 
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories.
@@ -255,7 +235,7 @@ class TAMS:
         if (np.amax(maxes) - np.amin(maxes)) < 1e-10:
             err_msg = f"Splitting is stalling with all trajectories stuck at a score_max: {np.amax(maxes)}"
             _logger.error(err_msg)
-            raise TAMSError(err_msg)
+            raise RuntimeError(err_msg)
 
         return False, maxes
 
@@ -377,7 +357,7 @@ class TAMS:
                 # Assemble a list of promises
                 for i in range(len(min_idx_list)):
                     task = [self._tdb.get_traj(rest_idx[i]),
-                            self._tdb.get_traj(min_idx_list[i]).id(),
+                            self._tdb.get_traj(min_idx_list[i]),
                             min_vals[i],
                             self._endDate,
                             self._tdb.path()]
