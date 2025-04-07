@@ -39,7 +39,7 @@ def traj_advance_with_exception(traj: Trajectory,
 
     finally:
         if a_db:
-            a_db.unlock_trajectory(traj.id(), traj.hasEnded())
+            a_db.unlock_trajectory(traj.id(), traj.has_ended())
             a_db.save_trajectory(traj)
 
     return traj
@@ -60,7 +60,7 @@ def pool_worker(traj: Trajectory,
     # Get wall time
     wall_time = (endDate - datetime.datetime.utcnow()).total_seconds()
 
-    if wall_time > 0.0 and not traj.hasEnded():
+    if wall_time > 0.0 and not traj.has_ended():
         db = None
         if db_path:
             db = Database.load(Path(db_path))
@@ -111,11 +111,11 @@ def ms_worker(
         inf_msg = f"Restarting [{rstTraj.id()}] from {fromTraj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.restartFromTraj(fromTraj, rstTraj, min_val)
+        traj = Trajectory.branch_from_trajectory(fromTraj, rstTraj, min_val)
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.restartFromTraj(fromTraj, rstTraj, min_val)
+    return Trajectory.branch_from_trajectory(fromTraj, rstTraj, min_val)
 
 async def worker_async(
     queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],

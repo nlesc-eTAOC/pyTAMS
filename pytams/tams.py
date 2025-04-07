@@ -222,8 +222,8 @@ class TAMS:
         allConverged = True
         maxes = np.zeros(self._tdb.traj_list_len())
         for i in range(self._tdb.traj_list_len()):
-            maxes[i] = self._tdb.get_traj(i).scoreMax()
-            allConverged = allConverged and self._tdb.get_traj(i).isConverged()
+            maxes[i] = self._tdb.get_traj(i).score_max()
+            allConverged = allConverged and self._tdb.get_traj(i).is_converged()
 
         # Exit if our work is done
         if allConverged:
@@ -399,7 +399,7 @@ class TAMS:
         # Check for early convergence
         allConverged = True
         for T in self._tdb.traj_list():
-            if not T.isConverged():
+            if not T.is_converged():
                 allConverged = False
                 break
 
@@ -434,7 +434,7 @@ class TAMS:
         # Compute how many traj. converged
         successCount = 0
         for T in self._tdb.traj_list():
-            if T.isConverged():
+            if T.is_converged():
                 successCount += 1
 
         trans_prob = successCount * self._tdb.weights()[-1] / W

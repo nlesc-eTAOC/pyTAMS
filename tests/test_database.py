@@ -80,8 +80,9 @@ def test_generateAndLoadTDB():
         toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0, "loglevel": "DEBUG"},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 2},
+                   "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.2, "stoichforcing" : 0.8}}, f)
+                                  "targetscore": 0.2}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     tams.compute_probability()
 
@@ -154,9 +155,9 @@ def test_accessTrajDataInDB():
     tdb.load_data()
 
     traj = tdb.get_traj(0)
-    times = traj.getTimeArr()
-    scores = traj.getScoreArr()
-    noises = traj.getNoiseArr()
+    times = traj.get_time_array()
+    scores = traj.get_score_array()
+    noises = traj.get_noise_array()
     assert times.size > 0
     assert scores.size > 0
     assert noises.size > 0

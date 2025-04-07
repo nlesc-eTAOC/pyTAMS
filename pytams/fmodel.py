@@ -67,7 +67,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
 
         # Add the deterministic parameter to the model dictionary
-        # for clarity
+        # for consistency
         if params.get("model", None):
             params["model"]["deterministic"] = params.get("tams", {}).get("deterministic", False)
         else:
@@ -82,8 +82,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
     @final
     def advance(self,
-                dt: float,
-                forcingAmpl: float) -> float:
+                dt: float) -> float:
         """Base class advance function of the model.
 
         This is the advance function called by TAMS internals. It
@@ -93,7 +92,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         Args:
             dt: the time step size over which to advance
-            forcingAmpl: stochastic multiplicator
 
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
@@ -108,8 +106,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             actual_dt = self._advance(self._step,
                                       self._time,
                                       dt,
-                                      self._noise,
-                                      forcingAmpl)
+                                      self._noise)
             # Update internal counter. Note that actual_dt may differ
             # from requested dt in some occasions.
             self._step = self._step + 1
@@ -164,8 +161,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Concrete class advance function.
 
         This is the model-specific advance function.
@@ -175,7 +171,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             time: the starting time of the advance call
             dt: the time step size over which to advance
             noise: the noise to be used in the model step
-            forcingAmpl: stochastic multiplicator
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """

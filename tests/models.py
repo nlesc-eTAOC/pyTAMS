@@ -22,8 +22,7 @@ class SimpleFModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Override the template."""
         self._state = self._state + dt
         return dt
@@ -67,8 +66,7 @@ class FailingFModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Override the template."""
         if self.score() > 0.5:
             raise RuntimeError("Failing model")
@@ -116,7 +114,9 @@ class DoubleWellModel(ForwardModelBaseClass):
                     ioprefix: Optional[str] = None):
         """Override the template."""
         self._state = self.initCondition()
+        print(params.get("model"))
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
+        self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
         if params["model"]["deterministic"]:
             seed = int(ioprefix[4:])
             self._rng = np.random.default_rng(seed)
@@ -141,11 +141,10 @@ class DoubleWellModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Override the template."""
         self._state = (
-            self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt, noise)
+            self._state + dt * self.__RHS(self._state) + self._noise_amplitude * self.__dW(dt, noise)
         )
         return dt
 
