@@ -79,7 +79,7 @@ def pool_worker(traj: Trajectory,
 
 def ms_worker(
     fromTraj: Trajectory,
-    rstId: int,
+    rstTraj: Trajectory,
     min_val: float,
     endDate: datetime,
     db_path: str | None = None,
@@ -88,7 +88,7 @@ def ms_worker(
 
     Args:
         fromTraj: a trajectory to restart from
-        rstId: Id of the trajectory being worked on
+        rstTraj: the trajectory being restarted
         min_val: the value of the score function to restart from
         endDate: the time limit to advance the trajectory
         db_path: a database path or None
@@ -102,20 +102,20 @@ def ms_worker(
             # Fetch a handle to the trajectory we are branching in the database pool
             # Try to lock the trajectory in the DB
             db = Database.load(Path(db_path))
-            get_to_work = db.lock_trajectory(rstId, True)
+            get_to_work = db.lock_trajectory(rstTraj.id(), True)
             if not get_to_work:
-                err_msg = f"Unable to lock trajectory {rstId} for branching"
+                err_msg = f"Unable to lock trajectory {rstTraj.id()} for branching"
                 _logger.error(err_msg)
                 raise RuntimeError(err_msg)
 
-        inf_msg = f"Restarting [{rstId}] from {fromTraj.idstr()} [time left: {wall_time}]"
+        inf_msg = f"Restarting [{rstTraj.id()}] from {fromTraj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+        traj = Trajectory.restartFromTraj(fromTraj, rstTraj, min_val)
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.restartFromTraj(fromTraj, rstId, min_val)
+    return Trajectory.restartFromTraj(fromTraj, rstTraj, min_val)
 
 async def worker_async(
     queue : asyncio.Queue[Tuple[Trajectory, float, bool, str]],
