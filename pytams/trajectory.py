@@ -67,15 +67,17 @@ class Trajectory:
     """
 
     def __init__(self,
+                 trajId: int,
                  fmodel_t: Any,
                  parameters: dict,
-                 trajId: int) -> None:
+                 workdir: os.PathLike | None = None) -> None:
         """Create a trajectory.
 
         Args:
+            trajId: a int for the trajectory index
             fmodel_t: the forward model type
             parameters: a dictionary of input parameters
-            trajId: a int for the trajectory index
+            workdir: the working directory
         """
         # Stash away the full parameters dict
         self._parameters_full : dict = parameters
@@ -106,16 +108,31 @@ class Trajectory:
 
         self._tid : int = trajId
         self._checkFile : os.PathLike = Path(f"{self.idstr()}.xml")
+        self._workdir : os.PathLike = Path(".") if workdir is None else workdir
 
         self._has_ended : bool = False
         self._has_converged : bool = False
 
         # Each trajectory have its own instance of the model
-        self._fmodel = fmodel_t(parameters, self.idstr())
+        self._fmodel = fmodel_t(parameters,
+                                self.idstr(),
+                                self._workdir)
 
     def setCheckFile(self, path: os.PathLike) -> None:
         """Setter of the trajectory checkFile."""
         self._checkFile = path
+
+    def setWorkDir(self, path: os.PathLike) -> None:
+        """Setter of the trajectory working directory.
+
+        And propagate the workdir to the forward model.
+        """
+        self._workdir = path
+        self._fmodel.setWorkDir(path)
+
+    def workDir(self) -> os.PathLike:
+        """Get the trajectory working directory."""
+        return self._workdir
 
     def id(self) -> int:
         """Return trajectory Id."""
@@ -230,6 +247,7 @@ class Trajectory:
         chkPoint: os.PathLike,
         fmodel_t: Any,
         parameters: dict,
+        workdir: os.PathLike | None = None,
     ) -> Trajectory:
         """Return a trajectory restored from an XML chkfile."""
         assert Path(chkPoint).exists() is True
@@ -240,7 +258,11 @@ class Trajectory:
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        restTraj = Trajectory(fmodel_t=fmodel_t, parameters=parameters, trajId=t_id)
+        restTraj = Trajectory(trajId=t_id,
+                              fmodel_t=fmodel_t,
+                              parameters=parameters,
+                              workdir = workdir,
+                              )
 
         restTraj._t_end = metadata["t_end"]
         restTraj._t_cur = metadata["t_cur"]
@@ -282,8 +304,8 @@ class Trajectory:
     @classmethod
     def restartFromTraj(
         cls,
-        traj: Trajectory,
-        rstId: int,
+        from_traj: Trajectory,
+        rst_traj: Trajectory,
         score: float,
     ) -> Trajectory:
         """Create a new trajectory.
@@ -292,18 +314,19 @@ class Trajectory:
         for all entries with score below a given score
 
         Args:
-            traj: an already existing trajectory to restart from
-            rstId: the id of the trajectory being restarted
+            from_traj: an already existing trajectory to restart from
+            rst_traj: the trajectory being restarted
             score: a threshold score
         """
         # Check for empty trajectory
-        if len(traj._snaps) == 0:
+        if len(from_traj._snaps) == 0:
             restTraj = Trajectory(
-                fmodel_t=type(traj._fmodel),
-                parameters=traj._parameters_full,
-                trajId=rstId,
+                trajId=rst_traj.id(),
+                fmodel_t=type(from_traj._fmodel),
+                parameters=from_traj._parameters_full,
+                workdir=rst_traj.workDir(),
             )
-            restTraj.setCheckFile(traj.checkFile().parent / f"/{restTraj.idstr()}.xml")
+            restTraj.setCheckFile(rst_traj.checkFile())
             return restTraj
 
         # To ensure that TAMS converges, branching occurs on
@@ -312,24 +335,27 @@ class Trajectory:
         # the target is encountered
         high_score_idx = 0
         last_snap_with_state = 0
-        while traj._snaps[high_score_idx].score <= score:
+        while from_traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
-            if (traj._snaps[high_score_idx].hasState()):
+            if (from_traj._snaps[high_score_idx].hasState()):
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
         restTraj = Trajectory(
-            fmodel_t=type(traj._fmodel), parameters=traj._parameters_full, trajId=rstId
+            trajId=rst_traj.id(),
+            fmodel_t=type(from_traj._fmodel),
+            parameters=from_traj._parameters_full,
+            workdir=rst_traj.workDir(),
         )
-        restTraj.setCheckFile(traj.checkFile().parent / f"{restTraj.idstr()}.xml")
+        restTraj.setCheckFile(rst_traj.checkFile())
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
             if (k <= last_snap_with_state):
-                restTraj._snaps.append(traj._snaps[k])
+                restTraj._snaps.append(from_traj._snaps[k])
             else:
-                restTraj._noise_backlog.append(traj._snaps[k].noise)
+                restTraj._noise_backlog.append(from_traj._snaps[k].noise)
 
         # Update trajectory metadata
         restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
