@@ -48,7 +48,7 @@ class Database:
 
     Attributes:
         _fmodel_t: the forward model type
-        _save: boolean to trigger saving the database to disk
+        _save_to_disk: boolean to trigger saving the database to disk
         _path: a path to an existing database to restore or a new path
         _restart: a bool to override an existing database
         _parameters: the dictionary of parameters
@@ -82,12 +82,12 @@ class Database:
         self._fmodel_t = fmodel_t
 
         # Metadata
-        self._save = False
+        self._save_to_disk = False
         self._parameters = params
         self._name = "TAMS_" + fmodel_t.name()
         self._path = params.get("database", {}).get("path", None)
         if self._path:
-            self._save = True
+            self._save_to_disk = True
             self._restart = params.get("database", {}).get("restart", False)
             self._format = params.get("database", {}).get("format", "XML")
             if self._format not in ["XML"]:
@@ -188,7 +188,7 @@ class Database:
             nsplititer: [OPT] number of splitting iteration to hold
         """
         # Initialize or load disk-based database metadata
-        if self._save:
+        if self._save_to_disk:
             # Check for an existing database:
             db_exists = self._abs_path.exists()
 
@@ -231,7 +231,7 @@ class Database:
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
-        if self._save:
+        if self._save_to_disk:
             if self._abs_path.exists():
                 rng = np.random.default_rng(12345)
                 copy_exists = True
@@ -288,7 +288,7 @@ class Database:
 
     def _load_metadata(self) -> None:
         """Read the database Metadata from the header."""
-        if self._save:
+        if self._save_to_disk:
             if self._format == "XML":
                 tree = ET.parse(self.header_file())
                 root = tree.getroot()
@@ -317,7 +317,7 @@ class Database:
     def init_pool(self) -> None:
         """Initialize the requested number of trajectories."""
         for n in range(self._ntraj):
-            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}") if self._save else None
+            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}") if self._save_to_disk else None
             T = Trajectory(
                 trajId=n,
                 fmodel_t=self._fmodel_t,
@@ -332,7 +332,7 @@ class Database:
         Args:
             traj: the trajectory to save
         """
-        if not self._save:
+        if not self._save_to_disk:
             return
 
         traj.store()
@@ -344,7 +344,7 @@ class Database:
         Args:
             ongoing_trajs: an optional list of ongoing trajectories
         """
-        if not self._save:
+        if not self._save_to_disk:
             return
 
         # Splitting data file
@@ -393,7 +393,7 @@ class Database:
         Args:
             load_archived_trajectories: whether to load archived trajectories
         """
-        if not self._save:
+        if not self._save_to_disk:
             return
 
         # Counter for number of trajectory loaded
@@ -457,14 +457,6 @@ class Database:
         """
         return self._name
 
-    def save(self) -> bool:
-        """Accessor to DB save bool.
-
-        Return:
-            Save bool
-        """
-        return self._save
-
     def append_traj(self,
                     a_traj: Trajectory,
                     update_db: bool) -> None:
@@ -476,7 +468,7 @@ class Database:
         """
         # Also adds it to the SQL pool file.
         # and set the checkfile
-        if self._save:
+        if self._save_to_disk:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
@@ -564,6 +556,18 @@ class Database:
         """
         return len(self._trajs_db)
 
+    def archived_traj_list_len(self) -> int:
+        """Length of the archived trajectory list.
+
+        Return:
+            Trajectory list length
+        """
+        if not self._store_archive:
+            return 0
+
+        return len(self._archived_trajs_db)
+
+
     def update_traj_list(self,
                          a_trajList: list[Trajectory]) -> None:
         """Overwrite the trajectory list.
@@ -589,7 +593,7 @@ class Database:
 
         # Update the list of archived trajectories in the SQL DB
         # And save the trajectory in the updated checkfile
-        if self._save:
+        if self._save_to_disk:
             # Update the trajectory checkfile with the
             # new name based on the number of branching it went through
             checkfile_str = f"./trajectories/{traj.idstr()}_{traj.get_nbranching():03}.xml"
@@ -609,7 +613,7 @@ class Database:
         Return:
             True if no disk DB and the trajectory was locked
         """
-        if not self._save:
+        if not self._save_to_disk:
             return True
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
@@ -622,7 +626,7 @@ class Database:
             tid: the trajectory id
             hasEnded: True if the trajectory has ended
         """
-        if not self._save:
+        if not self._save_to_disk:
             return
 
         if hasEnded:

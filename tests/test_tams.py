@@ -3,7 +3,9 @@ import os
 import shutil
 import pytest
 import toml
+from pathlib import Path
 from pytams.tams import TAMS
+from pytams.database import Database
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
 
@@ -43,7 +45,6 @@ def test_simpleModelTAMS():
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
 
-
 def test_simpleModelTAMSwithDB():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
@@ -70,7 +71,6 @@ def test_simpleModelTAMSSlurmFail():
     with pytest.raises(Exception):
         tams.compute_probability()
 
-
 def test_simpleModelTwiceTAMS():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
@@ -96,7 +96,6 @@ def test_simpleModelTwiceTAMS():
     assert os.path.exists("test.log")
     os.remove("test.log")
 
-
 def test_stallingSimpleModelTAMS():
     """Test TAMS with simple model and stalled score function."""
     fmodel = SimpleFModel
@@ -107,7 +106,6 @@ def test_stallingSimpleModelTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     with pytest.raises(Exception):
       tams.compute_probability()
-
 
 def test_doublewellModelTAMS():
     """Test TAMS with the doublewell model."""
@@ -121,7 +119,6 @@ def test_doublewellModelTAMS():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
-
 
 def test_doublewellModelSaveTAMS():
     """Test TAMS with the doublewell model."""
@@ -139,7 +136,6 @@ def test_doublewellModelSaveTAMS():
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")
 
-
 def test_doublewellDeterministicModelTAMS():
     """Test TAMS with the doublewell model."""
     fmodel = DoubleWellModel
@@ -155,7 +151,6 @@ def test_doublewellDeterministicModelTAMS():
     assert transition_proba == 0.44304798162617276
     os.remove("input.toml")
 
-
 @pytest.mark.dependency()
 def test_doublewellModel2WorkersTAMS():
     """Test TAMS with the doublewell model using two workers."""
@@ -165,7 +160,7 @@ def test_doublewellModel2WorkersTAMS():
                             "walltime": 500.0, "deterministic": True},
                    "runner": {"type" : "dask", "nworker_init": 2, "nworker_iter": 2},
                    "model": {"noise_amplitude" : 0.8},
-                   "database": {"path": "dwTest.tdb"},
+                   "database": {"path": "dwTest.tdb", "archive_discarded" : True},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.6}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
@@ -173,6 +168,13 @@ def test_doublewellModel2WorkersTAMS():
     assert transition_proba == 0.5238831403348925
     os.remove("input.toml")
 
+@pytest.mark.dependency(depends=["test_doublewellModel2WorkersTAMS"])
+def test_doublewellModel2WorkersLoadDB():
+    """Load the database from previous test."""
+    tdb = Database.load(Path("dwTest.tdb"))
+    tdb.load_data(True)
+    assert tdb.traj_list_len() == 100
+    assert tdb.archived_traj_list_len() == 64
 
 @pytest.mark.dependency(depends=["test_doublewellModel2WorkersTAMS"])
 def test_doublewellModel2WorkersRestoreTAMS():
