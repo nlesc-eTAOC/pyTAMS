@@ -1,5 +1,6 @@
 """A class for the trajectory pool as an SQL file."""
 from __future__ import annotations
+import json
 import logging
 import sqlite3
 
@@ -48,6 +49,16 @@ class SQLFile:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             traj_file TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'idle'
+        )
+        """)
+
+        # Create an archived trajectory table id, file
+        # Note that it might stay empty if the DB is not
+        # requested to archive discarded trajectories
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS archived_trajectories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            traj_file TEXT NOT NULL
         )
         """)
 
@@ -259,12 +270,92 @@ class SQLFile:
             _logger.error(err_msg)
             raise ValueError(err_msg)
 
+    def archive_trajectory(self,
+                           traj_file : str) -> None:
+        """Add a new trajectory to the archive container.
+
+        Args:
+            traj_file : The trajectory file of that trajectory
+        """
+        conn = self._connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO archived_trajectories (traj_file)
+        VALUES (?)
+        """, (traj_file,))
+
+        conn.commit()
+        conn.close()
+
+    def fetch_archived_trajectory(self,
+                                  traj_id : int) -> str | None:
+        """Get the trajectory file of a trajectory in the archive.
+
+        Args:
+            traj_id : The trajectory id
+
+        Return:
+            The trajectory file
+
+        Raises:
+            ValueError if the trajectory with the given id does not exist
+        """
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT traj_file
+        FROM archived_trajectories
+        WHERE id = ?
+        """, (traj_id+1,))
+        traj_data = cursor.fetchone()
+        conn.commit()
+        conn.close()
+
+        if traj_data:
+            return traj_data[0]
+
+        err_msg = f"Trajectory {traj_id} does not exist in archive."
+        _logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    def get_archived_trajectory_count(self) -> int:
+        """Get the number of trajectories in the archive.
+
+        Returns:
+            The number of trajectories
+        """
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT() FROM archived_trajectories")
+        count = cursor.fetchone()[0]
+        conn.commit()
+        conn.close()
+
+        return count
+
     def dump_file_json(self) -> None:
         """Dump the content of the trajectory table to a json file."""
+        db_data = {}
         conn = self._connect()
         cursor = conn.cursor()
         trajs = cursor.execute('SELECT * FROM trajectories').fetchall()
         for t in trajs:
-            print(t[0]-1, t[1], t[2])
+            db_data[t[0]-1] = {
+                "file": t[1],
+                "status": t[2]
+            }
+
+        db_archived_data = {}
+        trajs = cursor.execute('SELECT * FROM archived_trajectories').fetchall()
+        for t in trajs:
+            db_archived_data[t[0]-1] = {
+                "file": t[1]
+            }
         conn.commit()
         conn.close()
+
+        with open("db_data.json", "w") as f:
+            json_string = json.dumps({"trajectories": db_data, "archived_trajectories": db_archived_data},
+                                     default=lambda o: o.__dict__, sort_keys=True, indent=2)
+            f.write(json_string)
