@@ -31,7 +31,7 @@ def test_run_pool_worker_outoftime(caplog : pytest.LogCaptureFixture):
                                   "step_size": 0.01,
                                   "targetscore": 0.75},
                   "tams": {"loglevel": "DEBUG"},
-                  "model": {"slow_factor": 0.003}}
+                  "model": {"slow_factor": 0.03}}
     setup_logger(parameters)
     t_test = Trajectory(1, fmodel, parameters)
     enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=0.1)
