@@ -49,6 +49,7 @@ def test_initParametrizedTraj():
                                   "step_size": 0.01,
                                   "targetscore": 0.25}}
     t_test = Trajectory(1, fmodel, parameters)
+    t_test.set_work_dir(Path("."))
     assert t_test.step_size() == 0.01
 
 
@@ -95,6 +96,27 @@ def test_storeAndRestoreSimpleTraj():
     rst_test.advance()
     assert rst_test.is_converged() is True
     chkFile.unlink()
+
+
+def test_storeAndRestoreFrozenSimpleTraj():
+    """Test store and restoring frozen trajectory with simple model."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.05,
+                                  "step_size": 0.001,
+                                  "targetscore": 0.25}}
+    t_test = Trajectory(1, fmodel, parameters)
+    t_test.advance(0.02)
+    assert isclose(t_test.score_max(), 0.2, abs_tol=1e-9)
+    assert t_test.is_converged() is False
+    chkFile = Path("./test.xml")
+    t_test.store(chkFile)
+    assert chkFile.exists() is True
+    rst_test = Trajectory.restore_from_checkfile(chkFile, fmodel, parameters, frozen=True)
+    assert isclose(rst_test.score_max(), 0.2, abs_tol=1e-9)
+    with pytest.raises(Exception):
+        rst_test.advance()
+    with pytest.raises(Exception):
+        rst_test.one_step()
 
 
 def test_restartSimpleTraj():

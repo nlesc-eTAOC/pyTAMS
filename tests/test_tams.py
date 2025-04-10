@@ -1,11 +1,11 @@
 """Tests for the pytams.tams class."""
 import os
 import shutil
+from pathlib import Path
 import pytest
 import toml
-from pathlib import Path
-from pytams.tams import TAMS
 from pytams.database import Database
+from pytams.tams import TAMS
 from tests.models import DoubleWellModel
 from tests.models import SimpleFModel
 
