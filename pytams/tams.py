@@ -372,6 +372,9 @@ class TAMS:
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
                     self._tdb.save_splitting_data(min_idx_list)
+                    warn_msg = f"Ran out of time after {k} splitting iterations"
+                    _logger.warning(warn_msg)
+                    break
 
                 else:
                     # Update the trajectory database, increment splitting index
