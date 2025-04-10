@@ -34,6 +34,15 @@ def test_add_traj_and_fetch():
     assert traj == "test.xml"
     Path("./test.db").unlink(missing_ok=True)
 
+def test_archive_and_fetch_traj_to_DB():
+    """Archive a trajectory to SQLFile."""
+    poolFile = SQLFile("test.db")
+    poolFile.archive_trajectory("test.xml")
+    assert poolFile.get_archived_trajectory_count() == 1
+    traj = poolFile.fetch_archived_trajectory(0)
+    assert traj == "test.xml"
+    Path("./test.db").unlink(missing_ok=True)
+
 def test_lock_trajectory():
     """Lock a trajectory in the SQLFile."""
     poolFile = SQLFile("test.db")
@@ -76,3 +85,13 @@ def test_release_unknown_trajectory():
     with pytest.raises(ValueError):
         poolFile.release_trajectory(1)
     Path("./test.db").unlink(missing_ok=True)
+
+def test_dump_json():
+    """Dump the content of the DB to a json file."""
+    poolFile = SQLFile("test.db")
+    poolFile.add_trajectory("test.xml")
+    poolFile.archive_trajectory("test_arch.xml")
+    poolFile.dump_file_json()
+    assert Path("./test.json").exists() is True
+    Path("./test.db").unlink(missing_ok=True)
+    Path("./test.json").unlink(missing_ok=True)

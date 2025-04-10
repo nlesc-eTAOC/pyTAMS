@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from pathlib import Path
 
 _logger = logging.getLogger(__name__)
 
@@ -355,7 +356,8 @@ class SQLFile:
         conn.commit()
         conn.close()
 
-        with open("db_data.json", "w") as f:
+        json_file = Path(self._file_name).parent / f"{str(Path(self._file_name).stem)}.json"
+        with open(json_file, "w") as f:
             json_string = json.dumps({"trajectories": db_data, "archived_trajectories": db_archived_data},
                                      default=lambda o: o.__dict__, sort_keys=True, indent=2)
             f.write(json_string)
