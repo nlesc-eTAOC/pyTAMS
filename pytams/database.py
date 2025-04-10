@@ -99,9 +99,12 @@ class Database:
             self._creation_date = datetime.now()
             self._version = version(__package__)
 
-        # Trajectory Pool
+        self._store_archive = params.get("database", {}).get("archive_discarded", False)
+
+        # Trajectory pools
         self._trajs_db : list[Trajectory] = []
         self._pool_db = None
+        self._archived_trajs_db : list[Trajectory] = []
 
         # Splitting data
         self._ksplit = 0
@@ -381,8 +384,15 @@ class Database:
             _logger.error(err_msg)
             raise DatabaseError(err_msg)
 
-    def load_data(self) -> None:
-        """Load data stored into the database."""
+    def load_data(self, load_archived_trajectories: bool = False) -> None:
+        """Load data stored into the database.
+
+        The initialization of the database only populate the metadata
+        but not the full trajectories data.
+
+        Args:
+            load_archived_trajectories: whether to load archived trajectories
+        """
         if not self._save:
             return
 
@@ -418,6 +428,24 @@ class Database:
 
         # Load splitting data
         self._read_splitting_data()
+
+        # Load the archived trajectories if requested.
+        # Those are loaded as 'frozen', i.e. the internal model
+        # is not available and advance function disabled.
+        if load_archived_trajectories:
+            archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
+            for n in range(archived_ntraj_in_db):
+                trajChkFile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+                if trajChkFile.exists():
+                    self._archived_trajs_db.append(
+                        Trajectory.restore_from_checkfile(
+                            trajChkFile,
+                            fmodel_t=self._fmodel_t,
+                            parameters=self._parameters,
+                            workdir=None,
+                            frozen=True,
+                        )
+                    )
 
         self.info()
 
@@ -545,6 +573,30 @@ class Database:
         """
         self._trajs_db = a_trajList
 
+    def archive_trajectory(self,
+                           traj: Trajectory) -> None:
+        """Archive a trajectory about to be discarded.
+
+        Args:
+            traj: the trajectory to archive
+        """
+        if not self._store_archive:
+            return
+
+        # A branched trajectory will be overwritten by the
+        # newly generated one in-place in the _trajs_db list.
+        self._archived_trajs_db.append(traj)
+
+        # Update the list of archived trajectories in the SQL DB
+        # And save the trajectory in the updated checkfile
+        if self._save:
+            # Update the trajectory checkfile with the
+            # new name based on the number of branching it went through
+            checkfile_str = f"./trajectories/{traj.idstr()}_{traj.get_nbranching():03}.xml"
+            checkfile = Path(self._abs_path) / checkfile_str
+            traj.store(checkfile)
+            self._pool_db.archive_trajectory(checkfile_str)
+
     def lock_trajectory(self,
                         tid: int,
                         allow_completed_lock : bool = False) -> bool:
@@ -666,7 +718,8 @@ class Database:
         print(inf_tbl)
 
     def plot_score_functions(self,
-                             fname: Optional[str] = None) -> None:
+                             fname: Optional[str] = None,
+                             plot_archived: bool = False) -> None:
         """Plot the score as function of time for all trajectories."""
         if not fname:
             pltfile = Path(self._name).stem + "_scores.png"
@@ -676,6 +729,10 @@ class Database:
         plt.figure(figsize=(10, 6))
         for T in self._trajs_db:
             plt.plot(T.get_time_array(), T.get_score_array(), linewidth=0.8)
+
+        if plot_archived:
+            for T in self._archived_trajs_db:
+                plt.plot(T.get_time_array(), T.get_score_array(), linewidth=0.8)
 
         plt.xlabel(r'$Time$', fontsize="x-large")
         plt.xlim(left=0.0)
