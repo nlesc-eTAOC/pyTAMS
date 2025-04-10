@@ -233,9 +233,9 @@ class Trajectory:
         end_time = min(t_end, self._t_end)
 
         if not self._fmodel:
-            wrn_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
-            _logger.warning(wrn_msg)
-            return
+            err_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
+            _logger.error(err_msg)
+            raise RuntimeError(err_msg)
 
         # Set the initial snapshot
         # Always add the initial state
@@ -288,9 +288,9 @@ class Trajectory:
         in the forward model if a backlog is available.
         """
         if not self._fmodel:
-            wrn_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
-            _logger.warning(wrn_msg)
-            return
+            err_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
+            _logger.error(err_msg)
+            raise RuntimeError(err_msg)
 
         if self._noise_backlog:
             self._fmodel.setNoise(self._noise_backlog[0])
