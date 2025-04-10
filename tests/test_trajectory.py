@@ -116,7 +116,7 @@ def test_storeAndRestoreFrozenSimpleTraj():
     with pytest.raises(Exception):
         rst_test.advance()
     with pytest.raises(Exception):
-        rst_test.one_step()
+        rst_test._one_step()
 
 
 def test_restartSimpleTraj():
