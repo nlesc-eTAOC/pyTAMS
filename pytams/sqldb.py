@@ -260,16 +260,15 @@ class SQLFile:
         WHERE id = ?
         """, (traj_id+1,))
         traj_data = cursor.fetchone()
+        conn.commit()
+        conn.close()
+
         if traj_data:
-            conn.commit()
-            conn.close()
             return traj_data[0]
-        else:
-            conn.commit()
-            conn.close()
-            err_msg = f"Trajectory {traj_id} does not exist."
-            _logger.error(err_msg)
-            raise ValueError(err_msg)
+
+        err_msg = f"Trajectory {traj_id} does not exist."
+        _logger.error(err_msg)
+        raise ValueError(err_msg)
 
     def archive_trajectory(self,
                            traj_file : str) -> None:
