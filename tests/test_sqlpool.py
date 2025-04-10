@@ -1,9 +1,6 @@
 """Tests for the pytams.sqlpool class."""
-import os
-import shutil
 from pathlib import Path
 import pytest
-import toml
 from pytams.sqldb import SQLFile
 
 
@@ -42,7 +39,7 @@ def test_lock_trajectory():
     poolFile = SQLFile("test.db")
     poolFile.add_trajectory("test.xml")
     status = poolFile.lock_trajectory(0)
-    assert status == True
+    assert status
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_locked_trajectory():
@@ -51,7 +48,7 @@ def test_lock_locked_trajectory():
     poolFile.add_trajectory("test.xml")
     status = poolFile.lock_trajectory(0)
     status = poolFile.lock_trajectory(0)
-    assert status == False
+    assert status is False
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_release_trajectory():
@@ -61,7 +58,7 @@ def test_lock_and_release_trajectory():
     status = poolFile.lock_trajectory(0)
     poolFile.release_trajectory(0)
     status = poolFile.lock_trajectory(0)
-    assert status == True
+    assert status
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_unknown_trajectory():
