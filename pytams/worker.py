@@ -108,6 +108,9 @@ def ms_worker(
                 _logger.error(err_msg)
                 raise RuntimeError(err_msg)
 
+            # Archive the trajectory we are branching
+            db.archive_trajectory(rstTraj)
+
         inf_msg = f"Restarting [{rstTraj.id()}] from {fromTraj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 

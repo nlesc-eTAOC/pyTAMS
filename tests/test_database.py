@@ -32,6 +32,10 @@ def test_wrongFormat():
     with pytest.raises(Exception):
         _ = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
 
+def test_loadMissingDB():
+    """Test failed load database."""
+    with pytest.raises(Exception):
+        _ = Database.load(Path("dwTestNonExistent.tdb"))
 
 def test_initEmptyDBInMemory():
     """Test init database."""
