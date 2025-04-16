@@ -256,6 +256,8 @@ class TAMS:
             with get_runner_type(self._parameters)(self._parameters,
                                                    pool_worker,
                                                    self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
+
+                nBranch = len(ongoing_list)
                 for i in ongoing_list:
                     T = self._tdb.get_traj(i)
                     task = [T, self._endDate, self._tdb.path()]
@@ -269,7 +271,7 @@ class TAMS:
                 self._tdb.reset_ongoing()
 
                 # Increment splitting index
-                k = self._tdb.kSplit() + runner.n_workers()
+                k = self._tdb.kSplit() + nBranch
                 self._tdb.setKSplit(k)
                 self._tdb.save_splitting_data()
 
@@ -350,12 +352,13 @@ class TAMS:
 
                 # Randomly select trajectory to branch from
                 rest_idx = self.get_restart_at_random(min_idx_list)
+                nBranch = len(min_idx_list)
 
-                self._tdb.append_bias(len(min_idx_list))
+                self._tdb.append_bias(nBranch)
                 self._tdb.append_weight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._tdb.nTraj()))
 
                 # Assemble a list of promises
-                for i in range(len(min_idx_list)):
+                for i in range(nBranch):
                     task = [self._tdb.get_traj(rest_idx[i]),
                             self._tdb.get_traj(min_idx_list[i]),
                             min_vals[i],
@@ -378,7 +381,7 @@ class TAMS:
 
                 else:
                     # Update the trajectory database, increment splitting index
-                    k = k + runner.n_workers()
+                    k = k + nBranch
                     self._tdb.setKSplit(k)
                     self._tdb.save_splitting_data()
 
