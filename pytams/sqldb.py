@@ -87,6 +87,7 @@ class SQLFile:
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to add trajectory")
+            raise
         finally:
             session.close()
 
@@ -241,6 +242,18 @@ class SQLFile:
             session.rollback()
             _logger.exception("Failed to fetch trajectory")
             raise
+        finally:
+            session.close()
+
+    def release_all_trajectories(self) -> None:
+        """Release all trajectories in the DB."""
+        session = self._Session()
+        try:
+            session.query(Trajectory).update({"status": "idle"})
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to release all trajectories")
         finally:
             session.close()
 
