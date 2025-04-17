@@ -1,15 +1,38 @@
-"""A class for the trajectory pool as an SQL file."""
+"""A class for the TAMS data as an SQL database using SQLAlchemy."""
 from __future__ import annotations
 import json
 import logging
-import sqlite3
 from pathlib import Path
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
+from sqlalchemy import Text
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 _logger = logging.getLogger(__name__)
 
-valid_statuses = ["locked",      # Currently being worked on
-                  "idle",        # Waiting
-                  "completed"]   # Finished
+Base = declarative_base()
+
+class Trajectory(Base):
+    """A table storing the trajectories."""
+    __tablename__ = 'trajectories'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    traj_file = Column(Text, nullable=False)
+    status = Column(String, default="idle", nullable=False)
+
+class ArchivedTrajectory(Base):
+    """A table storing the archived trajectories."""
+    __tablename__ = 'archived_trajectories'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    traj_file = Column(Text, nullable=False)
+
+
+valid_statuses = ["locked", "idle", "completed"]
 
 class SQLFile:
     """An SQL file.
@@ -24,14 +47,15 @@ class SQLFile:
     Attributes:
         _file_name : The file name
     """
-    def __init__(self,
-                 file_name: str) -> None:
+    def __init__(self, file_name: str) -> None:
         """Initialize the file.
 
         Args:
             file_name : The file name
         """
         self._file_name = file_name
+        self._engine = create_engine(f"sqlite:///{file_name}", echo=False)
+        self._Session = sessionmaker(bind=self._engine)
         self._init_db()
 
     def _init_db(self) -> None:
@@ -40,70 +64,36 @@ class SQLFile:
         Raises:
             RuntimeError : If a connection to the DB could not be acquired
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-
-        # Create the trajectory table
-        # id, file, status
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS trajectories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            traj_file TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'idle'
-        )
-        """)
-
-        # Create an archived trajectory table id, file
-        # Note that it might stay empty if the DB is not
-        # requested to archive discarded trajectories
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS archived_trajectories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            traj_file TEXT NOT NULL
-        )
-        """)
-
-        conn.commit()
-        conn.close()
-
-    def _connect(self) -> sqlite3.Connection:
-        """Create a new SQLite connection.
-
-        Returns:
-            An sqlite3.Connection
-
-        Raises:
-            RuntimeError if no connection can be established
-        """
         try:
-            return sqlite3.connect(self._file_name)
-        except Exception:
-            err_msg = f"Unable to connect to {self._file_name}"
-            _logger.exception(err_msg)
-            raise
+            Base.metadata.create_all(self._engine)
+        except SQLAlchemyError as e:
+            _logger.exception("Failed to initialize DB schema")
+            raise RuntimeError("Database initialization failed") from e
 
-
-    def add_trajectory(self,
-                       traj_file : str) -> None:
+    def add_trajectory(self, traj_file: str) -> None:
         """Add a new trajectory to the DB.
 
         Args:
             traj_file : The trajectory file of that trajectory
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        INSERT INTO trajectories (traj_file)
-        VALUES (?)
-        """, (traj_file,))
-
-        conn.commit()
-        conn.close()
+        session = self._Session()
+        try:
+            new_traj = Trajectory(traj_file=traj_file)
+            session.add(new_traj)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to add trajectory")
+            raise
+        finally:
+            session.close()
 
     def lock_trajectory(self,
-                        traj_id : int,
-                        allow_completed_lock : bool = False) -> bool:
+                        traj_id: int,
+                        allow_completed_lock: bool = False) -> bool:
         """Set the status of a trajectory to "locked" if possible.
 
         Args:
@@ -115,35 +105,31 @@ class SQLFile:
 
         Raises:
             ValueError if the trajectory with the given id does not exist
+            SQLAlchemyError if the DB could not be accessed
         """
-        # Use atomic transaction
-        # Update only if current status allows it
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("BEGIN EXCLUSIVE TRANSACTION")
-        cursor.execute("""
-        SELECT status
-        FROM trajectories
-        WHERE id = ?
-        """, (traj_id+1,))
-        traj_data = cursor.fetchone()
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).with_for_update().one_or_none()
 
-        if traj_data:
-            status = traj_data[0]
-            allowed_status = ["idle", "completed"] if allow_completed_lock else ["idle"]
-            if status in allowed_status:
-                cursor.execute("UPDATE trajectories SET status = ? WHERE id = ?", ("locked", traj_id+1))
-                conn.commit()
-                conn.close()
-                return True
-            else:
-                conn.close()
+            if traj:
+                allowed_status = ["idle", "completed"] if allow_completed_lock else ["idle"]
+                if traj.status in allowed_status:
+                    traj.status = "locked"
+                    session.commit()
+                    return True
                 return False
-        else:
-            conn.close()
-            err_msg = f"Trajectory {traj_id} does not exist"
-            _logger.error(err_msg)
-            raise ValueError(err_msg)
+            else:
+                err_msg = f"Trajectory {traj_id} does not exist"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to lock trajectory")
+            raise
+        finally:
+            session.close()
 
     def mark_trajectory_as_completed(self,
                                      traj_id : int) -> None:
@@ -154,36 +140,30 @@ class SQLFile:
 
         Raises:
             ValueError if the trajectory with the given id does not exist
+            SQLAlchemyError if the DB could not be accessed
         """
-        # Use atomic transaction
-        # Update only if current status allows it
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("BEGIN EXCLUSIVE TRANSACTION")
-        cursor.execute("""
-        SELECT status
-        FROM trajectories
-        WHERE id = ?
-        """, (traj_id+1,))
-        traj_data = cursor.fetchone()
-
-        if traj_data:
-            status = traj_data[0]
-            if status in ["locked"]:
-                cursor.execute("UPDATE trajectories SET status = ? WHERE id = ?", ("completed", traj_id+1))
-                conn.commit()
-                conn.close()
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+            if traj:
+                if traj.status in ["locked"]:
+                    traj.status = "completed"
+                    session.commit()
+                else:
+                    warn_msg = f"Attempting to mark completed Trajectory {traj_id} already in status {traj.status}."
+                    _logger.warning(warn_msg)
             else:
-                warn_msg = f"Attempting to mark completed Trajectory {traj_id} already in status {status}."
-                _logger.warning(warn_msg)
-                conn.commit()
-                conn.close()
-        else:
-            conn.commit()
-            conn.close()
-            err_msg = f"Trajectory {traj_id} does not exist"
-            _logger.error(err_msg)
-            raise ValueError(err_msg)
+                err_msg = f"Trajectory {traj_id} does not exist"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to mark trajectory as completed")
+            raise
+        finally:
+            session.close()
 
     def release_trajectory(self,
                            traj_id : int) -> None:
@@ -195,34 +175,28 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        # Use atomic transaction
-        # Update only if current status allows it
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("BEGIN EXCLUSIVE TRANSACTION")
-        cursor.execute("""
-        SELECT status
-        FROM trajectories
-        WHERE id = ?
-        """, (traj_id+1,))
-        traj_data = cursor.fetchone()
-
-        if traj_data:
-            status = traj_data[0]
-            if status in ["locked"]:
-                cursor.execute("UPDATE trajectories SET status = ? WHERE id = ?", ("idle", traj_id+1))
-                conn.commit()
-                conn.close()
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+            if traj:
+                if traj.status in ["locked"]:
+                    traj.status = "idle"
+                    session.commit()
+                else:
+                    warn_msg = f"Attempting to release Trajectory {traj_id} already in status {traj.status}."
+                    _logger.warning(warn_msg)
             else:
-                warn_msg = f"Attempting to release {status} Trajectory {traj_id}."
-                _logger.warning(warn_msg)
-                conn.close()
-        else:
-            conn.commit()
-            conn.close()
-            err_msg = f"Trajectory {traj_id} does not exist."
-            _logger.error(err_msg)
-            raise ValueError(err_msg)
+                err_msg = f"Trajectory {traj_id} does not exist"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to release trajectory")
+            raise
+        finally:
+            session.close()
 
     def get_trajectory_count(self) -> int:
         """Get the number of trajectories in the DB.
@@ -230,14 +204,15 @@ class SQLFile:
         Returns:
             The number of trajectories
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT() FROM trajectories")
-        count = cursor.fetchone()[0]
-        conn.commit()
-        conn.close()
-
-        return count
+        session = self._Session()
+        try:
+            return session.query(Trajectory).count()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to count the number of trajectories")
+            raise
+        finally:
+            session.close()
 
     def fetch_trajectory(self,
                          traj_id : int) -> str | None:
@@ -252,23 +227,35 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT traj_file
-        FROM trajectories
-        WHERE id = ?
-        """, (traj_id+1,))
-        traj_data = cursor.fetchone()
-        conn.commit()
-        conn.close()
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+            if traj:
+                return traj.traj_file
+            else:
+                err_msg = f"Trajectory {traj_id} does not exist"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to fetch trajectory")
+            raise
+        finally:
+            session.close()
 
-        if traj_data:
-            return traj_data[0]
-
-        err_msg = f"Trajectory {traj_id} does not exist."
-        _logger.error(err_msg)
-        raise ValueError(err_msg)
+    def release_all_trajectories(self) -> None:
+        """Release all trajectories in the DB."""
+        session = self._Session()
+        try:
+            session.query(Trajectory).update({"status": "idle"})
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to release all trajectories")
+        finally:
+            session.close()
 
     def archive_trajectory(self,
                            traj_file : str) -> None:
@@ -277,16 +264,16 @@ class SQLFile:
         Args:
             traj_file : The trajectory file of that trajectory
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        INSERT INTO archived_trajectories (traj_file)
-        VALUES (?)
-        """, (traj_file,))
-
-        conn.commit()
-        conn.close()
+        session = self._Session()
+        try:
+            new_traj = ArchivedTrajectory(traj_file=traj_file)
+            session.add(new_traj)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to archive trajectory")
+        finally:
+            session.close()
 
     def fetch_archived_trajectory(self,
                                   traj_id : int) -> str | None:
@@ -301,23 +288,23 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT traj_file
-        FROM archived_trajectories
-        WHERE id = ?
-        """, (traj_id+1,))
-        traj_data = cursor.fetchone()
-        conn.commit()
-        conn.close()
-
-        if traj_data:
-            return traj_data[0]
-
-        err_msg = f"Trajectory {traj_id} does not exist in archive."
-        _logger.error(err_msg)
-        raise ValueError(err_msg)
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
+            if traj:
+                return traj.traj_file
+            else:
+                err_msg = f"Trajectory {traj_id} does not exist"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to fetch archived trajectory")
+            raise
+        finally:
+            session.close()
 
     def get_archived_trajectory_count(self) -> int:
         """Get the number of trajectories in the archive.
@@ -325,38 +312,34 @@ class SQLFile:
         Returns:
             The number of trajectories
         """
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT() FROM archived_trajectories")
-        count = cursor.fetchone()[0]
-        conn.commit()
-        conn.close()
-
-        return count
+        session = self._Session()
+        try:
+            return session.query(ArchivedTrajectory).count()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to count the number of archived trajectories")
+            raise
+        finally:
+            session.close()
 
     def dump_file_json(self) -> None:
         """Dump the content of the trajectory table to a json file."""
         db_data = {}
-        conn = self._connect()
-        cursor = conn.cursor()
-        trajs = cursor.execute('SELECT * FROM trajectories').fetchall()
-        for t in trajs:
-            db_data[t[0]-1] = {
-                "file": t[1],
-                "status": t[2]
-            }
-
-        db_archived_data = {}
-        trajs = cursor.execute('SELECT * FROM archived_trajectories').fetchall()
-        for t in trajs:
-            db_archived_data[t[0]-1] = {
-                "file": t[1]
-            }
-        conn.commit()
-        conn.close()
+        session = self._Session()
+        try:
+            db_data["trajectories"] = dict([(traj.id-1,
+                                             {"file" : traj.traj_file, "status" : traj.status})
+                                            for traj in session.query(Trajectory).all()])
+            db_data["archived_trajectories"] = dict([(traj.id-1,
+                                                      {"file" : traj.traj_file})
+                                                     for traj in session.query(ArchivedTrajectory).all()])
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to count the number of archived trajectories")
+            raise
+        finally:
+            session.close()
 
         json_file = Path(self._file_name).parent / f"{str(Path(self._file_name).stem)}.json"
-        with open(json_file, "w") as f:
-            json_string = json.dumps({"trajectories": db_data, "archived_trajectories": db_archived_data},
-                                     default=lambda o: o.__dict__, sort_keys=True, indent=2)
-            f.write(json_string)
+        with json_file.open("w") as f:
+            json.dump(db_data, f, indent=2)
