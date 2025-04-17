@@ -15,6 +15,7 @@ from typing import Union
 import cloudpickle
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import toml
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
@@ -110,6 +111,7 @@ class Database:
         self._ksplit = 0
         self._l_bias : list[int] = []
         self._weights : list[float] = [1.0]
+        self._minmax : list[npt.NDArray] = []
         self._ongoing = None
 
         # Initialize only metadata at this point
@@ -355,6 +357,7 @@ class Database:
             root.append(new_element("ksplit", self._ksplit))
             root.append(new_element("bias", np.array(self._l_bias, dtype=int)))
             root.append(new_element("weight", np.array(self._weights, dtype=float)))
+            root.append(new_element("minmax", np.array(self._minmax, dtype=float)))
             if ongoing_trajs:
                 root.append(new_element("ongoing", np.array(ongoing_trajs)))
             tree = ET.ElementTree(root)
@@ -377,6 +380,7 @@ class Database:
             self._ksplit = datafromxml["ksplit"]
             self._l_bias = datafromxml["bias"].tolist()
             self._weights = datafromxml["weight"].tolist()
+            self._minmax = list(np.reshape(datafromxml["minmax"], [3,-1], order="F").T)
             if "ongoing" in datafromxml:
                 self._ongoing = datafromxml["ongoing"].tolist()
         else:
@@ -650,6 +654,13 @@ class Database:
     def append_bias(self, bias: int) -> None:
         """Append a bias to internal list."""
         self._l_bias.append(bias)
+
+    def append_minmax(self,
+                      ksplit: int,
+                      minofmaxes: float,
+                      maxofmaxes: float) -> None:
+        """Append min/max of maxes to internal list."""
+        self._minmax.append(np.array([float(ksplit), minofmaxes, maxofmaxes]))
 
     def kSplit(self) -> int:
         """Splitting iteration counter."""

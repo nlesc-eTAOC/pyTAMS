@@ -336,10 +336,13 @@ class TAMS:
             while k <= self._tdb.nSplitIter():
                 inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
+
                 # Check for early exit conditions
                 early_exit, maxes = self.check_exit_splitting_loop(k)
                 if early_exit:
                     break
+
+                self._tdb.append_minmax(k, np.min(maxes), np.max(maxes))
 
                 # Plot trajectory database scores
                 if self._plot_diags:
@@ -365,7 +368,14 @@ class TAMS:
                             self._endDate,
                             self._tdb.path()]
                     runner.make_promise(task)
-                restartedTrajs = runner.execute_promises()
+
+                try:
+                    restartedTrajs = runner.execute_promises()
+                except Exception:
+                    err_msg = f"Failed to branch {nBranch} trajectories at iteration {k}"
+                    _logger.error(err_msg)
+                    self._tdb.save_splitting_data(min_idx_list)
+                    raise
 
                 # Update the trajectory database
                 for T in restartedTrajs:
