@@ -327,8 +327,13 @@ class Trajectory:
         if score > self._score_max:
             self._score_max = score
 
-        if score >= self._convergedVal:
-            self._has_converged = True
+        # The default ABC method simply check for a score above
+        # the target value, but concrete implementations can override
+        # with mode complex convergence criteria
+        self._has_converged = self._fmodel.check_convergence(self._step,
+                                                             self._t_cur,
+                                                             score,
+                                                             self._convergedVal)
 
         return score
 
@@ -371,6 +376,8 @@ class Trajectory:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
                 restTraj._snaps.append(Snapshot(time, score, noise, state))
+
+        restTraj._step = len(restTraj._snaps)
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
@@ -465,6 +472,7 @@ class Trajectory:
         # Update trajectory metadata
         restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
         restTraj._t_cur = restTraj._snaps[-1].time
+        restTraj._step = len(restTraj._snaps)
         restTraj.update_metadata()
 
         # Enable the model to perform tweaks
@@ -513,8 +521,10 @@ class Trajectory:
             if (snap.score > new_score_max):
                 new_score_max = snap.score
         self._score_max = new_score_max
-        if new_score_max > self._convergedVal:
-            self._has_converged = True
+        self._has_converged = self._fmodel.check_convergence(self._step,
+                                                             self._t_cur,
+                                                             self._score_max,
+                                                             self._convergedVal)
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
 
