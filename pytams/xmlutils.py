@@ -61,7 +61,7 @@ def manualCastStr(type_str: str,
     try:
         castedElem = POD_cast_dict[type_str](elem_text)
     except KeyError:
-        if type_str == "bool":
+        if (type_str == "bool" or type_str == "bool_"):
             if (elem_text == "True"):
                 castedElem = True
             else:

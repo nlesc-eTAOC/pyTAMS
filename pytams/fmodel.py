@@ -17,8 +17,8 @@ class AdvanceError(Exception):
 class ForwardModelBaseClass(metaclass=ABCMeta):
     """A base class for the stochastic forward model.
 
-    pyTAMS relies on a separation of the stochastic model
-    encapsulating the physics of interest and the TAMS
+    pyTAMS relies on a separation of the stochastic model,
+    encapsulating the physics of interest, and the TAMS
     algorithm itself. The ForwardModelBaseClass defines
     the API the TAMS algorithm requires from the stochastic
     model.
@@ -231,6 +231,25 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     def _trajectory_restore_hook(self) -> None:
         """Model-specific post trajectory restore hook."""
         pass
+
+    def check_convergence(self,
+                          step: int,
+                          time: float,
+                          current_score: float,
+                          target_score: float) -> bool:
+        """Check if the model has converged.
+
+        This default implementation checks if the current score is
+        greater than or equal to the target score. The user can override
+        this method to implement a different convergence criterion.
+
+        Args:
+            step: the current step counter
+            time: the time of the simulation
+            current_score: the current score
+            target_score: the target score
+        """
+        return current_score >= target_score
 
     def _clear_model(self) -> Any:
         """Clear the concrete forward model internals."""
