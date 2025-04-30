@@ -16,8 +16,8 @@ class MOCModel(ForwardModelBaseClass):
         opt_params: "temp_params" to give lambda_a
                     "ice_params" to give [f_ice, q_factor_min]
         """
-        self.E_A = 0.25
-        self._noise_level = 0.1
+        self._E_A = params.get("model",{}).get("E_A", 0.25)
+        self._noise_level = params.get("model",{}).get("noise_level", 0.1)
         # self.forcing = None
         # seed = 0
         # self.rng = np.random.Generator(seed)
@@ -90,7 +90,7 @@ class MOCModel(ForwardModelBaseClass):
 
     def set_E_A(self, E_A):
         """Sets the forcing amplitude and reinitializes the model."""
-        self.E_A = E_A
+        self._E_A = E_A
         self.load_init_state()
 
     def set_forcing(self, forcing_function, forcing_params, *fixed_args, **fixed_kwargs):
@@ -111,14 +111,14 @@ class MOCModel(ForwardModelBaseClass):
 
         #Select all the indices for the AMOC on state
         end_branch_on  = np.where(q_N == 0)[0][0]
-        self.E_A_index_on    = (np.abs(E_A_values[:end_branch_on] - self.E_A)).argmin()
+        self.E_A_index_on    = (np.abs(E_A_values[:end_branch_on] - self._E_A)).argmin()
 
         #Select all the indices for the AMOC off state
         branch_off_index   = np.where(q_N[np.argmax(E_A_values):] >= 5)[0][0] + np.argmax(E_A_values)
-        self.E_A_index_off = (np.abs(E_A_values[np.argmax(E_A_values):branch_off_index] - self.E_A)).argmin() \
+        self.E_A_index_off = (np.abs(E_A_values[np.argmax(E_A_values):branch_off_index] - self._E_A)).argmin() \
             + np.argmax(E_A_values)
 
-        self.E_A *= 1e6
+        self._E_A *= 1e6
 
         self.on = np.array([fh.variables['S_t'][self.E_A_index_on],
                             fh.variables['S_ts'][self.E_A_index_on],
@@ -216,7 +216,7 @@ class MOCModel(ForwardModelBaseClass):
 
     def _dW(self, dt, noise):
         """Stochastic forcing."""
-        return self._noise_level * self.E_A * self.S_0 * noise * np.sqrt(dt * (100*365*86400))
+        return self._noise_level * self._E_A * self.S_0 * noise * np.sqrt(dt * (100*365*86400))
 
     def sea_ice(self, temp):
         """Returns the AMOC reduction factor for a given response function."""
@@ -253,10 +253,10 @@ class MOCModel(ForwardModelBaseClass):
             self.r_S * (S_t - S_ts)
         # N-box
         deltas[2] = hqn * self.q_N * (S_t - S_n) + self.r_N * (S_t - S_n) - \
-            (self.E_S + self.E_A) * self.S_0
+            (self.E_S + self._E_A) * self.S_0
         # S-box
         deltas[3] = self.q_S * (hqs * S_d + (1-hqs) * S_s) + self.q_e * S_ts - self.q_Ek * S_s - \
-            (self.E_S - self.E_A) * self.S_0
+            (self.E_S - self._E_A) * self.S_0
         # Depth pycnocline
         deltas[4] = self.q_U + self.q_Ek - self.q_e - hqn * self.q_N
         deltas[4] /= (self.A + 0.5 * self.L_xA * self.L_y)
@@ -349,8 +349,7 @@ class MOCModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Override the template."""
         self.system(self._state, self._dW(dt, noise), dt)
         self._state = self.update_vars()
@@ -547,4 +546,3 @@ if __name__ == "__main__":
     tams = TAMS(fmodel_t=fmodel)
     transition_proba = tams.compute_probability()
     print("Transition probability: {}".format(transition_proba))
-
