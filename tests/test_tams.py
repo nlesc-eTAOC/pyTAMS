@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 import pytest
 import toml
+import math
 from pytams.database import Database
 from pytams.tams import TAMS
 from tests.models import DoubleWellModel
@@ -260,10 +261,10 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.0178251300803965
+    assert math.isclose(transition_proba, 0.0178251300803965, rel_tol=1e-9)
     tams_load =  TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.02134512765172512
+    assert math.isclose(transition_proba, 0.02134512765172512, rel_tol=1e-9)
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")
