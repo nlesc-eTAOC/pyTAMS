@@ -91,6 +91,32 @@ class SQLFile:
         finally:
             session.close()
 
+    def update_trajectory_file(self,
+                               traj_id: int,
+                               traj_file: str) -> None:
+        """Update a trajectory file in the DB.
+
+        Args:
+            traj_id : The trajectory id
+            traj_file : The new trajectory file of that trajectory
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
+        """
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
+            traj.traj_file = traj_file
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception(f"Failed to update trajectory {traj_id}")
+            raise
+        finally:
+            session.close()
+
     def lock_trajectory(self,
                         traj_id: int,
                         allow_completed_lock: bool = False) -> bool:
