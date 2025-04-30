@@ -22,7 +22,7 @@ extras = dev
 
 [tool.ruff]
 # Enable Pyflakes `E` and `F` codes by default.
-select = [
+lint.select = [
     "F",  # Pyflakes
     "E",  # pycodestyle (error)
     "W",    # pycodestyle (warning)
@@ -36,7 +36,7 @@ select = [
     # "PLW",  # Warning
 
 ]
-ignore = [
+lint.ignore = [
     'D100',  # Missing module docstring
     'D104',  # Missing public package docstring
     # The following list excludes rules irrelevant to the Google style
@@ -55,8 +55,8 @@ ignore = [
 ]
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["A", "B", "C", "D", "E", "F", "I"]
-unfixable = []
+lint.fixable = ["A", "B", "C", "D", "E", "F", "I"]
+lint.unfixable = []
 
 exclude = [
     ".bzr",
@@ -82,16 +82,16 @@ exclude = [
     "scripts",
     "docs",
 ]
-per-file-ignores = {}
+lint.per-file-ignores = {}
 
 
 # Allow unused variables when underscore-prefixed.
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 target-version = "py310"
 line-length = 120
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["pytams"]
 force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
