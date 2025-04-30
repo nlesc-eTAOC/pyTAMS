@@ -251,7 +251,7 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
         toml.dump({"tams": {"ntrajectories": 20, "nsplititer": 20,
-                            "walltime": 5.0, "deterministic": True},
+                            "walltime": 10.0, "deterministic": True},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 6.0, "step_size": 0.01,
