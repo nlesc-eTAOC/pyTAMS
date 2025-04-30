@@ -70,7 +70,7 @@ help you decide which tool to use for packaging.
 
 [Sonarcloud](https://sonarcloud.io/) is used to perform quality analysis and code coverage report
 
-- `sonar-project.properties` is the SonarCloud [configuration](https://docs.sonarqube.org/latest/analysis/analysis-parameters/) file
+- `sonar-project.properties` is the SonarCloud [configuration](https://docs.sonarsource.com/sonarqube-server/latest/) file
 - `.github/workflows/sonarcloud.yml` is the GitHub action workflow which performs the SonarCloud analysis
 
 ## Package version number
