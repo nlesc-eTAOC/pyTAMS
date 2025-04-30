@@ -253,7 +253,7 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
         toml.dump({"tams": {"ntrajectories": 20, "nsplititer": 20,
                             "walltime": 10.0, "deterministic": True},
                    "database": {"path": "dwTest.tdb"},
-                   "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
+                   "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 1},
                    "trajectory": {"end_time": 6.0, "step_size": 0.01,
                                   "targetscore": 0.6},
                    "model": {"slow_factor": 0.00000001, "noise_amplitude" : 0.5}}
