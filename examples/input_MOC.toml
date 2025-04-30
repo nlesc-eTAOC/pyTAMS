@@ -2,6 +2,7 @@
 ntrajectories = 100
 nsplititer = 1000
 loglevel = "INFO"
+walltime = 500.0
 
 
 [trajectory]
@@ -9,10 +10,10 @@ end_time = 3153600000
 step_size = 86400
 targetscore = 1.00
 sparse_freq = 10
-stoichforcing = 0
 
 [model]
-test_param = "toto"
+noise_level = 0.1
+E_A = 0.25
 
 [runner]
 type = "asyncio"
