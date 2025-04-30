@@ -147,7 +147,7 @@ def test_replaceTrajInDB():
 
     traj_zero = tdb.get_traj(0)
     tdb.overwrite_traj(1,traj_zero)
-    assert tdb.get_traj(1).idstr() == "traj000000"
+    assert tdb.get_traj(1).idstr() == "traj000000_0000"
 
 
 @pytest.mark.dependency(depends=["genDB"])
