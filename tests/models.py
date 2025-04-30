@@ -117,7 +117,7 @@ class DoubleWellModel(ForwardModelBaseClass):
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
         self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
         if params["model"]["deterministic"]:
-            seed = int(ioprefix[4:])
+            seed = int(ioprefix[4:10])
             self._rng = np.random.default_rng(seed)
         else:
             self._rng = np.random.default_rng()

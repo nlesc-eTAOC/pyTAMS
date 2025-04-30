@@ -333,7 +333,7 @@ class TAMS:
         with get_runner_type(self._parameters)(self._parameters,
                                                ms_worker,
                                                self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
-            while k <= self._tdb.nSplitIter():
+            while k < self._tdb.nSplitIter():
                 inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
 
@@ -443,17 +443,7 @@ class TAMS:
             _logger.warning(warn_msg)
             return -1.0
 
-        W = self._tdb.nTraj() * self._tdb.weights()[-1]
-        for i in range(len(self._tdb.biases())):
-            W += self._tdb.biases()[i] * self._tdb.weights()[i]
-
-        # Compute how many traj. converged
-        successCount = 0
-        for T in self._tdb.traj_list():
-            if T.is_converged():
-                successCount += 1
-
-        trans_prob = successCount * self._tdb.weights()[-1] / W
+        trans_prob = self._tdb.get_transition_probability()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)

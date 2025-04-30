@@ -24,15 +24,17 @@ class DoubleWellModel3D(ForwardModelBaseClass):
                     ioprefix: str = None):
         """Override the template."""
         self._state = self.initCondition()
+        self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
+        self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
         if params["model"]["deterministic"]:
-            seed = int(ioprefix[4:])
+            seed = int(ioprefix[4:10])
             self._rng = np.random.default_rng(seed)
         else:
             self._rng = np.random.default_rng()
 
     def __RHS(self, state):
         """Double well RHS function."""
-        sleepTime = float(0.00001 * np.random.rand(1).item())
+        sleepTime = float(self._slow_factor * np.random.rand(1).item())
         time.sleep(sleepTime)
         return np.array([state[0] - state[0] ** 3,
                          -2 * state[1],
@@ -50,11 +52,10 @@ class DoubleWellModel3D(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any,
-                 forcingAmpl: float) -> float:
+                 noise: Any) -> float:
         """Override the template."""
         self._state = (
-                self._state + dt * self.__RHS(self._state) + forcingAmpl * self.__dW(dt, noise[:3])
+                self._state + dt * self.__RHS(self._state) + self._noise_amplitude * self.__dW(dt, noise[:3])
         )
         self._prescribed_noise = False
         return dt

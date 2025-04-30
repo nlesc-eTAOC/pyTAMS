@@ -14,7 +14,7 @@ _logger = logging.getLogger(__name__)
 def oneliner_ndarray():
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
-    np.set_printoptions(linewidth=np.inf)
+    np.set_printoptions(linewidth=np.inf, precision=16)
     yield
     np.set_printoptions(**oldoptions)
 
@@ -159,7 +159,8 @@ def new_element(key: str, val: Any) -> ET.Element:
     """
     elem = ET.Element(key)
     elem.attrib["type"] = get_val_type(val)
-    elem.text = str(val)
+    with oneliner_ndarray():
+        elem.text = str(val)
 
     return elem
 
@@ -188,7 +189,8 @@ def make_xml_snapshot(idx: int,
         elem.attrib["state_type"] = "None"
     else:
         elem.attrib["state_type"] = get_val_type(state)
-        elem.text = str(state)
+        with oneliner_ndarray():
+            elem.text = str(state)
 
     return elem
 

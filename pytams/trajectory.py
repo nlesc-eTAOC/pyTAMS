@@ -22,13 +22,14 @@ class WallTimeLimit(Exception):
     """Exception for running into wall time limit."""
     pass
 
-def formTrajID(n: int) -> str:
+def formTrajID(n: int,
+               nb : int = 0) -> str:
     """Helper to assemble a trajectory ID string."""
-    return f"traj{n:06}"
+    return f"traj{n:06}_{nb:04}"
 
-def getIndexFromID(identity: str) -> int:
+def getIndexFromID(identity: str) -> tuple[int,int]:
     """Helper to get trajectory index from ID string."""
-    return int(identity[-6:])
+    return int(identity[-10:-5]), int(identity[-4:])
 
 @dataclass
 class Snapshot:
@@ -115,8 +116,7 @@ class Trajectory:
 
         # The workdir is a runtime parameter, not saved in the chkfile.
         self._tid : int = trajId
-        self._checkFile : os.PathLike = Path(f"{self.idstr()}.xml")
-        self._workdir : os.PathLike = Path(".") if workdir is None else workdir
+        self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
         self._score_max : float = 0.0
         self._has_ended : bool = False
         self._has_converged : bool = False
@@ -134,14 +134,6 @@ class Trajectory:
         # a s \in [0,1]. A default value of 0.95 is provided.
         self._convergedVal : float = traj_params.get("targetscore", 0.95)
 
-        # For large models, the state may not be available at each snapshot due
-        # to memory constraint (both in-memory and on-disk). Sparse state can
-        # be specified. Finally, writing a chkfile to disk at each step might
-        # incur a performance hit and is by default disabled.
-        self._sparse_state_int : int = traj_params.get("sparse_freq", 1)
-        self._sparse_state_beg : int = traj_params.get("sparse_start", 0)
-        self._write_chkfile_all : bool = traj_params.get("chkfile_dump_all", False)
-
         # List of snapshots
         self._snaps : list[Snapshot] = []
 
@@ -149,9 +141,18 @@ class Trajectory:
         # steps might be already available. This backlog is used to store them.
         self._noise_backlog : list[Any] = []
 
-        # Keep trakc of the branching history during TAMS
+        # Keep track of the branching history during TAMS
         # iterations
         self._branching_history : list[int] = []
+
+        # For large models, the state may not be available at each snapshot due
+        # to memory constraint (both in-memory and on-disk). Sparse state can
+        # be specified. Finally, writing a chkfile to disk at each step might
+        # incur a performance hit and is by default disabled.
+        self._sparse_state_int : int = traj_params.get("sparse_freq", 1)
+        self._sparse_state_beg : int = traj_params.get("sparse_start", 0)
+        self._write_chkfile_all : bool = traj_params.get("chkfile_dump_all", False)
+        self._checkFile : os.PathLike = Path(f"{self.idstr()}.xml")
 
         # Each trajectory has its own instance of the forward model
         if frozen:
@@ -203,7 +204,7 @@ class Trajectory:
         Returns:
             the trajectory id as a string
         """
-        return formTrajID(self._tid)
+        return formTrajID(self._tid, self.get_nbranching())
 
     def advance(self,
                 t_end: float = 1.0e12,
@@ -430,13 +431,15 @@ class Trajectory:
         """
         # Check for empty trajectory
         if len(from_traj._snaps) == 0:
+            tid, nb = getIndexFromID(rst_traj.idstr())
+            new_workdir = Path(rst_traj.get_work_dir().parents[0] / formTrajID(tid,nb+1))
             restTraj = Trajectory(
                 trajId=rst_traj.id(),
                 fmodel_t=type(from_traj._fmodel),
                 parameters=from_traj._parameters_full,
-                workdir=rst_traj.get_work_dir(),
+                workdir = new_workdir,
             )
-            restTraj.set_checkfile(rst_traj.get_checkfile())
+            restTraj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{restTraj.idstr()}.xml"))
             return restTraj
 
         # To ensure that TAMS converges, branching occurs on
@@ -451,15 +454,17 @@ class Trajectory:
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
+        tid, nb = getIndexFromID(rst_traj.idstr())
+        new_workdir = Path(rst_traj.get_work_dir().parents[0] / formTrajID(tid,nb+1))
         restTraj = Trajectory(
             trajId=rst_traj.id(),
             fmodel_t=type(from_traj._fmodel),
             parameters=from_traj._parameters_full,
-            workdir=rst_traj.get_work_dir(),
+            workdir = new_workdir,
         )
-        restTraj.set_checkfile(rst_traj.get_checkfile())
         restTraj._branching_history = rst_traj._branching_history
         restTraj._branching_history.append(from_traj.id())
+        restTraj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{restTraj.idstr()}.xml"))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
@@ -505,6 +510,7 @@ class Trajectory:
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
+
         if traj_file is not None:
             tree.write(traj_file.absolute())
         else:

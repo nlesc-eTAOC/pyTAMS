@@ -116,6 +116,11 @@ def ms_worker(
 
         traj = Trajectory.branch_from_trajectory(fromTraj, rstTraj, min_val)
 
+        # The branched trajectory has a new checkfile
+        # Update the database to point to the latest one.
+        if db_path:
+            db.update_trajectory_file(traj.id(), traj.get_checkfile())
+
         return traj_advance_with_exception(traj, wall_time, db)
 
     return Trajectory.branch_from_trajectory(fromTraj, rstTraj, min_val)

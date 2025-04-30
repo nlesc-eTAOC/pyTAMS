@@ -406,7 +406,7 @@ class Database:
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
             trajChkFile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
-            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}")
+            workdir = Path(self._abs_path / f"trajectories/{trajChkFile.stem}")
             if trajChkFile.exists():
                 nTrajRestored += 1
                 self.append_traj(
@@ -596,13 +596,8 @@ class Database:
         self._archived_trajs_db.append(traj)
 
         # Update the list of archived trajectories in the SQL DB
-        # And save the trajectory in the updated checkfile
         if self._save_to_disk:
-            # Update the trajectory checkfile with the
-            # new name based on the number of branching it went through
-            checkfile_str = f"./trajectories/{traj.idstr()}_{traj.get_nbranching():03}.xml"
-            checkfile = Path(self._abs_path) / checkfile_str
-            traj.store(checkfile)
+            checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
             self._pool_db.archive_trajectory(checkfile_str)
 
     def lock_trajectory(self,
@@ -616,6 +611,9 @@ class Database:
 
         Return:
             True if no disk DB and the trajectory was locked
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
         """
         if not self._save_to_disk:
             return True
@@ -629,6 +627,9 @@ class Database:
         Args:
             tid: the trajectory id
             hasEnded: True if the trajectory has ended
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
         """
         if not self._save_to_disk:
             return
@@ -637,6 +638,24 @@ class Database:
             self._pool_db.mark_trajectory_as_completed(tid)
         else:
             self._pool_db.release_trajectory(tid)
+
+    def update_trajectory_file(self,
+                               traj_id: int,
+                               checkfile: os.PathLike) -> None:
+        """Update a trajectory file in the DB.
+
+        Args:
+            traj_id : The trajectory id
+            checkfile : The new checkfile of that trajectory
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
+        """
+        if not self._save_to_disk:
+            return
+
+        checkfile_str = checkfile.relative_to(self._abs_path).as_posix()
+        self._pool_db.update_trajectory_file(traj_id, checkfile_str)
 
 
     def weights(self) -> list[float]:

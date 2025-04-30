@@ -111,10 +111,10 @@ def test_doublewellModelTAMS():
     """Test TAMS with the doublewell model."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
+        toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0},
                    "runner": {"type" : "dask"},
                    "model": {"noise_amplitude" : 0.8},
-                   "trajectory": {"end_time": 10.0, "step_size": 0.01,
+                   "trajectory": {"end_time": 6.0, "step_size": 0.01,
                                   "targetscore": 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -156,16 +156,16 @@ def test_doublewellModel2WorkersTAMS():
     """Test TAMS with the doublewell model using two workers."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 100, "nsplititer": 400,
+        toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 400,
                             "walltime": 500.0, "deterministic": True},
                    "runner": {"type" : "dask", "nworker_init": 2, "nworker_iter": 2},
                    "model": {"noise_amplitude" : 0.8},
                    "database": {"path": "dwTest.tdb", "archive_discarded" : True},
-                   "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.6}}, f)
+                   "trajectory": {"end_time": 5.0, "step_size": 0.01,
+                                  "targetscore": 0.5}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.5238831403348925
+    assert transition_proba == 0.6382393305518409
     os.remove("input.toml")
 
 @pytest.mark.dependency(depends=["test_doublewellModel2WorkersTAMS"])
@@ -173,8 +173,8 @@ def test_doublewellModel2WorkersLoadDB():
     """Load the database from previous test."""
     tdb = Database.load(Path("dwTest.tdb"))
     tdb.load_data(True)
-    assert tdb.traj_list_len() == 100
-    assert tdb.archived_traj_list_len() == 64
+    assert tdb.traj_list_len() == 50
+    assert tdb.archived_traj_list_len() == 22
 
 @pytest.mark.dependency(depends=["test_doublewellModel2WorkersTAMS"])
 def test_doublewellModel2WorkersRestoreTAMS():
@@ -198,12 +198,12 @@ def test_doublewellVerySlowTAMS():
     """Test TAMS run out of time with a slow doublewell."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 6.0},
+        toml.dump({"tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 3.0},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "dask", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7},
-                   "model": {"slow_factor": 0.2, "noise_amplitude" : 0.1}}
+                   "model": {"slow_factor": 0.05, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -216,12 +216,12 @@ def test_doublewellSlowTAMS():
     """Test TAMS run out of time with a slow doublewell."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 6.0},
+        toml.dump({"tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 3.0},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7},
-                   "model": {"slow_factor": 0.003, "noise_amplitude" : 0.1}}
+                   "model": {"slow_factor": 0.001, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
@@ -233,15 +233,37 @@ def test_doublewellSlowRestoreTAMS():
     """Test TAMS restarting a slow doublewell."""
     fmodel = DoubleWellModel
     with open("input.toml", 'w') as f:
-        toml.dump({"tams": {"ntrajectories": 5, "nsplititer": 400, "walltime": 6.0},
+        toml.dump({"tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 3.0},
                    "database": {"path": "dwTest.tdb"},
                    "runner": {"type" : "asyncio", "nworker_init": 1, "nworker_iter": 1},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
                                   "targetscore": 0.7},
-                   "model": {"slow_factor": 0.003, "noise_amplitude" : 0.1}}
+                   "model": {"slow_factor": 0.001, "noise_amplitude" : 0.1}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    os.remove("input.toml")
+    shutil.rmtree("dwTest.tdb")
+
+def test_doublewellSlowTAMSRestoreMoreSplit():
+    """Test restart TAMS more splitting iterations."""
+    fmodel = DoubleWellModel
+    with open("input.toml", 'w') as f:
+        toml.dump({"tams": {"ntrajectories": 20, "nsplititer": 20,
+                            "walltime": 10.0, "deterministic": True},
+                   "database": {"path": "dwTest.tdb"},
+                   "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 1},
+                   "trajectory": {"end_time": 6.0, "step_size": 0.01,
+                                  "targetscore": 0.6},
+                   "model": {"slow_factor": 0.00000001, "noise_amplitude" : 0.5}}
+                  , f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 0.0178251300803965
+    tams_load =  TAMS(fmodel_t=fmodel, a_args=[])
+    tams_load._tdb._nsplititer = 30
+    transition_proba = tams_load.compute_probability()
+    assert transition_proba == 0.02134512765172512
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")

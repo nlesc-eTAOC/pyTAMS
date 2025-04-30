@@ -37,7 +37,7 @@ def test_initBlankTraj():
                                   "step_size": 0.01}}
     t_test = Trajectory(1, fmodel, parameters)
     assert t_test.id() == 1
-    assert t_test.idstr() == "traj000001"
+    assert t_test.idstr() == "traj000001_0000"
     assert t_test.current_time() == 0.0
     assert t_test.score_max() == 0.0
 
