@@ -1,5 +1,4 @@
 """Tests for the pytams.tams class."""
-import math
 import os
 import shutil
 from pathlib import Path
@@ -261,12 +260,10 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    #assert math.isclose(transition_proba, 0.0178251300803965, rel_tol=1e-9)
     assert transition_proba == 0.03584859224085421
     tams_load =  TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    #assert math.isclose(transition_proba, 0.02134512765172512, rel_tol=1e-9)
     assert transition_proba == 0.042808839345993124
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")
