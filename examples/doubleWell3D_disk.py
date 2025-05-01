@@ -88,11 +88,11 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
         self._state = state_path.relative_to(self._db_path).as_posix()
         return dt
 
-    def getCurState(self):
+    def get_current_state(self):
         """Override the template."""
         return self._state
 
-    def setCurState(self, state):
+    def set_current_state(self, state):
         """Override the template."""
         self._state = state
 
