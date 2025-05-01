@@ -256,14 +256,14 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
                    "runner": {"type" : "asyncio", "nworker_init": 2, "nworker_iter": 1},
                    "trajectory": {"end_time": 6.0, "step_size": 0.01,
                                   "targetscore": 0.6},
-                   "model": {"slow_factor": 0.00000001, "noise_amplitude" : 0.5}}
+                   "model": {"slow_factor": 0.00000001, "noise_amplitude" : 0.6}}
                   , f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.0178251300803965
+    assert transition_proba == 0.03584859224085421
     tams_load =  TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.02134512765172512
+    assert transition_proba == 0.042808839345993124
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")
