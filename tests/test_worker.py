@@ -19,7 +19,7 @@ def test_run_pool_worker():
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
     t_test = Trajectory(1, fmodel, parameters)
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=10.0)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = pool_worker(t_test, enddate)
     assert isclose(t_test.score_max(), 0.1, abs_tol=1e-9)
     assert t_test.is_converged() is False
@@ -34,7 +34,7 @@ def test_run_pool_worker_outoftime(caplog : pytest.LogCaptureFixture):
                   "model": {"slow_factor": 0.03}}
     setup_logger(parameters)
     t_test = Trajectory(1, fmodel, parameters)
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=0.1)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=0.1)
     _ = pool_worker(t_test, enddate)
     assert "advance ran out of time" in caplog.text
 
@@ -46,7 +46,7 @@ def test_run_pool_worker_advanceerror():
                                   "targetscore": 0.75},
                   "tams": {"loglevel": "DEBUG"}}
     setup_logger(parameters)
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=1.0)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     t_test = Trajectory(1, fmodel, parameters)
     with pytest.raises(RuntimeError):
         _ = pool_worker(t_test, enddate)
@@ -57,7 +57,7 @@ def test_run_ms_worker():
     parameters = {"trajectory" : {"end_time": 0.01,
                                   "step_size": 0.001,
                                   "targetscore": 0.25}}
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=10.0)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = Trajectory(1, fmodel, parameters)
     t_test.advance()
     rst_test = Trajectory(2, fmodel, parameters)
@@ -80,7 +80,7 @@ def test_run_ms_worker_outoftime(caplog : pytest.LogCaptureFixture):
     t_test = Trajectory(1, fmodel, parameters)
     t_test.advance()
     rst_test = Trajectory(2, fmodel, parameters)
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=0.1)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=0.1)
     _ = ms_worker(t_test,
                   rst_test, 0.1,
                   enddate)
@@ -93,7 +93,7 @@ def test_run_ms_worker_advanceerror():
                                   "step_size": 0.001,
                                   "targetscore": 0.75},
                   "tams": {"loglevel": "DEBUG"}}
-    enddate = datetime.datetime.utcnow() + datetime.timedelta(seconds=1.0)
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     setup_logger(parameters)
     t_test = Trajectory(1, fmodel, parameters)
     t_test.advance(0.01)

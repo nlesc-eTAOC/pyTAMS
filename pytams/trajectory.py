@@ -1,12 +1,11 @@
 from __future__ import annotations
 import logging
-import os
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
-from typing import Optional
 import numpy as np
 import numpy.typing as npt
 from pytams.xmlutils import dict_to_xml
@@ -15,20 +14,38 @@ from pytams.xmlutils import new_element
 from pytams.xmlutils import read_xml_snapshot
 from pytams.xmlutils import xml_to_dict
 
+if TYPE_CHECKING:
+    import os
+    from pytams.fmodel import ForwardModelBaseClass
+
 _logger = logging.getLogger(__name__)
 
 
-class WallTimeLimit(Exception):
+class WallTimeLimitError(Exception):
     """Exception for running into wall time limit."""
-    pass
 
-def formTrajID(n: int,
-               nb : int = 0) -> str:
-    """Helper to assemble a trajectory ID string."""
+def form_trajectory_id(n: int,
+                       nb : int = 0) -> str:
+    """Helper to assemble a trajectory ID string.
+
+    Args:
+        n : trajectory index
+        nb : number of branching
+
+    Returns:
+        trajectory ID
+    """
     return f"traj{n:06}_{nb:04}"
 
-def getIndexFromID(identity: str) -> tuple[int,int]:
-    """Helper to get trajectory index from ID string."""
+def get_index_from_id(identity: str) -> tuple[int,int]:
+    """Helper to get trajectory index from ID string.
+
+    Args:
+        identity : trajectory ID
+
+    Returns:
+        trajectory index and number of branching
+    """
     return int(identity[-10:-5]), int(identity[-4:])
 
 @dataclass
@@ -90,15 +107,15 @@ class Trajectory:
     """
 
     def __init__(self,
-                 trajId: int,
-                 fmodel_t: Any,
+                 traj_id: int,
+                 fmodel_t: ForwardModelBaseClass,
                  parameters: dict,
                  workdir: os.PathLike | None = None,
                  frozen: bool = False) -> None:
         """Create a trajectory.
 
         Args:
-            trajId: a int for the trajectory index
+            traj_id: a int for the trajectory index
             fmodel_t: the forward model type
             parameters: a dictionary of input parameters
             workdir: an optional working directory
@@ -115,7 +132,7 @@ class Trajectory:
             raise ValueError
 
         # The workdir is a runtime parameter, not saved in the chkfile.
-        self._tid : int = trajId
+        self._tid : int = traj_id
         self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
         self._score_max : float = 0.0
         self._has_ended : bool = False
@@ -170,7 +187,7 @@ class Trajectory:
         """
         self._checkFile = path
 
-    def set_work_dir(self, path: os.PathLike) -> None:
+    def set_workdir(self, path: os.PathLike) -> None:
         """Setter of the trajectory working directory.
 
         And propagate the workdir to the forward model.
@@ -180,9 +197,9 @@ class Trajectory:
         """
         self._workdir = path
         if self._fmodel is not None:
-            self._fmodel.setWorkDir(path)
+            self._fmodel.set_workdir(path)
 
-    def get_work_dir(self) -> os.PathLike:
+    def get_workdir(self) -> os.PathLike:
         """Get the trajectory working directory.
 
         Returns:
@@ -204,7 +221,7 @@ class Trajectory:
         Returns:
             the trajectory id as a string
         """
-        return formTrajID(self._tid, self.get_nbranching())
+        return form_trajectory_id(self._tid, self.get_nbranching())
 
     def advance(self,
                 t_end: float = 1.0e12,
@@ -215,7 +232,7 @@ class Trajectory:
         Unless specified otherwise, the trajectory will advance until
         the end time is reached or the model has converged.
 
-        If the walltime limit is reached, a WallTimeLimit exception is raised.
+        If the walltime limit is reached, a WallTimeLimitError exception is raised.
         Note that this exception is treated as a warning not an error by the
         TAMS workers.
 
@@ -227,10 +244,10 @@ class Trajectory:
             None
 
         Raises:
-            WallTimeLimit: if the walltime limit is reached
+            WallTimeLimitError: if the walltime limit is reached
         """
-        startTime = time.monotonic()
-        remainingTime = walltime - time.monotonic() + startTime
+        start_time = time.monotonic()
+        remaining_time = walltime - time.monotonic() + start_time
         end_time = min(t_end, self._t_end)
 
         if not self._fmodel:
@@ -243,20 +260,20 @@ class Trajectory:
         if self._step == 0:
            self._snaps.append(Snapshot(time=self._t_cur,
                                        score=self._fmodel.score(),
-                                       noise=self._fmodel.getNoise(),
-                                       state=self._fmodel.getCurState()
-                                       )
+                                       noise=self._fmodel.get_noise(),
+                                       state=self._fmodel.get_current_state(),
+                                       ),
                               )
 
         while (
             self._t_cur < end_time
             and not self._has_converged
-            and remainingTime >= 0.05 * walltime
+            and remaining_time >= 0.05 * walltime
         ):
             # Do a single and keep track of remaining walltime
             score = self._one_step()
 
-            remainingTime = walltime - time.monotonic() + startTime
+            remaining_time = walltime - time.monotonic() + start_time
 
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
@@ -268,18 +285,18 @@ class Trajectory:
             self._snaps.pop(-1)
             self._snaps.append(Snapshot(self._t_cur,
                                         score,
-                                        self._fmodel.getNoise(),
-                                        self._fmodel.getCurState()
-                                        )
+                                        self._fmodel.get_noise(),
+                                        self._fmodel.get_current_state(),
+                                        ),
                                )
 
         if self._has_ended:
             self._fmodel.clear()
 
-        if remainingTime < 0.05 * walltime:
+        if remaining_time < 0.05 * walltime:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
             _logger.warning(warn_msg)
-            raise WallTimeLimit(warn_msg)
+            raise WallTimeLimitError(warn_msg)
 
     def _one_step(self) -> float:
         """Perform a single step of the forward model.
@@ -290,18 +307,18 @@ class Trajectory:
         """
         if not self._fmodel:
             err_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
-            _logger.error(err_msg)
+            _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
         if self._noise_backlog:
-            self._fmodel.setNoise(self._noise_backlog[0])
+            self._fmodel.set_noise(self._noise_backlog[0])
             self._noise_backlog.pop(0)
 
         try:
             dt = self._fmodel.advance(self._dt)
         except Exception:
             err_msg = f"ForwardModel advance error at step {self._step:08}"
-            _logger.error(err_msg)
+            _logger.exception(err_msg)
             raise
 
         self._step += 1
@@ -311,22 +328,21 @@ class Trajectory:
         if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
             self._snaps.append(Snapshot(time=self._t_cur,
                                         score=score,
-                                        noise=self._fmodel.getNoise(),
-                                        state=self._fmodel.getCurState()
-                                        )
+                                        noise=self._fmodel.get_noise(),
+                                        state=self._fmodel.get_current_state(),
+                                        ),
                                )
         else:
             self._snaps.append(Snapshot(time=self._t_cur,
                                         score=score,
-                                        noise=self._fmodel.getNoise(),
-                                        )
+                                        noise=self._fmodel.get_noise(),
+                                        ),
                                )
 
         if self._write_chkfile_all:
             self.store()
 
-        if score > self._score_max:
-            self._score_max = score
+        self._score_max = max(self._score_max, score)
 
         # The default ABC method simply check for a score above
         # the target value, but concrete implementations can override
@@ -342,43 +358,46 @@ class Trajectory:
     @classmethod
     def restore_from_checkfile(
         cls,
-        chkPoint: os.PathLike,
-        fmodel_t: Any,
+        checkfile: os.PathLike,
+        fmodel_t: ForwardModelBaseClass,
         parameters: dict,
         workdir: os.PathLike | None = None,
         frozen: bool = False,
     ) -> Trajectory:
         """Return a trajectory restored from an XML chkfile."""
-        assert Path(chkPoint).exists() is True
+        if not Path(checkfile).exists():
+            err_msg = f"Trajectory {checkfile} does not exist."
+            _logger.exception(err_msg)
+            raise FileNotFoundError
 
         # Read in trajectory metadata
-        tree = ET.parse(chkPoint.absolute())
+        tree = ET.parse(checkfile.absolute())
         root = tree.getroot()
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        restTraj = Trajectory(trajId=t_id,
+        rest_traj = Trajectory(traj_id=t_id,
                               fmodel_t=fmodel_t,
                               parameters=parameters,
                               workdir = workdir,
                               frozen=frozen,
                               )
 
-        restTraj._t_end = metadata["t_end"]
-        restTraj._t_cur = metadata["t_cur"]
-        restTraj._dt = metadata["dt"]
-        restTraj._score_max = metadata["score_max"]
-        restTraj._has_ended = metadata["ended"]
-        restTraj._has_converged = metadata["converged"]
-        restTraj._branching_history = metadata["branching_history"].tolist()
+        rest_traj._t_end = metadata["t_end"]
+        rest_traj._t_cur = metadata["t_cur"]
+        rest_traj._dt = metadata["dt"]
+        rest_traj._score_max = metadata["score_max"]
+        rest_traj._has_ended = metadata["ended"]
+        rest_traj._has_converged = metadata["converged"]
+        rest_traj._branching_history = metadata["branching_history"].tolist()
 
         snapshots = root.find("snapshots")
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
-                restTraj._snaps.append(Snapshot(time, score, noise, state))
+                rest_traj._snaps.append(Snapshot(time, score, noise, state))
 
-        restTraj._step = len(restTraj._snaps)
+        rest_traj._step = len(rest_traj._snaps)
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
@@ -386,27 +405,27 @@ class Trajectory:
             # Remove snapshots from the list until a state
             # is available
             need_update = False
-            for k in range(len(restTraj._snaps)-1,-1,-1):
-                if not restTraj._snaps[k].has_state():
-                    restTraj._noise_backlog.append(restTraj._snaps[k].noise)
-                    restTraj._snaps.pop(k)
+            for k in range(len(rest_traj._snaps)-1,-1,-1):
+                if not rest_traj._snaps[k].has_state():
+                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
+                    rest_traj._snaps.pop(k)
                     need_update = True
                 else:
                     break
 
-            restTraj._t_cur = restTraj._snaps[-1].time
+            rest_traj._t_cur = rest_traj._snaps[-1].time
 
-            restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
+            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
 
             # Reset score_max, ended and converged
             if need_update:
-                restTraj.update_metadata()
+                rest_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restore
-            restTraj._fmodel.post_trajectory_restore_hook(len(restTraj._snaps), restTraj._t_cur)
+            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps), rest_traj._t_cur)
 
-        return restTraj
+        return rest_traj
 
     @classmethod
     def branch_from_trajectory(
@@ -431,16 +450,16 @@ class Trajectory:
         """
         # Check for empty trajectory
         if len(from_traj._snaps) == 0:
-            tid, nb = getIndexFromID(rst_traj.idstr())
-            new_workdir = Path(rst_traj.get_work_dir().parents[0] / formTrajID(tid,nb+1))
-            restTraj = Trajectory(
-                trajId=rst_traj.id(),
+            tid, nb = get_index_from_id(rst_traj.idstr())
+            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+            rest_traj = Trajectory(
+                traj_id=rst_traj.id(),
                 fmodel_t=type(from_traj._fmodel),
                 parameters=from_traj._parameters_full,
                 workdir = new_workdir,
             )
-            restTraj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{restTraj.idstr()}.xml"))
-            return restTraj
+            rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
+            return rest_traj
 
         # To ensure that TAMS converges, branching occurs on
         # the first snapshot with a score *strictly* above the target
@@ -454,39 +473,39 @@ class Trajectory:
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
-        tid, nb = getIndexFromID(rst_traj.idstr())
-        new_workdir = Path(rst_traj.get_work_dir().parents[0] / formTrajID(tid,nb+1))
-        restTraj = Trajectory(
-            trajId=rst_traj.id(),
+        tid, nb = get_index_from_id(rst_traj.idstr())
+        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+        rest_traj = Trajectory(
+            traj_id=rst_traj.id(),
             fmodel_t=type(from_traj._fmodel),
             parameters=from_traj._parameters_full,
             workdir = new_workdir,
         )
-        restTraj._branching_history = rst_traj._branching_history
-        restTraj._branching_history.append(from_traj.id())
-        restTraj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{restTraj.idstr()}.xml"))
+        rest_traj._branching_history = rst_traj._branching_history
+        rest_traj._branching_history.append(from_traj.id())
+        rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
             if (k <= last_snap_with_state):
-                restTraj._snaps.append(from_traj._snaps[k])
+                rest_traj._snaps.append(from_traj._snaps[k])
             else:
-                restTraj._noise_backlog.append(from_traj._snaps[k].noise)
+                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
 
         # Update trajectory metadata
-        restTraj._fmodel.setCurState(restTraj._snaps[-1].state)
-        restTraj._t_cur = restTraj._snaps[-1].time
-        restTraj._step = len(restTraj._snaps)
-        restTraj.update_metadata()
+        rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
+        rest_traj._t_cur = rest_traj._snaps[-1].time
+        rest_traj._step = len(rest_traj._snaps)
+        rest_traj.update_metadata()
 
         # Enable the model to perform tweaks
         # after a trajectory restart
-        restTraj._fmodel.post_trajectory_restart_hook(len(restTraj._snaps), restTraj._t_cur)
+        rest_traj._fmodel.post_trajectory_restart_hook(len(rest_traj._snaps), rest_traj._t_cur)
 
-        return restTraj
+        return rest_traj
 
-    def store(self, traj_file: Optional[os.PathLike] = None) -> None:
+    def store(self, traj_file: os.PathLink | None = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
@@ -506,7 +525,8 @@ class Trajectory:
                                   self._snaps[k].time,
                                   self._snaps[k].score,
                                   self._snaps[k].noise,
-                                  self._snaps[k].state)
+                                  self._snaps[k].state,
+                                  ),
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
@@ -524,8 +544,7 @@ class Trajectory:
         """
         new_score_max = 0.0
         for snap in self._snaps:
-            if (snap.score > new_score_max):
-                new_score_max = snap.score
+            new_score_max = max(new_score_max, snap.score)
         self._score_max = new_score_max
         self._has_converged = self._fmodel.check_convergence(self._step,
                                                              self._t_cur,
@@ -591,8 +610,10 @@ class Trajectory:
         """Return the number of branching events."""
         return len(self._branching_history)
 
-    def get_last_state(self) -> Any:
+    def get_last_state(self) -> Any | None:
         """Return the last state in the trajectory."""
         for snap in reversed(self._snaps):
             if snap.has_state():
                 return snap.state
+
+        return None

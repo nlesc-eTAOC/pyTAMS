@@ -27,11 +27,11 @@ class SimpleFModel(ForwardModelBaseClass):
         self._state = self._state + dt
         return dt
 
-    def getCurState(self) -> float:
+    def get_current_state(self) -> float:
         """Override the template."""
         return self._state
 
-    def setCurState(self, state) -> None:
+    def set_current_state(self, state) -> None:
         """Override the template."""
         self._state = state
 
@@ -73,11 +73,11 @@ class FailingFModel(ForwardModelBaseClass):
         self._state = self._state + dt
         return dt
 
-    def getCurState(self) -> float:
+    def get_current_state(self) -> float:
         """Override the template."""
         return self._state
 
-    def setCurState(self, state) -> None:
+    def set_current_state(self, state) -> None:
         """Override the template."""
         self._state = state
 
@@ -113,7 +113,7 @@ class DoubleWellModel(ForwardModelBaseClass):
                     params: dict,
                     ioprefix: Optional[str] = None):
         """Override the template."""
-        self._state = self.initCondition()
+        self._state = self.init_condition()
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
         self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
         if params["model"]["deterministic"]:
@@ -132,7 +132,7 @@ class DoubleWellModel(ForwardModelBaseClass):
         """Stochastic forcing."""
         return np.sqrt(dt) * noise
 
-    def initCondition(self):
+    def init_condition(self):
         """Return the initial conditions."""
         return np.array([-1.0, 0.0])
 
@@ -147,11 +147,11 @@ class DoubleWellModel(ForwardModelBaseClass):
         )
         return dt
 
-    def getCurState(self):
+    def get_current_state(self):
         """Override the template."""
         return self._state
 
-    def setCurState(self, state):
+    def set_current_state(self, state):
         """Override the template."""
         self._state = state
 
