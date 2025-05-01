@@ -9,9 +9,6 @@ from typing import final
 
 _logger = getLogger(__name__)
 
-class AdvanceError(Exception):
-    """Concrete ForwardModel _advance error !"""
-
 class ForwardModelBaseClass(metaclass=ABCMeta):
     """A base class for the stochastic forward model.
 
@@ -109,8 +106,8 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             # from requested dt in some occasions.
             self._step = self._step + 1
             self._time = self._time + actual_dt
-        except AdvanceError:
-            err_msg = "Advance error !"
+        except Exception:
+            err_msg = "Advance function ran into an error !"
             _logger.exception(err_msg)
             raise
 
