@@ -2,6 +2,7 @@ import ast
 import logging
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
@@ -10,12 +11,12 @@ import numpy as np
 _logger = logging.getLogger(__name__)
 
 @contextmanager
-def oneliner_ndarray() -> None:
+def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
     np.set_printoptions(linewidth=np.inf, precision=12)
-    yield
     np.set_printoptions(**oldoptions)
+    yield
 
 
 class XMLUtilsError(Exception):
