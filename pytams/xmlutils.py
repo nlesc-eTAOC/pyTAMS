@@ -1,50 +1,53 @@
 import ast
 import logging
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
-from typing import Callable
-from typing import Dict
 import numpy as np
 
 _logger = logging.getLogger(__name__)
 
 @contextmanager
-def oneliner_ndarray():
+def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
     np.set_printoptions(linewidth=np.inf, precision=12)
-    yield
     np.set_printoptions(**oldoptions)
+    yield
+
 
 class XMLUtilsError(Exception):
     """Exception class for the xmlutils."""
 
-    pass
 
-
-def manualCastSnap(elem: ET.Element) -> Any:
+def manual_cast_snapshot(elem: ET.Element) -> Any:
     """Manually cast XML snapshot state."""
     if not elem.text:
         return elem.tag, None
-    else:
-        return elem.tag, manualCastStr(elem.attrib["state_type"], elem.text)
+
+    return elem.tag, manual_cast_str(elem.attrib["state_type"], elem.text)
 
 
-def manualCastSnapNoise(elem: ET.Element) -> Any:
+def manual_cast_snapshot_noise(elem: ET.Element) -> Any:
     """Manually cast XML snapshot noise."""
-    return elem.tag, manualCastStr(elem.attrib["noise_type"], elem.attrib["noise"])
+    return elem.tag, manual_cast_str(elem.attrib["noise_type"], elem.attrib["noise"])
 
 
-def manualCast(elem: ET.Element) -> Any:
+def manual_cast(elem: ET.Element) -> Any:
     """Manually cast XML elements reads."""
-    assert(elem.text is not None)
-    return elem.tag, manualCastStr(elem.attrib["type"], elem.text)
+    if not elem.text:
+        error_msg = f"Unable to parse XML element {elem.tag} since it is empty"
+        _logger.exception(error_msg)
+        raise XMLUtilsError(error_msg)
+
+    return elem.tag, manual_cast_str(elem.attrib["type"], elem.text)
 
 
 # Plain old data type cast in map
-POD_cast_dict : Dict[str, Callable] = {
+POD_cast_dict : dict[str, Callable] = {
         "int": int,
         "float": float,
         "float64": np.float64,
@@ -52,39 +55,36 @@ POD_cast_dict : Dict[str, Callable] = {
         "str": str,
         "str_": str,
         "dict": ast.literal_eval,
+        "bool": lambda elem_text: bool(elem_text == "True"),
+        "bool_": lambda elem_text: bool(elem_text == "True"),
         }
 
 
-def manualCastStr(type_str: str,
-                  elem_text: str) -> Any:
+def manual_cast_str(type_str: str,
+                    elem_text: str) -> Any:
     """Manually cast from strings."""
     try:
-        castedElem = POD_cast_dict[type_str](elem_text)
-    except KeyError:
-        if (type_str == "bool" or type_str == "bool_"):
-            if (elem_text == "True"):
-                castedElem = True
-            else:
-                castedElem = False
-        elif type_str == "ndarray[float]":
+        casted_elem = POD_cast_dict[type_str](elem_text)
+    except KeyError as e:
+        if type_str == "ndarray[float]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-            castedElem = np.fromstring(stripped_text, dtype=float, sep=" ")
+            casted_elem = np.fromstring(stripped_text, dtype=float, sep=" ")
         elif type_str == "ndarray[int]":
             stripped_text = elem_text.replace("[", "").replace("]", "").replace("  ", " ")
-            castedElem = np.fromstring(stripped_text, dtype=int, sep=" ")
+            casted_elem = np.fromstring(stripped_text, dtype=int, sep=" ")
         elif type_str == "ndarray[bool]":
             stripped_text = elem_text.replace("[ ", " ").replace("]", "").replace("  ", " ")
             npofstr = np.array(list(stripped_text.lstrip().split(" ")), dtype=object)
-            castedElem = npofstr == "True"
+            casted_elem = npofstr == "True"
         elif type_str == "datetime":
-            castedElem = datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f")
+            casted_elem = datetime.strptime(elem_text, "%Y-%m-%d %H:%M:%S.%f%z")
         elif type_str == "None":
-            castedElem = None
+            casted_elem = None
         else:
-            err_msg = f"Type {type_str} not handled by manualCast !"
-            _logger.error(err_msg)
-            raise XMLUtilsError(err_msg)
-    return castedElem
+            err_msg = f"Type {type_str} not handled by manual_cast !"
+            _logger.exception(err_msg)
+            raise XMLUtilsError(err_msg) from e
+    return casted_elem
 
 
 def dict_to_xml(tag: str, d: dict) -> ET.Element:
@@ -115,12 +115,13 @@ def xml_to_dict(elem: ET.Element | None) -> dict:
         a dictionary containing the element entries
     """
     if elem is None:
-        _logger.error("Unable to parse XML element to dict since 'None' was passed")
-        raise XMLUtilsError("Unable to parse XML element to dict since 'None' was passed")
+        error_msg = "Unable to parse XML element to dict since 'None' was passed"
+        _logger.exception(error_msg)
+        raise XMLUtilsError(error_msg)
 
     d = {}
     for child in elem:
-        tag, entry = manualCast(child)
+        tag, entry = manual_cast(child)
         d[tag] = entry
 
     return d
@@ -143,8 +144,8 @@ def get_val_type(val: Any) -> str:
         elif val.dtype == "bool":
             base_type = base_type + "[bool]"
         return base_type
-    else:
-        return base_type
+
+    return base_type
 
 
 def new_element(key: str, val: Any) -> ET.Element:
@@ -203,7 +204,7 @@ def read_xml_snapshot(snap: ET.Element) -> tuple[float, float, Any, Any]:
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])
-    _, noise = manualCastSnapNoise(snap)
-    _, state = manualCastSnap(snap)
+    _, noise = manual_cast_snapshot_noise(snap)
+    _, state = manual_cast_snapshot(snap)
 
     return time, score, noise, state

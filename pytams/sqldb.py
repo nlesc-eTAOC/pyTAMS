@@ -18,7 +18,7 @@ Base = declarative_base()
 
 class Trajectory(Base):
     """A table storing the trajectories."""
-    __tablename__ = 'trajectories'
+    __tablename__ = "trajectories"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     traj_file = Column(Text, nullable=False)
@@ -26,7 +26,7 @@ class Trajectory(Base):
 
 class ArchivedTrajectory(Base):
     """A table storing the archived trajectories."""
-    __tablename__ = 'archived_trajectories'
+    __tablename__ = "archived_trajectories"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     traj_file = Column(Text, nullable=False)
@@ -67,8 +67,9 @@ class SQLFile:
         try:
             Base.metadata.create_all(self._engine)
         except SQLAlchemyError as e:
-            _logger.exception("Failed to initialize DB schema")
-            raise RuntimeError("Database initialization failed") from e
+            err_msg = "Failed to initialize DB schema"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg) from e
 
     def add_trajectory(self, traj_file: str) -> None:
         """Add a new trajectory to the DB.
@@ -112,7 +113,8 @@ class SQLFile:
             session.commit()
         except SQLAlchemyError:
             session.rollback()
-            _logger.exception(f"Failed to update trajectory {traj_id}")
+            err_msg = f"Failed to update trajectory {traj_id}"
+            _logger.exception(err_msg)
             raise
         finally:
             session.close()
@@ -146,10 +148,11 @@ class SQLFile:
                     session.commit()
                     return True
                 return False
-            else:
-                err_msg = f"Trajectory {traj_id} does not exist"
-                _logger.error(err_msg)
-                raise ValueError(err_msg)
+
+            err_msg = f"Trajectory {traj_id} does not exist"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
+
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to lock trajectory")
@@ -260,10 +263,10 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 return traj.traj_file
-            else:
-                err_msg = f"Trajectory {traj_id} does not exist"
-                _logger.error(err_msg)
-                raise ValueError(err_msg)
+
+            err_msg = f"Trajectory {traj_id} does not exist"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to fetch trajectory")
@@ -321,10 +324,10 @@ class SQLFile:
             traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
             if traj:
                 return traj.traj_file
-            else:
-                err_msg = f"Trajectory {traj_id} does not exist"
-                _logger.error(err_msg)
-                raise ValueError(err_msg)
+
+            err_msg = f"Trajectory {traj_id} does not exist"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to fetch archived trajectory")
@@ -353,12 +356,10 @@ class SQLFile:
         db_data = {}
         session = self._Session()
         try:
-            db_data["trajectories"] = dict([(traj.id-1,
-                                             {"file" : traj.traj_file, "status" : traj.status})
-                                            for traj in session.query(Trajectory).all()])
-            db_data["archived_trajectories"] = dict([(traj.id-1,
-                                                      {"file" : traj.traj_file})
-                                                     for traj in session.query(ArchivedTrajectory).all()])
+            db_data["trajectories"] = {traj.id-1 : {"file" : traj.traj_file, "status" : traj.status}
+                                       for traj in session.query(Trajectory).all()}
+            db_data["archived_trajectories"] = {traj.id-1 : {"file" : traj.traj_file}
+                                                for traj in session.query(ArchivedTrajectory).all()}
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to count the number of archived trajectories")
@@ -366,6 +367,6 @@ class SQLFile:
         finally:
             session.close()
 
-        json_file = Path(self._file_name).parent / f"{str(Path(self._file_name).stem)}.json"
+        json_file = Path(f"{Path(self._file_name).stem}.json")
         with json_file.open("w") as f:
             json.dump(db_data, f, indent=2)

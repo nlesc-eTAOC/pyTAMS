@@ -49,7 +49,7 @@ def test_initParametrizedTraj():
                                   "step_size": 0.01,
                                   "targetscore": 0.25}}
     t_test = Trajectory(1, fmodel, parameters)
-    t_test.set_work_dir(Path("."))
+    t_test.set_workdir(Path("."))
     assert t_test.step_size() == 0.01
 
 

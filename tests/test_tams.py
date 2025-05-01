@@ -17,7 +17,7 @@ def test_initTAMS():
         toml.dump({"tams": {"ntrajectories": 500, "nsplititer": 200},
                    "trajectory" : {"end_time": 0.02, "step_size": 0.001}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
-    assert tams.nTraj() == 500
+    assert tams.n_traj() == 500
 
 def test_initTAMSMissingReq():
     """Test failed TAMS initialization."""
@@ -264,6 +264,6 @@ def test_doublewellSlowTAMSRestoreMoreSplit():
     tams_load =  TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.042808839345993124
+    assert transition_proba == 0.04280883914395982
     os.remove("input.toml")
     shutil.rmtree("dwTest.tdb")

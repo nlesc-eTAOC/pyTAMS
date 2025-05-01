@@ -1,17 +1,15 @@
 """A database class for TAMS."""
 from __future__ import annotations
 import copy
+import datetime
 import logging
-import os
 import shutil
 import sys
 import xml.etree.ElementTree as ET
-from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
-from typing import Optional
-from typing import Union
 import cloudpickle
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,18 +17,18 @@ import numpy.typing as npt
 import toml
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
-from pytams.trajectory import formTrajID
+from pytams.trajectory import form_trajectory_id
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
+
+if TYPE_CHECKING:
+    import os
 
 _logger = logging.getLogger(__name__)
 
 
 class DatabaseError(Exception):
     """Exception class for TAMS Database."""
-
-    pass
-
 
 class Database:
     """A database class for TAMS.
@@ -63,8 +61,8 @@ class Database:
     def __init__(self,
                  fmodel_t: Any,
                  params: dict,
-                 ntraj: Optional[int] = None,
-                 nsplititer: Optional[int] = None) -> None:
+                 ntraj: int | None = None,
+                 nsplititer: int | None = None) -> None:
         """Initialize a TAMS database.
 
         Initialize TAMS database object, bare in-memory or on-disk.
@@ -97,7 +95,7 @@ class Database:
                 raise DatabaseError(err_msg)
             self._name = f"{self._path}"
             self._abs_path : os.PathLike = Path.cwd() / self._name
-            self._creation_date = datetime.now()
+            self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
             self._version = version(__package__)
 
         self._store_archive = params.get("database", {}).get("archive_discarded", False)
@@ -118,7 +116,7 @@ class Database:
         # so that the object remains lightweight
         self._init_metadata(ntraj, nsplititer)
 
-    def nTraj(self) -> int:
+    def n_traj(self) -> int:
         """Return the number of trajectory used for TAMS.
 
         Note that this is the requested number of trajectory, not
@@ -129,7 +127,7 @@ class Database:
         """
         return self._ntraj
 
-    def nSplitIter(self) -> int:
+    def n_split_iter(self) -> int:
         """Return the number of splitting iteration used for TAMS.
 
         Note that this is the requested number of splitting iteration, not
@@ -178,8 +176,8 @@ class Database:
         return cls(model, db_params)
 
     def _init_metadata(self,
-                       ntraj: Optional[int] = None,
-                       nsplititer: Optional[int] = None) -> None:
+                       ntraj: int | None = None,
+                       nsplititer: int | None = None) -> None:
         """Initialize the database.
 
         Initialize database internal metadata (only) and setup
@@ -213,9 +211,9 @@ class Database:
                 self._load_metadata()
                 # Parameters stored in the DB override
                 # newly provided parameters.
-                with Path(self._abs_path / "input_params.toml").open('r') as f:
-                    readInParams = toml.load(f)
-                self._parameters.update(readInParams)
+                with Path(self._abs_path / "input_params.toml").open("r") as f:
+                    read_in_params = toml.load(f)
+                self._parameters.update(read_in_params)
 
         # Initialize in-memory database metadata
         else:
@@ -245,10 +243,10 @@ class Database:
                 _logger.warning(warn_msg)
                 shutil.move(self._name, path_rnd.absolute())
 
-            os.mkdir(self._name)
+            Path(self._name).mkdir()
 
             # Save the runtime options
-            with Path(self._abs_path / "input_params.toml").open('w') as f:
+            with Path(self._abs_path / "input_params.toml").open("w") as f:
                 toml.dump(self._parameters, f)
 
             # Header file with metadata and pool DB
@@ -266,7 +264,7 @@ class Database:
     def _write_metadata(self) -> None:
         """Write the database Metadata to disk."""
         if self._format == "XML":
-            headerFile = self.header_file()
+            header_file = self.header_file()
             root = ET.Element("header")
             mdata = ET.SubElement(root, "metadata")
             mdata.append(new_element("pyTAMS_version", version(__package__)))
@@ -276,7 +274,7 @@ class Database:
             mdata.append(new_element("nsplititer", self._nsplititer))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
-            tree.write(headerFile)
+            tree.write(header_file)
 
             # Initialialize splitting data file
             self.save_splitting_data()
@@ -319,14 +317,14 @@ class Database:
     def init_pool(self) -> None:
         """Initialize the requested number of trajectories."""
         for n in range(self._ntraj):
-            workdir = Path(self._abs_path / f"trajectories/{formTrajID(n)}") if self._save_to_disk else None
-            T = Trajectory(
-                trajId=n,
+            workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
+            t = Trajectory(
+                traj_id=n,
                 fmodel_t=self._fmodel_t,
                 parameters=self._parameters,
                 workdir=workdir,
             )
-            self.append_traj(T, True)
+            self.append_traj(t, True)
 
     def save_trajectory(self, traj: Trajectory) -> None:
         """Save a trajectory to disk in the database.
@@ -340,7 +338,7 @@ class Database:
         traj.store()
 
     def save_splitting_data(self,
-                            ongoing_trajs: Optional[list[int]] = None) -> None:
+                            ongoing_trajs: list[int] | None = None) -> None:
         """Write splitting data to the database.
 
         Args:
@@ -351,7 +349,7 @@ class Database:
 
         # Splitting data file
         if self._format == "XML":
-            splittingDataFile = f"{self._name}/splittingData.xml"
+            splitting_data_file = f"{self._name}/splittingData.xml"
             root = ET.Element("splitting")
             root.append(new_element("nsplititer", self._nsplititer))
             root.append(new_element("ksplit", self._ksplit))
@@ -362,7 +360,7 @@ class Database:
                 root.append(new_element("ongoing", np.array(ongoing_trajs)))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
-            tree.write(splittingDataFile)
+            tree.write(splitting_data_file)
         else:
             err_msg = f"Unsupported TAMS database format: {self._format} !"
             _logger.error(err_msg)
@@ -372,8 +370,8 @@ class Database:
         """Read splitting data."""
         # Read data file
         if self._format == "XML":
-            splittingDataFile = f"{self._name}/splittingData.xml"
-            tree = ET.parse(splittingDataFile)
+            splitting_data_file = f"{self._name}/splittingData.xml"
+            tree = ET.parse(splitting_data_file)
             root = tree.getroot()
             datafromxml = xml_to_dict(root)
             self._nsplititer = datafromxml["nsplititer"]
@@ -401,17 +399,17 @@ class Database:
             return
 
         # Counter for number of trajectory loaded
-        nTrajRestored = 0
+        n_traj_restored = 0
 
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
-            trajChkFile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
-            workdir = Path(self._abs_path / f"trajectories/{trajChkFile.stem}")
-            if trajChkFile.exists():
-                nTrajRestored += 1
+            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
+            workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
+            if traj_checkfile.exists():
+                n_traj_restored += 1
                 self.append_traj(
                     Trajectory.restore_from_checkfile(
-                        trajChkFile,
+                        traj_checkfile,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -419,15 +417,15 @@ class Database:
                     False,
                 )
             else:
-                T = Trajectory(
-                    trajId=n,
+                t = Trajectory(
+                    traj_id=n,
                     fmodel_t=self._fmodel_t,
                     parameters=self._parameters,
                     workdir=workdir,
                 )
-                self.append_traj(T, False)
+                self.append_traj(t, False)
 
-        inf_msg = f"{nTrajRestored} trajectories loaded"
+        inf_msg = f"{n_traj_restored} trajectories loaded"
         _logger.info(inf_msg)
 
         # Load splitting data
@@ -439,16 +437,16 @@ class Database:
         if load_archived_trajectories:
             archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
             for n in range(archived_ntraj_in_db):
-                trajChkFile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
-                if trajChkFile.exists():
+                traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+                if traj_checkfile.exists():
                     self._archived_trajs_db.append(
                         Trajectory.restore_from_checkfile(
-                            trajChkFile,
+                            traj_checkfile,
                             fmodel_t=self._fmodel_t,
                             parameters=self._parameters,
                             workdir=None,
                             frozen=True,
-                        )
+                        ),
                     )
 
         self.info()
@@ -573,13 +571,13 @@ class Database:
 
 
     def update_traj_list(self,
-                         a_trajList: list[Trajectory]) -> None:
+                         a_traj_list: list[Trajectory]) -> None:
         """Overwrite the trajectory list.
 
         Args:
-            a_trajList: the new trajectory list
+            a_traj_list: the new trajectory list
         """
-        self._trajs_db = a_trajList
+        self._trajs_db = a_traj_list
 
     def archive_trajectory(self,
                            traj: Trajectory) -> None:
@@ -621,12 +619,12 @@ class Database:
 
     def unlock_trajectory(self,
                           tid: int,
-                          hasEnded: bool) -> None:
+                          has_ended: bool) -> None:
         """Unlock a trajectory in the SQL DB.
 
         Args:
             tid: the trajectory id
-            hasEnded: True if the trajectory has ended
+            has_ended: True if the trajectory has ended
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
@@ -634,7 +632,7 @@ class Database:
         if not self._save_to_disk:
             return
 
-        if hasEnded:
+        if has_ended:
             self._pool_db.mark_trajectory_as_completed(tid)
         else:
             self._pool_db.release_trajectory(tid)
@@ -681,7 +679,7 @@ class Database:
         """Append min/max of maxes to internal list."""
         self._minmax.append(np.array([float(ksplit), minofmaxes, maxofmaxes]))
 
-    def kSplit(self) -> int:
+    def k_split(self) -> int:
         """Splitting iteration counter."""
         return self._ksplit
 
@@ -693,87 +691,83 @@ class Database:
         """Reset the list of trajectories undergoing branching."""
         self._ongoing = None
 
-    def get_ongoing(self) -> Union[list[int],None]:
+    def get_ongoing(self) -> list[int] | None:
         """Return the list of trajectories undergoing branching or None."""
         return self._ongoing
 
-    def setKSplit(self, ksplit: int) -> None:
+    def set_k_split(self, ksplit: int) -> None:
         """Set splitting iteration counter."""
         self._ksplit = ksplit
 
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
         count = 0
-        for T in self._trajs_db:
-            if T.has_ended():
+        for t in self._trajs_db:
+            if t.has_ended():
                 count = count + 1
         return count
 
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
         count = 0
-        for T in self._trajs_db:
-            if T.is_converged():
+        for t in self._trajs_db:
+            if t.is_converged():
                 count = count + 1
         return count
 
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
         if self.count_ended_traj() < self._ntraj:
-            print("TAMS initialization still ongoing, probability estimate not available yet")
+            wrn_msg = "TAMS initialization still ongoing, probability estimate not available yet"
+            _logger.warning(wrn_msg)
             return 0.0
-        else:
-            W = self._ntraj * self._weights[-1]
-            for i in range(len(self._l_bias)):
-                W += self._l_bias[i] * self._weights[i]
 
-            trans_prob = self.count_converged_traj() * self._weights[-1] / W
-            return trans_prob
+        w = self._ntraj * self._weights[-1]
+        for i in range(len(self._l_bias)):
+            w += self._l_bias[i] * self._weights[i]
 
+        return self.count_converged_traj() * self._weights[-1] / w
 
     def info(self) -> None:
         """Print database info to screen."""
         db_date_str = str(self._creation_date)
-        prettyLine = "####################################################"
+        pretty_line = "####################################################"
         inf_tbl = f"""
-            {prettyLine}
+            {pretty_line}
             # TAMS v{self._version:17s} trajectory database      #
             # Date: {db_date_str:42s} #
             # Model: {self._fmodel_t.name():41s} #
-            {prettyLine}
+            {pretty_line}
             # Requested # of traj: {self._ntraj:27} #
             # Requested # of splitting iter: {self._nsplititer:17} #
             # Number of 'Ended' trajectories: {self.count_ended_traj():16} #
             # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
             # Current splitting iter counter: {self._ksplit:16} #
             # Transition probability: {self.get_transition_probability():24} #
-            {prettyLine}
+            {pretty_line}
         """
-        print(inf_tbl)
+        _logger.info(inf_tbl)
 
     def plot_score_functions(self,
-                             fname: Optional[str] = None,
+                             fname: str | None = None,
                              plot_archived: bool = False) -> None:
         """Plot the score as function of time for all trajectories."""
-        if not fname:
-            pltfile = Path(self._name).stem + "_scores.png"
-        else:
-            pltfile = fname
+        pltfile = fname if fname else Path(self._name).stem + "_scores.png"
 
         plt.figure(figsize=(10, 6))
-        for T in self._trajs_db:
-            plt.plot(T.get_time_array(), T.get_score_array(), linewidth=0.8)
+        for t in self._trajs_db:
+            plt.plot(t.get_time_array(), t.get_score_array(), linewidth=0.8)
 
         if plot_archived:
-            for T in self._archived_trajs_db:
-                plt.plot(T.get_time_array(), T.get_score_array(), linewidth=0.8)
+            for t in self._archived_trajs_db:
+                plt.plot(t.get_time_array(), t.get_score_array(), linewidth=0.8)
 
-        plt.xlabel(r'$Time$', fontsize="x-large")
+        plt.xlabel(r"$Time$", fontsize="x-large")
         plt.xlim(left=0.0)
-        plt.ylabel(r'$Score \; [-]$', fontsize="x-large")
+        plt.ylabel(r"$Score \; [-]$", fontsize="x-large")
         plt.xticks(fontsize="x-large")
         plt.yticks(fontsize="x-large")
-        plt.grid(linestyle='dotted')
+        plt.grid(linestyle="dotted")
         plt.tight_layout() # to fit everything in the prescribed area
         plt.savefig(pltfile, dpi=300)
         plt.clf()

@@ -2,6 +2,67 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "pytams"
+version = "0.0.3"
+authors = [
+    { name = "Lucas Esclapez", email = "l.esclapez@esciencecenter.nl" }
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+description = "An implementation of the trajectory-adaptive multilevel splitting (TAMS) method."
+keywords = ["Rare events", "Stochastic systems", "Multilevel splitting"]
+license = {file = "LICENSE"}
+readme = {file = "README.md", content-type = "text/markdown"}
+urls = {Repository = "https://github.com/esciencecenter/pyTAMS", Documentation = "https://pytams.readthedocs.io/en/latest/", Issues = "https://github.com/esciencecenter/pyTAMS/issues"}
+requires-python = ">=3.10"
+dependencies = [
+  "toml",
+  "numpy",
+  "matplotlib",
+  "netCDF4",
+  "dask",
+  "dask [distributed]",
+  "dask-jobqueue",
+  "SQLAlchemy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build",  # build is not only used in publishing (below), but also in the template's test suite
+    "bump-my-version",
+    "coverage [toml]",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "sphinx",
+    "furo",
+    "sphinx-autoapi",
+    "tox",
+    "myst_parser",
+]
+docs = [
+    "sphinx",
+    "furo",
+    "sphinx-autoapi",
+    "myst_parser",
+]
+publishing = [
+    "build",
+    "twine",
+    "wheel",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
@@ -13,7 +74,7 @@ command_line = "-m pytest"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py310,py311
+envlist = py310,py311,py312,py313
 skip_missing_interpreters = true
 [testenv]
 commands = pytest
@@ -21,75 +82,44 @@ extras = dev
 """
 
 [tool.ruff]
-# Enable Pyflakes `E` and `F` codes by default.
-lint.select = [
-    "F",  # Pyflakes
-    "E",  # pycodestyle (error)
-    "W",    # pycodestyle (warning)
-    # "C90",  # mccabe
-    "I",    # isort
-    "D",    # pydocstyle
-    # "PL",   # Pylint
-    # "PLC",  # Convention
-    # "PLE",  # Error
-    # "PLR",  # Refactor
-    # "PLW",  # Warning
-
-]
-lint.ignore = [
-    'D100',  # Missing module docstring
-    'D104',  # Missing public package docstring
-    # The following list excludes rules irrelevant to the Google style
-    'D203',
-    'D204',
-    'D213',
-    'D215',
-    'D400',
-    'D401',
-    'D404',
-    'D406',
-    'D407',
-    'D408',
-    'D409',
-    'D413',
-]
-
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-lint.fixable = ["A", "B", "C", "D", "E", "F", "I"]
-lint.unfixable = []
-
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "venv",
-    ".venv",
-    "scripts",
-    "docs",
-]
-lint.per-file-ignores = {}
-
-
-# Allow unused variables when underscore-prefixed.
-lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-
-target-version = "py310"
 line-length = 120
+output-format = "concise"
+extend-exclude = ["docs", "examples", "tests"]
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Enable Pyflakes `E` and `F` codes by default.
+select = ["ALL"]
+ignore = [
+    "ANN204", # Missing return type annotation for special (dunder) method
+    "FBT",    # Using boolean function arguments
+    "TD",     # TODOs
+    "FIX001", # Resolve FIXMEs
+    "FIX002", # Resolve TODOs
+    "B028",   # No explicit `stacklevel` keyword argument found in warning
+    "S603",   # Use subprocess without check
+    # No docstrings required in the following cases
+    "D100", # Missing module docstring
+    "D104", # Missing public package docstring
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in `__init__`
+    "S314", # Use of the XML lib"
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+    "B027", # Empty default in ABC.
+]
+pydocstyle.convention = "google"
+fixable = ["A", "B", "C", "D", "E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can ignore a few extra rules
+"tests/**.py" = [
+    "ANN201",  # Missing return type annotation for public function
+    "PLR2004", # Magic value used in comparison
+    "PT011",   # Missing `match` parameter in `pytest.raises()`
+    "S101",    # Use of assert is detected
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["pytams"]
