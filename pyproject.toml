@@ -137,6 +137,3 @@ warn_redundant_casts = true
 [[tool.mypy.overrides]]
 module = ["toml","dask_jobqueue"]
 ignore_missing_imports = true
-
-[tool.setuptools.packages.find]
-where = ["pytams"]
