@@ -143,7 +143,7 @@ class SQLFile:
             if traj:
                 allowed_status = ["idle", "completed"] if allow_completed_lock else ["idle"]
                 if traj.status in allowed_status:
-                    traj.status = mapped_column("locked")
+                    traj.status = "locked"
                     session.commit()
                     return True
                 return False
@@ -177,7 +177,7 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 if traj.status in ["locked"]:
-                    traj.status = mapped_column("completed")
+                    traj.status = "completed"
                     session.commit()
                 else:
                     warn_msg = f"Attempting to mark completed Trajectory {traj_id} already in status {traj.status}."
@@ -210,7 +210,7 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 if traj.status in ["locked"]:
-                    traj.status = mapped_column("idle")
+                    traj.status = "idle"
                     session.commit()
                 else:
                     warn_msg = f"Attempting to release Trajectory {traj_id} already in status {traj.status}."
