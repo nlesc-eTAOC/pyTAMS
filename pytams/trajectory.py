@@ -15,7 +15,6 @@ from pytams.xmlutils import read_xml_snapshot
 from pytams.xmlutils import xml_to_dict
 
 if TYPE_CHECKING:
-    import os
     from pytams.fmodel import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
@@ -108,9 +107,9 @@ class Trajectory:
 
     def __init__(self,
                  traj_id: int,
-                 fmodel_t: ForwardModelBaseClass,
-                 parameters: dict,
-                 workdir: os.PathLike | None = None,
+                 fmodel_t: type[ForwardModelBaseClass] | None,
+                 parameters: dict[Any, Any],
+                 workdir: Path | None = None,
                  frozen: bool = False) -> None:
         """Create a trajectory.
 
@@ -122,7 +121,7 @@ class Trajectory:
             frozen: whether the trajectory is frozen (no fmodel)
         """
         # Stash away the full parameters dict
-        self._parameters_full : dict = parameters
+        self._parameters_full : dict[Any, Any] = parameters
 
         traj_params = parameters.get("trajectory", {})
         if ("end_time" not in traj_params or
@@ -133,7 +132,7 @@ class Trajectory:
 
         # The workdir is a runtime parameter, not saved in the chkfile.
         self._tid : int = traj_id
-        self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
+        self._workdir : Path = Path.cwd() if workdir is None else workdir
         self._score_max : float = 0.0
         self._has_ended : bool = False
         self._has_converged : bool = False
@@ -169,17 +168,17 @@ class Trajectory:
         self._sparse_state_int : int = traj_params.get("sparse_freq", 1)
         self._sparse_state_beg : int = traj_params.get("sparse_start", 0)
         self._write_chkfile_all : bool = traj_params.get("chkfile_dump_all", False)
-        self._checkFile : os.PathLike = Path(f"{self.idstr()}.xml")
+        self._checkFile : Path = Path(f"{self.idstr()}.xml")
 
         # Each trajectory has its own instance of the forward model
-        if frozen:
+        if frozen or fmodel_t is None:
             self._fmodel = None
         else:
             self._fmodel = fmodel_t(parameters,
                                     self.idstr(),
                                     self._workdir)
 
-    def set_checkfile(self, path: os.PathLike) -> None:
+    def set_checkfile(self, path: Path) -> None:
         """Setter of the trajectory checkFile.
 
         Args:
@@ -187,7 +186,7 @@ class Trajectory:
         """
         self._checkFile = path
 
-    def set_workdir(self, path: os.PathLike) -> None:
+    def set_workdir(self, path: Path) -> None:
         """Setter of the trajectory working directory.
 
         And propagate the workdir to the forward model.
@@ -199,7 +198,7 @@ class Trajectory:
         if self._fmodel is not None:
             self._fmodel.set_workdir(path)
 
-    def get_workdir(self) -> os.PathLike:
+    def get_workdir(self) -> Path:
         """Get the trajectory working directory.
 
         Returns:
@@ -358,14 +357,14 @@ class Trajectory:
     @classmethod
     def restore_from_checkfile(
         cls,
-        checkfile: os.PathLike,
-        fmodel_t: ForwardModelBaseClass,
-        parameters: dict,
-        workdir: os.PathLike | None = None,
+        checkfile: Path,
+        fmodel_t: type[ForwardModelBaseClass],
+        parameters: dict[Any, Any],
+        workdir: Path | None = None,
         frozen: bool = False,
     ) -> Trajectory:
         """Return a trajectory restored from an XML chkfile."""
-        if not Path(checkfile).exists():
+        if not checkfile.exists():
             err_msg = f"Trajectory {checkfile} does not exist."
             _logger.exception(err_msg)
             raise FileNotFoundError
@@ -401,7 +400,7 @@ class Trajectory:
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
-        if not frozen:
+        if rest_traj._fmodel:
             # Remove snapshots from the list until a state
             # is available
             need_update = False
@@ -452,9 +451,10 @@ class Trajectory:
         if len(from_traj._snaps) == 0:
             tid, nb = get_index_from_id(rst_traj.idstr())
             new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+            fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
             rest_traj = Trajectory(
                 traj_id=rst_traj.id(),
-                fmodel_t=type(from_traj._fmodel),
+                fmodel_t=fmodel_t,
                 parameters=from_traj._parameters_full,
                 workdir = new_workdir,
             )
@@ -475,9 +475,10 @@ class Trajectory:
         # Init empty trajectory
         tid, nb = get_index_from_id(rst_traj.idstr())
         new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+        fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
         rest_traj = Trajectory(
             traj_id=rst_traj.id(),
-            fmodel_t=type(from_traj._fmodel),
+            fmodel_t=fmodel_t,
             parameters=from_traj._parameters_full,
             workdir = new_workdir,
         )
@@ -494,18 +495,19 @@ class Trajectory:
                 rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
 
         # Update trajectory metadata
-        rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
         rest_traj._t_cur = rest_traj._snaps[-1].time
         rest_traj._step = len(rest_traj._snaps)
-        rest_traj.update_metadata()
+        if rest_traj._fmodel:
+            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
+            rest_traj.update_metadata()
 
-        # Enable the model to perform tweaks
-        # after a trajectory restart
-        rest_traj._fmodel.post_trajectory_restart_hook(len(rest_traj._snaps), rest_traj._t_cur)
+            # Enable the model to perform tweaks
+            # after a trajectory restart
+            rest_traj._fmodel.post_trajectory_restart_hook(len(rest_traj._snaps), rest_traj._t_cur)
 
         return rest_traj
 
-    def store(self, traj_file: os.PathLink | None = None) -> None:
+    def store(self, traj_file: Path | None = None) -> None:
         """Store the trajectory to an XML chkfile."""
         root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
@@ -532,9 +534,9 @@ class Trajectory:
         ET.indent(tree, space="\t", level=0)
 
         if traj_file is not None:
-            tree.write(traj_file.absolute())
+            tree.write(traj_file.as_posix())
         else:
-            tree.write(self._checkFile.absolute())
+            tree.write(self._checkFile.as_posix())
 
     def update_metadata(self) -> None:
         """Update trajectory score/ending metadata.
@@ -546,10 +548,13 @@ class Trajectory:
         for snap in self._snaps:
             new_score_max = max(new_score_max, snap.score)
         self._score_max = new_score_max
-        self._has_converged = self._fmodel.check_convergence(self._step,
-                                                             self._t_cur,
-                                                             self._score_max,
-                                                             self._convergedVal)
+        if self._fmodel:
+            self._has_converged = self._fmodel.check_convergence(self._step,
+                                                                 self._t_cur,
+                                                                 self._score_max,
+                                                                 self._convergedVal)
+        else:
+            self._has_converged = False
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
 
@@ -577,7 +582,7 @@ class Trajectory:
         """Return True if computation has started."""
         return self._t_cur > 0.0
 
-    def get_checkfile(self) -> os.PathLike:
+    def get_checkfile(self) -> Path:
         """Return the trajectory check file name."""
         return self._checkFile
 

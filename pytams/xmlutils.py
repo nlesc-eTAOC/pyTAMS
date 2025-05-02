@@ -14,7 +14,7 @@ _logger = logging.getLogger(__name__)
 def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
-    np.set_printoptions(linewidth=np.inf, precision=12)
+    np.set_printoptions(linewidth = np.iinfo(np.int32).max, precision=12)
     np.set_printoptions(**oldoptions)
     yield
 
@@ -47,7 +47,7 @@ def manual_cast(elem: ET.Element) -> Any:
 
 
 # Plain old data type cast in map
-POD_cast_dict : dict[str, Callable] = {
+POD_cast_dict : dict[str, Callable[..., Any]] = {
         "int": int,
         "float": float,
         "float64": np.float64,
@@ -87,7 +87,7 @@ def manual_cast_str(type_str: str,
     return casted_elem
 
 
-def dict_to_xml(tag: str, d: dict) -> ET.Element:
+def dict_to_xml(tag: str, d: dict[Any, Any]) -> ET.Element:
     """Return an Element from a dictionnary.
 
     Args:
@@ -105,7 +105,7 @@ def dict_to_xml(tag: str, d: dict) -> ET.Element:
     return elem
 
 
-def xml_to_dict(elem: ET.Element | None) -> dict:
+def xml_to_dict(elem: ET.Element | None) -> dict[Any, Any]:
     """Return an dictionnary an Element.
 
     Args:

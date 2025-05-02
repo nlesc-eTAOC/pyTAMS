@@ -3,33 +3,32 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Text
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import sessionmaker
 
 _logger = logging.getLogger(__name__)
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """A base class for the tables."""
 
 class Trajectory(Base):
     """A table storing the trajectories."""
     __tablename__ = "trajectories"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    traj_file = Column(Text, nullable=False)
-    status = Column(String, default="idle", nullable=False)
+    id : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    traj_file : Mapped[str] = mapped_column(nullable=False)
+    status : Mapped[str] = mapped_column(default="idle", nullable=False)
 
 class ArchivedTrajectory(Base):
     """A table storing the archived trajectories."""
     __tablename__ = "archived_trajectories"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    traj_file = Column(Text, nullable=False)
+    id : Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    traj_file : Mapped[str] = mapped_column(nullable=False)
 
 
 valid_statuses = ["locked", "idle", "completed"]
@@ -109,7 +108,7 @@ class SQLFile:
             # SQL indexing starts at 1, adjust ID
             db_id = traj_id + 1
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
-            traj.traj_file = traj_file
+            traj.traj_file = mapped_column(traj_file)
             session.commit()
         except SQLAlchemyError:
             session.rollback()
@@ -144,7 +143,7 @@ class SQLFile:
             if traj:
                 allowed_status = ["idle", "completed"] if allow_completed_lock else ["idle"]
                 if traj.status in allowed_status:
-                    traj.status = "locked"
+                    traj.status = mapped_column("locked")
                     session.commit()
                     return True
                 return False
@@ -178,7 +177,7 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 if traj.status in ["locked"]:
-                    traj.status = "completed"
+                    traj.status = mapped_column("completed")
                     session.commit()
                 else:
                     warn_msg = f"Attempting to mark completed Trajectory {traj_id} already in status {traj.status}."
@@ -211,7 +210,7 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 if traj.status in ["locked"]:
-                    traj.status = "idle"
+                    traj.status = mapped_column("idle")
                     session.commit()
                 else:
                     warn_msg = f"Attempting to release Trajectory {traj_id} already in status {traj.status}."
@@ -244,7 +243,7 @@ class SQLFile:
             session.close()
 
     def fetch_trajectory(self,
-                         traj_id : int) -> str | None:
+                         traj_id : int) -> str:
         """Get the trajectory file of a trajectory.
 
         Args:
@@ -262,7 +261,8 @@ class SQLFile:
             db_id = traj_id + 1
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
-                return traj.traj_file
+                tfile : str = traj.traj_file
+                return tfile
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
@@ -305,7 +305,7 @@ class SQLFile:
             session.close()
 
     def fetch_archived_trajectory(self,
-                                  traj_id : int) -> str | None:
+                                  traj_id : int) -> str:
         """Get the trajectory file of a trajectory in the archive.
 
         Args:
@@ -323,7 +323,8 @@ class SQLFile:
             db_id = traj_id + 1
             traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
             if traj:
-                return traj.traj_file
+                tfile : str = traj.traj_file
+                return tfile
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)

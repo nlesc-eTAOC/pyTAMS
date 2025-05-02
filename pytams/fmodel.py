@@ -1,5 +1,4 @@
 """A base class for the stochastic forward model."""
-import os
 from abc import ABCMeta
 from abc import abstractmethod
 from logging import getLogger
@@ -35,9 +34,9 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
     @final
     def __init__(self,
-                 params: dict,
+                 params: dict[Any, Any],
                  ioprefix: str | None = None,
-                 workdir: os.PathLike | None = None):
+                 workdir: Path | None = None):
         """Base class __init__ method.
 
         The ABC init method calls the concrete class init method
@@ -59,7 +58,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._noise : Any = None
         self._step : int = 0
         self._time : float = 0.0
-        self._workdir : os.PathLike = Path.cwd() if workdir is None else workdir
+        self._workdir : Path = Path.cwd() if workdir is None else workdir
 
         # Add the deterministic parameter to the model dictionary
         # for consistency
@@ -133,7 +132,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._clear_model()
 
     @final
-    def set_workdir(self, workdir : os.PathLike) -> None:
+    def set_workdir(self, workdir : Path) -> None:
         """Setter of the model working directory.
 
         Args:
@@ -143,7 +142,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
     @abstractmethod
     def _init_model(self,
-                    params: dict | None = None,
+                    params: dict[Any, Any] | None = None,
                     ioprefix: str | None = None) -> None:
         """Concrete class specific initialization.
 
@@ -180,7 +179,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Set the current state of the model."""
 
     @abstractmethod
-    def score(self) -> Any:
+    def score(self) -> float:
         """Return the model's current state score."""
 
     @abstractmethod

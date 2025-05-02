@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any
 import numpy as np
+import numpy.typing as npt
 import toml
 from pytams.database import Database
 from pytams.taskrunner import get_runner_type
@@ -108,8 +109,8 @@ class TAMS:
 
         # Time management uses UTC date
         # to make sure workers are always in sync
-        self._startDate : datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-        self._endDate : datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
+        self._startDate : datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        self._endDate : datetime.datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
 
         # Initialize trajectory pool
         if self._tdb.is_empty():
@@ -133,8 +134,17 @@ class TAMS:
 
         Returns:
            TAMS elapse time.
+
+        Raises:
+            ValueError: if the start date is not set
         """
-        return (datetime.datetime.now(tz=datetime.timezone.utc) - self._startDate).total_seconds()
+        delta : datetime.timedelta = datetime.datetime.now(tz=datetime.timezone.utc) - self._startDate
+        if delta:
+            return delta.total_seconds()
+
+        err_msg = "TAMS start date is not set !"
+        _logger.exception(err_msg)
+        raise ValueError
 
     def remaining_walltime(self) -> float:
         """Return the remaining wallclock time.
@@ -198,7 +208,7 @@ class TAMS:
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
 
-    def check_exit_splitting_loop(self, k: int) -> tuple[bool, np.ndarray]:
+    def check_exit_splitting_loop(self, k: int) -> tuple[bool, npt.NDArray[np.float64]]:
         """Check for exit criterion of the splitting loop.
 
         Args:
@@ -286,7 +296,7 @@ class TAMS:
         Returns:
             list of trajectory index to restart from
         """
-        # Enable deterministic runs by setting the a (different) seed
+        # Enable deterministic runs by setting a (different) seed
         # for each splitting iteration
         if self._parameters.get("tams",{}).get("deterministic", False):
             rng = np.random.default_rng(seed=42*self._tdb.k_split())
@@ -296,7 +306,7 @@ class TAMS:
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
             while rest_idx[i] in min_idx_list:
-                rest_idx[i] = rng.integers(0, self._tdb.traj_list_len())
+                rest_idx[i] = rng.integers(low = 0, high = self._tdb.traj_list_len(), dtype = int)
         return rest_idx
 
 
