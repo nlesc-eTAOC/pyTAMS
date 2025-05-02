@@ -65,3 +65,5 @@ jobs:
           python -m pip install .[dev,publishing]
       - name: Check style against standards using ruff
         run: ruff check .
+      - name: Check type using mypy
+        run: mypy .

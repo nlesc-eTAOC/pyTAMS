@@ -22,7 +22,7 @@ from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
 if TYPE_CHECKING:
-    import os
+    from pytams.fmodel import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
 
@@ -59,8 +59,8 @@ class Database:
     """
 
     def __init__(self,
-                 fmodel_t: Any,
-                 params: dict,
+                 fmodel_t: type[ForwardModelBaseClass],
+                 params: dict[Any, Any],
                  ntraj: int | None = None,
                  nsplititer: int | None = None) -> None:
         """Initialize a TAMS database.
@@ -84,7 +84,7 @@ class Database:
         self._save_to_disk = False
         self._parameters = params
         self._name = "TAMS_" + fmodel_t.name()
-        self._path = params.get("database", {}).get("path", None)
+        self._path : str | None = params.get("database", {}).get("path", None)
         if self._path:
             self._save_to_disk = True
             self._restart = params.get("database", {}).get("restart", False)
@@ -94,7 +94,7 @@ class Database:
                 _logger.error(err_msg)
                 raise DatabaseError(err_msg)
             self._name = f"{self._path}"
-            self._abs_path : os.PathLike = Path.cwd() / self._name
+            self._abs_path : Path = Path.cwd() / self._name
             self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
             self._version = version(__package__)
 
@@ -102,14 +102,14 @@ class Database:
 
         # Trajectory pools
         self._trajs_db : list[Trajectory] = []
-        self._pool_db = None
+        self._pool_db : SQLFile | None = None
         self._archived_trajs_db : list[Trajectory] = []
 
         # Splitting data
         self._ksplit = 0
         self._l_bias : list[int] = []
         self._weights : list[float] = [1.0]
-        self._minmax : list[npt.NDArray] = []
+        self._minmax : list[npt.NDArray[np.float64]] = []
         self._ongoing = None
 
         # Initialize only metadata at this point
@@ -138,13 +138,13 @@ class Database:
         """
         return self._nsplititer
 
-    def path(self) -> str:
+    def path(self) -> str | None:
         """Return the path to the database."""
         return self._path
 
     @classmethod
     def load(cls,
-             a_path: os.PathLike) -> Database:
+             a_path: Path) -> Database:
         """Instanciate a TAMS database from disk.
 
         Args:
@@ -398,6 +398,11 @@ class Database:
         if not self._save_to_disk:
             return
 
+        if not self._pool_db:
+            err_msg = "Database is not initialized !"
+            _logger.exception(err_msg)
+            raise DatabaseError(err_msg)
+
         # Counter for number of trajectory loaded
         n_traj_restored = 0
 
@@ -470,7 +475,7 @@ class Database:
         """
         # Also adds it to the SQL pool file.
         # and set the checkfile
-        if self._save_to_disk:
+        if self._save_to_disk and self._pool_db:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
@@ -594,7 +599,7 @@ class Database:
         self._archived_trajs_db.append(traj)
 
         # Update the list of archived trajectories in the SQL DB
-        if self._save_to_disk:
+        if self._save_to_disk and self._pool_db:
             checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
             self._pool_db.archive_trajectory(checkfile_str)
 
@@ -613,7 +618,7 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk:
+        if (not self._save_to_disk or not self._pool_db):
             return True
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
@@ -629,7 +634,7 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk:
+        if not self._save_to_disk or not self._pool_db:
             return
 
         if has_ended:
@@ -639,7 +644,7 @@ class Database:
 
     def update_trajectory_file(self,
                                traj_id: int,
-                               checkfile: os.PathLike) -> None:
+                               checkfile: Path) -> None:
         """Update a trajectory file in the DB.
 
         Args:
@@ -649,7 +654,7 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk:
+        if not self._save_to_disk or not self._pool_db:
             return
 
         checkfile_str = checkfile.relative_to(self._abs_path).as_posix()

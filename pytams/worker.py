@@ -4,7 +4,9 @@ import concurrent.futures
 import datetime
 import functools
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from pytams.database import Database
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimitError
@@ -44,7 +46,7 @@ def traj_advance_with_exception(traj: Trajectory,
     return traj
 
 def pool_worker(traj: Trajectory,
-                end_date: datetime,
+                end_date: datetime.date,
                 db_path: str | None = None) -> Trajectory:
     """A worker to generate each initial trajectory.
 
@@ -57,7 +59,10 @@ def pool_worker(traj: Trajectory,
         The updated trajectory
     """
     # Get wall time
-    wall_time = (end_date - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds()
+    wall_time = -1.0
+    timedelta : datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
+    if timedelta:
+        wall_time = timedelta.total_seconds()
 
     if wall_time > 0.0 and not traj.has_ended():
         db = None
@@ -80,7 +85,7 @@ def ms_worker(
     from_traj: Trajectory,
     rst_traj: Trajectory,
     min_val: float,
-    end_date: datetime,
+    end_date: datetime.date,
     db_path: str | None = None,
 ) -> Trajectory:
     """A worker to restart trajectories.
@@ -93,7 +98,10 @@ def ms_worker(
         db_path: a database path or None
     """
     # Get wall time
-    wall_time = (end_date - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds()
+    wall_time = -1.0
+    timedelta : datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
+    if timedelta:
+        wall_time = timedelta.total_seconds()
 
     if wall_time > 0.0 :
         db = None
@@ -117,7 +125,7 @@ def ms_worker(
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
-        if db_path:
+        if db:
             db.update_trajectory_file(traj.id(), traj.get_checkfile())
 
         return traj_advance_with_exception(traj, wall_time, db)
@@ -125,8 +133,8 @@ def ms_worker(
     return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
 
 async def worker_async(
-    queue : asyncio.Queue[tuple[Trajectory, float, bool, str]],
-    res_queue : asyncio.Queue[Trajectory],
+    queue : asyncio.Queue[tuple[Callable[..., Any], Trajectory, float, bool, str]],
+    res_queue : asyncio.Queue[asyncio.Future[Trajectory]],
     executor : concurrent.futures.Executor) -> None:
     """An async worker for the asyncio taskrunner.
 
@@ -141,7 +149,7 @@ async def worker_async(
     while True:
         func, *work_unit = await queue.get()
         loop = asyncio.get_running_loop()
-        traj = await loop.run_in_executor(
+        traj : asyncio.Future[Trajectory] = await loop.run_in_executor(
             executor,
             functools.partial(func, *work_unit),
         )
