@@ -10,11 +10,12 @@ import numpy as np
 
 _logger = logging.getLogger(__name__)
 
+
 @contextmanager
 def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
-    np.set_printoptions(linewidth = np.iinfo(np.int32).max, precision=12)
+    np.set_printoptions(linewidth=np.iinfo(np.int32).max, precision=12)
     np.set_printoptions(**oldoptions)
     yield
 
@@ -47,21 +48,20 @@ def manual_cast(elem: ET.Element) -> Any:
 
 
 # Plain old data type cast in map
-POD_cast_dict : dict[str, Callable[..., Any]] = {
-        "int": int,
-        "float": float,
-        "float64": np.float64,
-        "complex": complex,
-        "str": str,
-        "str_": str,
-        "dict": ast.literal_eval,
-        "bool": lambda elem_text: bool(elem_text == "True"),
-        "bool_": lambda elem_text: bool(elem_text == "True"),
-        }
+POD_cast_dict: dict[str, Callable[..., Any]] = {
+    "int": int,
+    "float": float,
+    "float64": np.float64,
+    "complex": complex,
+    "str": str,
+    "str_": str,
+    "dict": ast.literal_eval,
+    "bool": lambda elem_text: bool(elem_text == "True"),
+    "bool_": lambda elem_text: bool(elem_text == "True"),
+}
 
 
-def manual_cast_str(type_str: str,
-                    elem_text: str) -> Any:
+def manual_cast_str(type_str: str, elem_text: str) -> Any:
     """Manually cast from strings."""
     try:
         casted_elem = POD_cast_dict[type_str](elem_text)
@@ -126,6 +126,7 @@ def xml_to_dict(elem: ET.Element | None) -> dict[Any, Any]:
 
     return d
 
+
 def get_val_type(val: Any) -> str:
     """Return the type of val.
 
@@ -166,11 +167,7 @@ def new_element(key: str, val: Any) -> ET.Element:
     return elem
 
 
-def make_xml_snapshot(idx: int,
-                      time: float,
-                      score: float,
-                      noise: Any,
-                      state: Any) -> ET.Element:
+def make_xml_snapshot(idx: int, time: float, score: float, noise: Any, state: Any) -> ET.Element:
     """Return a snapshot in XML elemt format.
 
     Args:

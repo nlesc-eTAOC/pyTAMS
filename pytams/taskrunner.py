@@ -26,12 +26,12 @@ _logger = logging.getLogger(__name__)
 
 class WorkerLoggerPlugin(WorkerPlugin):
     """A plugin to configure logging on each worker."""
-    def __init__(self,
-                 params : dict[Any,Any]) -> None:
+
+    def __init__(self, params: dict[Any, Any]) -> None:
         """Init function pass in the params dict."""
         self._params = params
 
-    def setup(self, worker : Worker) -> None:
+    def setup(self, worker: Worker) -> None:
         """Configure logging on the worker.
 
         Args:
@@ -45,15 +45,17 @@ class WorkerLoggerPlugin(WorkerPlugin):
 class RunnerError(Exception):
     """Exception class for the runner."""
 
+
 class BaseRunner(metaclass=ABCMeta):
     """An ABC for the task runners."""
 
     @abstractmethod
-    def __init__(self,
-                 params: dict,
-                 sync_wk : Callable,
-                 n_workers: int = 1,
-                 ):
+    def __init__(
+        self,
+        params: dict,
+        sync_wk: Callable,
+        n_workers: int = 1,
+    ):
         """A dummy init method."""
 
     @abstractmethod
@@ -61,11 +63,11 @@ class BaseRunner(metaclass=ABCMeta):
         """To enable use of with."""
 
     @abstractmethod
-    def __exit__(self, *args : object) -> None:
+    def __exit__(self, *args: object) -> None:
         """Executed leaving with scope."""
 
     @abstractmethod
-    def make_promise(self, task : list[Any]) -> None:
+    def make_promise(self, task: list[Any]) -> None:
         """Log a new task to the list of task to tackle."""
 
     @abstractmethod
@@ -87,11 +89,12 @@ class AsIORunner(BaseRunner):
     back into result queue.
     """
 
-    def __init__(self,
-                 params: dict,
-                 sync_wk : Callable,
-                 n_workers: int = 1,
-                 ):
+    def __init__(
+        self,
+        params: dict,
+        sync_wk: Callable,
+        n_workers: int = 1,
+    ):
         """Init the task runner.
 
         Args:
@@ -101,14 +104,14 @@ class AsIORunner(BaseRunner):
             n_workers: number of workers
         """
         self._params = params
-        self._queue : asyncio.Queue[Any] = asyncio.Queue()
-        self._rqueue : asyncio.Queue[Any] = asyncio.Queue()
-        self._n_workers : int = n_workers
+        self._queue: asyncio.Queue[Any] = asyncio.Queue()
+        self._rqueue: asyncio.Queue[Any] = asyncio.Queue()
+        self._n_workers: int = n_workers
         self._sync_worker = sync_wk
         self._async_worker = worker_async
-        self._loop : asyncio.AbstractEventLoop | None = None
-        self._executor : concurrent.futures.Executor | None = None
-        self._workers : list[asyncio.Task[Any]] | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._executor: concurrent.futures.Executor | None = None
+        self._workers: list[asyncio.Task[Any]] | None = None
 
     def __enter__(self) -> Self:
         """To enable use of with."""
@@ -116,7 +119,7 @@ class AsIORunner(BaseRunner):
         asyncio.set_event_loop(self._loop)
         return self
 
-    def __exit__(self, *args : object) -> None:
+    def __exit__(self, *args: object) -> None:
         """Executed leaving with scope."""
         if self._workers:
             for w in self._workers:
@@ -128,25 +131,24 @@ class AsIORunner(BaseRunner):
             self._loop.close()
             asyncio.set_event_loop(None)
 
-    async def add_task(self, task : list[Any]) -> None:
+    async def add_task(self, task: list[Any]) -> None:
         """Append a task to the queue."""
         await self._queue.put([self._sync_worker, *task])
 
-    def make_promise(self, task : list[Any]) -> None:
+    def make_promise(self, task: list[Any]) -> None:
         """A synchronous wrapper to add_task."""
         asyncio.run(self.add_task(task))
 
     async def run_tasks(self) -> list[Any]:
         """Create worker tasks and run."""
         if not self._workers:
-            self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=self._n_workers,
-                                                                    initializer=setup_logger,
-                                                                    initargs=(self._params,))
+            self._executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=self._n_workers, initializer=setup_logger, initargs=(self._params,)
+            )
             self._workers = [
-                asyncio.create_task(self._async_worker(self._queue,
-                                                       self._rqueue,
-                                                       self._executor))
-                for _ in range(self._n_workers)]
+                asyncio.create_task(self._async_worker(self._queue, self._rqueue, self._executor))
+                for _ in range(self._n_workers)
+            ]
 
         # Wait until all tasks are processed
         await self._queue.join()
@@ -172,10 +174,10 @@ class AsIORunner(BaseRunner):
         else:
             return res
 
-
     def n_workers(self) -> int:
         """Return the number of workers in the runner."""
         return self._n_workers
+
 
 class DaskRunner(BaseRunner):
     """A task runner class based on Dask.
@@ -184,11 +186,12 @@ class DaskRunner(BaseRunner):
     a tasks concurently in workers.
     """
 
-    def __init__(self,
-                 params: dict,
-                 sync_wk : Callable,
-                 n_workers: int = 1,
-                 ):
+    def __init__(
+        self,
+        params: dict,
+        sync_wk: Callable,
+        n_workers: int = 1,
+    ):
         """Start the Dask cluster and client.
 
         Args:
@@ -197,11 +200,11 @@ class DaskRunner(BaseRunner):
             async_wk: an asynchronous worker function
             n_workers: number of workers
         """
-        dask_dict = params.get("dask",{})
+        dask_dict = params.get("dask", {})
         self.dask_backend = dask_dict.get("backend", "local")
-        self._n_workers : int = n_workers
+        self._n_workers: int = n_workers
         self._sync_worker = sync_wk
-        self._tlist : list[Any] = []
+        self._tlist: list[Any] = []
         if self.dask_backend == "local":
             self.client = Client(threads_per_worker=1, n_workers=self._n_workers)
             self.cluster = None
@@ -215,7 +218,8 @@ class DaskRunner(BaseRunner):
 
                 config_file = ntpath.basename(self.slurm_config_file)
                 shutil.move(
-                    self.slurm_config_file, f"~/.config/dask/{config_file}",
+                    self.slurm_config_file,
+                    f"~/.config/dask/{config_file}",
                 )
                 self.cluster = SLURMCluster()
             else:
@@ -233,9 +237,11 @@ class DaskRunner(BaseRunner):
                     processes=1,
                     interface="ib0",
                     job_script_prologue=self.dask_prologue,
-                    job_extra_directives=[f"--ntasks={self.dask_ntasks}",
-                                          f"--tasks-per-node={self.dask_ntasks_per_node}",
-                                          "--exclusive"],
+                    job_extra_directives=[
+                        f"--ntasks={self.dask_ntasks}",
+                        f"--tasks-per-node={self.dask_ntasks_per_node}",
+                        "--exclusive",
+                    ],
                     job_directives_skip=["--cpus-per-task=", "--mem"],
                 )
             self.cluster.scale(jobs=self._n_workers)
@@ -252,7 +258,7 @@ class DaskRunner(BaseRunner):
         """To enable use of with."""
         return self
 
-    def __exit__(self, *args : object) -> None:
+    def __exit__(self, *args: object) -> None:
         """Executed leaving with scope."""
         if self.cluster:
             self.cluster.close()
@@ -262,7 +268,7 @@ class DaskRunner(BaseRunner):
         """Append a task to the internal task list."""
         self._tlist.append(dask.delayed(self._sync_worker)(*task))
 
-    def just_delay(self, obj : Any) -> Any:
+    def just_delay(self, obj: Any) -> Any:
         """Delay an object."""
         return dask.delayed(obj)
 
@@ -288,14 +294,12 @@ class DaskRunner(BaseRunner):
             self._tlist.clear()
             return res
 
-
-
     def n_workers(self) -> int:
         """Return the number of workers in the runner."""
         return self._n_workers
 
 
-def get_runner_type(params : dict) -> type[BaseRunner]:
+def get_runner_type(params: dict) -> type[BaseRunner]:
     """Create an engine from parameters."""
     runner_map = {
         "dask": DaskRunner,

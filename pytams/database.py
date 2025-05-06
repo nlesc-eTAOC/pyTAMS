@@ -1,4 +1,5 @@
 """A database class for TAMS."""
+
 from __future__ import annotations
 import copy
 import datetime
@@ -30,6 +31,7 @@ _logger = logging.getLogger(__name__)
 class DatabaseError(Exception):
     """Exception class for TAMS Database."""
 
+
 class Database:
     """A database class for TAMS.
 
@@ -58,11 +60,13 @@ class Database:
         _ongoing: the list of ongoing branches if unfinished splitting iteration.
     """
 
-    def __init__(self,
-                 fmodel_t: type[ForwardModelBaseClass],
-                 params: dict[Any, Any],
-                 ntraj: int | None = None,
-                 nsplititer: int | None = None) -> None:
+    def __init__(
+        self,
+        fmodel_t: type[ForwardModelBaseClass],
+        params: dict[Any, Any],
+        ntraj: int | None = None,
+        nsplititer: int | None = None,
+    ) -> None:
         """Initialize a TAMS database.
 
         Initialize TAMS database object, bare in-memory or on-disk.
@@ -84,7 +88,7 @@ class Database:
         self._save_to_disk = False
         self._parameters = params
         self._name = "TAMS_" + fmodel_t.name()
-        self._path : str | None = params.get("database", {}).get("path", None)
+        self._path: str | None = params.get("database", {}).get("path", None)
         if self._path:
             self._save_to_disk = True
             self._restart = params.get("database", {}).get("restart", False)
@@ -94,22 +98,22 @@ class Database:
                 _logger.error(err_msg)
                 raise DatabaseError(err_msg)
             self._name = f"{self._path}"
-            self._abs_path : Path = Path.cwd() / self._name
+            self._abs_path: Path = Path.cwd() / self._name
             self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
             self._version = version(__package__)
 
         self._store_archive = params.get("database", {}).get("archive_discarded", False)
 
         # Trajectory pools
-        self._trajs_db : list[Trajectory] = []
-        self._pool_db : SQLFile | None = None
-        self._archived_trajs_db : list[Trajectory] = []
+        self._trajs_db: list[Trajectory] = []
+        self._pool_db: SQLFile | None = None
+        self._archived_trajs_db: list[Trajectory] = []
 
         # Splitting data
         self._ksplit = 0
-        self._l_bias : list[int] = []
-        self._weights : list[float] = [1.0]
-        self._minmax : list[npt.NDArray[np.float64]] = []
+        self._l_bias: list[int] = []
+        self._weights: list[float] = [1.0]
+        self._minmax: list[npt.NDArray[np.float64]] = []
         self._ongoing = None
 
         # Initialize only metadata at this point
@@ -143,8 +147,7 @@ class Database:
         return self._path
 
     @classmethod
-    def load(cls,
-             a_path: Path) -> Database:
+    def load(cls, a_path: Path) -> Database:
         """Instanciate a TAMS database from disk.
 
         Args:
@@ -175,9 +178,7 @@ class Database:
 
         return cls(model, db_params)
 
-    def _init_metadata(self,
-                       ntraj: int | None = None,
-                       nsplititer: int | None = None) -> None:
+    def _init_metadata(self, ntraj: int | None = None, nsplititer: int | None = None) -> None:
         """Initialize the database.
 
         Initialize database internal metadata (only) and setup
@@ -193,7 +194,7 @@ class Database:
             db_exists = self._abs_path.exists()
 
             # Regardless of a pre-existing path we initialize from scratch
-            if (not db_exists or self._restart):
+            if not db_exists or self._restart:
                 if not ntraj:
                     err_msg = "Initializing TAMS database from scratch require ntraj !"
                     _logger.error(err_msg)
@@ -227,7 +228,6 @@ class Database:
                 raise DatabaseError(err_msg)
             self._ntraj = ntraj
             self._nsplititer = nsplititer
-
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -337,8 +337,7 @@ class Database:
 
         traj.store()
 
-    def save_splitting_data(self,
-                            ongoing_trajs: list[int] | None = None) -> None:
+    def save_splitting_data(self, ongoing_trajs: list[int] | None = None) -> None:
         """Write splitting data to the database.
 
         Args:
@@ -378,7 +377,7 @@ class Database:
             self._ksplit = datafromxml["ksplit"]
             self._l_bias = datafromxml["bias"].tolist()
             self._weights = datafromxml["weight"].tolist()
-            self._minmax = list(np.reshape(datafromxml["minmax"], [3,-1], order="F").T)
+            self._minmax = list(np.reshape(datafromxml["minmax"], [3, -1], order="F").T)
             if "ongoing" in datafromxml:
                 self._ongoing = datafromxml["ongoing"].tolist()
         else:
@@ -464,9 +463,7 @@ class Database:
         """
         return self._name
 
-    def append_traj(self,
-                    a_traj: Trajectory,
-                    update_db: bool) -> None:
+    def append_traj(self, a_traj: Trajectory, update_db: bool) -> None:
         """Append a Trajectory to the internal list.
 
         Args:
@@ -483,7 +480,6 @@ class Database:
                 self._pool_db.add_trajectory(checkfile_str)
 
         self._trajs_db.append(a_traj)
-
 
     def traj_list(self) -> list[Trajectory]:
         """Access to the trajectory list.
@@ -505,16 +501,13 @@ class Database:
         Raises:
             ValueError if idx is out of range
         """
-        if (idx < 0 or
-            idx >= len(self._trajs_db)):
+        if idx < 0 or idx >= len(self._trajs_db):
             err_msg = f"Trying to access a non existing trajectory {idx} !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
         return self._trajs_db[idx]
 
-    def overwrite_traj(self,
-                      idx: int,
-                      traj: Trajectory) -> None:
+    def overwrite_traj(self, idx: int, traj: Trajectory) -> None:
         """Deep copy a trajectory into internal list.
 
         Args:
@@ -524,8 +517,7 @@ class Database:
         Raises:
             ValueError if idx is out of range
         """
-        if (idx < 0 or
-            idx >= len(self._trajs_db)):
+        if idx < 0 or idx >= len(self._trajs_db):
             err_msg = f"Trying to override a non existing trajectory {idx} !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
@@ -574,9 +566,7 @@ class Database:
 
         return len(self._archived_trajs_db)
 
-
-    def update_traj_list(self,
-                         a_traj_list: list[Trajectory]) -> None:
+    def update_traj_list(self, a_traj_list: list[Trajectory]) -> None:
         """Overwrite the trajectory list.
 
         Args:
@@ -584,8 +574,7 @@ class Database:
         """
         self._trajs_db = a_traj_list
 
-    def archive_trajectory(self,
-                           traj: Trajectory) -> None:
+    def archive_trajectory(self, traj: Trajectory) -> None:
         """Archive a trajectory about to be discarded.
 
         Args:
@@ -603,9 +592,7 @@ class Database:
             checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
             self._pool_db.archive_trajectory(checkfile_str)
 
-    def lock_trajectory(self,
-                        tid: int,
-                        allow_completed_lock : bool = False) -> bool:
+    def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
 
         Args:
@@ -618,13 +605,11 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if (not self._save_to_disk or not self._pool_db):
+        if not self._save_to_disk or not self._pool_db:
             return True
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
-    def unlock_trajectory(self,
-                          tid: int,
-                          has_ended: bool) -> None:
+    def unlock_trajectory(self, tid: int, has_ended: bool) -> None:
         """Unlock a trajectory in the SQL DB.
 
         Args:
@@ -642,9 +627,7 @@ class Database:
         else:
             self._pool_db.release_trajectory(tid)
 
-    def update_trajectory_file(self,
-                               traj_id: int,
-                               checkfile: Path) -> None:
+    def update_trajectory_file(self, traj_id: int, checkfile: Path) -> None:
         """Update a trajectory file in the DB.
 
         Args:
@@ -660,10 +643,9 @@ class Database:
         checkfile_str = checkfile.relative_to(self._abs_path).as_posix()
         self._pool_db.update_trajectory_file(traj_id, checkfile_str)
 
-
     def weights(self) -> list[float]:
         """Splitting iterations weights."""
-        return  self._weights
+        return self._weights
 
     def append_weight(self, weight: float) -> None:
         """Append a weight to internal list."""
@@ -677,10 +659,7 @@ class Database:
         """Append a bias to internal list."""
         self._l_bias.append(bias)
 
-    def append_minmax(self,
-                      ksplit: int,
-                      minofmaxes: float,
-                      maxofmaxes: float) -> None:
+    def append_minmax(self, ksplit: int, minofmaxes: float, maxofmaxes: float) -> None:
         """Append min/max of maxes to internal list."""
         self._minmax.append(np.array([float(ksplit), minofmaxes, maxofmaxes]))
 
@@ -753,9 +732,7 @@ class Database:
         """
         _logger.info(inf_tbl)
 
-    def plot_score_functions(self,
-                             fname: str | None = None,
-                             plot_archived: bool = False) -> None:
+    def plot_score_functions(self, fname: str | None = None, plot_archived: bool = False) -> None:
         """Plot the score as function of time for all trajectories."""
         pltfile = fname if fname else Path(self._name).stem + "_scores.png"
 
@@ -773,7 +750,7 @@ class Database:
         plt.xticks(fontsize="x-large")
         plt.yticks(fontsize="x-large")
         plt.grid(linestyle="dotted")
-        plt.tight_layout() # to fit everything in the prescribed area
+        plt.tight_layout()  # to fit everything in the prescribed area
         plt.savefig(pltfile, dpi=300)
         plt.clf()
         plt.close()

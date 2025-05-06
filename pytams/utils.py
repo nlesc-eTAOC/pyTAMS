@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 
-def setup_logger(params : dict[Any,Any]) -> None:
+def setup_logger(params: dict[Any, Any]) -> None:
     """Setup the logger parameters.
 
     Args:
@@ -38,8 +38,8 @@ def setup_logger(params : dict[Any,Any]) -> None:
         log_file.setFormatter(logging.Formatter(log_format))
         logging.getLogger("").addHandler(log_file)
 
-def get_min_scored(maxes : npt.NDArray[Any],
-                   nworkers : int) -> tuple[list[int], npt.NDArray[Any]]:
+
+def get_min_scored(maxes: npt.NDArray[Any], nworkers: int) -> tuple[list[int], npt.NDArray[Any]]:
     """Get the nworker lower scored trajectories or more if equal score.
 
     Args:
@@ -52,20 +52,18 @@ def get_min_scored(maxes : npt.NDArray[Any],
     """
     ordered_tlist = np.argsort(maxes)
     is_same_min = False
-    min_idx_list : list[int] = []
+    min_idx_list: list[int] = []
     for idx in ordered_tlist:
-      if len(min_idx_list) > 0:
-        is_same_min = maxes[idx] == maxes[min_idx_list[-1]]
-      if (len(min_idx_list) < nworkers or
-          is_same_min):
-        min_idx_list.append(idx)
+        if len(min_idx_list) > 0:
+            is_same_min = maxes[idx] == maxes[min_idx_list[-1]]
+        if len(min_idx_list) < nworkers or is_same_min:
+            min_idx_list.append(idx)
 
     min_vals = maxes[min_idx_list]
     return min_idx_list, min_vals
 
 
-def moving_avg(arr_in : npt.NDArray[Any],
-               window_l : int) -> npt.NDArray[Any]:
+def moving_avg(arr_in: npt.NDArray[Any], window_l: int) -> npt.NDArray[Any]:
     """Return the moving average of a 1D numpy array.
 
     Args:
@@ -77,11 +75,11 @@ def moving_avg(arr_in : npt.NDArray[Any],
     """
     arr_out = np.zeros(arr_in.shape[0])
     for i in range(len(arr_in)):
-        lbnd = max(i-int(np.ceil(window_l/2)),0)
-        hbnd = min(i+int(np.floor(window_l/2)),len(arr_in)-1)
+        lbnd = max(i - int(np.ceil(window_l / 2)), 0)
+        hbnd = min(i + int(np.floor(window_l / 2)), len(arr_in) - 1)
         if lbnd == 0:
             hbnd = window_l
-        if hbnd == len(arr_in)-1:
-            lbnd = len(arr_in)-window_l-1
+        if hbnd == len(arr_in) - 1:
+            lbnd = len(arr_in) - window_l - 1
         arr_out[i] = np.mean(arr_in[lbnd:hbnd])
     return arr_out

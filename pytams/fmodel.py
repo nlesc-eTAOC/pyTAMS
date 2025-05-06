@@ -1,4 +1,5 @@
 """A base class for the stochastic forward model."""
+
 from abc import ABCMeta
 from abc import abstractmethod
 from logging import getLogger
@@ -7,6 +8,7 @@ from typing import Any
 from typing import final
 
 _logger = getLogger(__name__)
+
 
 class ForwardModelBaseClass(metaclass=ABCMeta):
     """A base class for the stochastic forward model.
@@ -33,10 +35,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     """
 
     @final
-    def __init__(self,
-                 params: dict[Any, Any],
-                 ioprefix: str | None = None,
-                 workdir: Path | None = None):
+    def __init__(self, params: dict[Any, Any], ioprefix: str | None = None, workdir: Path | None = None):
         """Base class __init__ method.
 
         The ABC init method calls the concrete class init method
@@ -54,11 +53,11 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             workdir: an optional path to the working directory
         """
         # Initialize common tooling
-        self._prescribed_noise : bool = False
-        self._noise : Any = None
-        self._step : int = 0
-        self._time : float = 0.0
-        self._workdir : Path = Path.cwd() if workdir is None else workdir
+        self._prescribed_noise: bool = False
+        self._noise: Any = None
+        self._step: int = 0
+        self._time: float = 0.0
+        self._workdir: Path = Path.cwd() if workdir is None else workdir
 
         # Add the deterministic parameter to the model dictionary
         # for consistency
@@ -75,8 +74,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._noise = self._make_noise()
 
     @final
-    def advance(self,
-                dt: float) -> float:
+    def advance(self, dt: float) -> float:
         """Base class advance function of the model.
 
         This is the advance function called by TAMS internals. It
@@ -97,10 +95,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             self._noise = self._make_noise()
 
         try:
-            actual_dt = self._advance(self._step,
-                                      self._time,
-                                      dt,
-                                      self._noise)
+            actual_dt = self._advance(self._step, self._time, dt, self._noise)
             # Update internal counter. Note that actual_dt may differ
             # from requested dt in some occasions.
             self._step = self._step + 1
@@ -121,7 +116,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         return self._noise
 
     @final
-    def set_noise(self, a_noise : Any) -> None:
+    def set_noise(self, a_noise: Any) -> None:
         """Set the model's next noise increment."""
         self._prescribed_noise = True
         self._noise = a_noise
@@ -132,7 +127,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._clear_model()
 
     @final
-    def set_workdir(self, workdir : Path) -> None:
+    def set_workdir(self, workdir: Path) -> None:
         """Setter of the model working directory.
 
         Args:
@@ -141,9 +136,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._workdir = workdir
 
     @abstractmethod
-    def _init_model(self,
-                    params: dict[Any, Any] | None = None,
-                    ioprefix: str | None = None) -> None:
+    def _init_model(self, params: dict[Any, Any] | None = None, ioprefix: str | None = None) -> None:
         """Concrete class specific initialization.
 
         Args:
@@ -152,11 +145,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _advance(self,
-                 step: int,
-                 time: float,
-                 dt: float,
-                 noise: Any) -> float:
+    def _advance(self, step: int, time: float, dt: float, noise: Any) -> float:
         """Concrete class advance function.
 
         This is the model-specific advance function.
@@ -175,7 +164,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Return the current state of the model."""
 
     @abstractmethod
-    def set_current_state(self, state : Any) -> Any:
+    def set_current_state(self, state: Any) -> Any:
         """Set the current state of the model."""
 
     @abstractmethod
@@ -187,9 +176,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Return the model's latest noise increment."""
 
     @final
-    def post_trajectory_restart_hook(self,
-                                     step : int,
-                                     time : float) -> None:
+    def post_trajectory_restart_hook(self, step: int, time: float) -> None:
         """Model post trajectory restart hook.
 
         Args:
@@ -204,9 +191,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Model-specific post trajectory restart hook."""
 
     @final
-    def post_trajectory_restore_hook(self,
-                                     step : int,
-                                     time : float) -> None:
+    def post_trajectory_restore_hook(self, step: int, time: float) -> None:
         """Model post trajectory restore hook.
 
         Args:
@@ -220,11 +205,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     def _trajectory_restore_hook(self) -> None:
         """Model-specific post trajectory restore hook."""
 
-    def check_convergence(self,
-                          step: int,
-                          time: float,
-                          current_score: float,
-                          target_score: float) -> bool:
+    def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.
 
         This default implementation checks if the current score is

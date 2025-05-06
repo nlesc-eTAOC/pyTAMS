@@ -1,4 +1,5 @@
 """The main TAMS class."""
+
 import argparse
 import datetime
 import logging
@@ -18,7 +19,8 @@ _logger = logging.getLogger(__name__)
 
 STALL_TOL = 1e-10
 
-def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace :
+
+def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
     """Parse provided list or default CL argv.
 
     Args:
@@ -27,6 +29,7 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace :
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", help="pyTAMS input .toml file", default="input.toml")
     return parser.parse_args() if a_args is None else parser.parse_args(a_args)
+
 
 class TAMS:
     """A class implementing TAMS.
@@ -60,9 +63,7 @@ class TAMS:
         _tdb: the trajectory database (containing all trajectories)
     """
 
-    def __init__(self,
-                 fmodel_t : Any,
-                 a_args: list[str] | None = None) -> None:
+    def __init__(self, fmodel_t: Any, a_args: list[str] | None = None) -> None:
         """Initialize a TAMS object.
 
         Args:
@@ -88,29 +89,25 @@ class TAMS:
 
         # Parse user-inputs
         tams_subdict = self._parameters["tams"]
-        if ("ntrajectories" not in tams_subdict or
-            "nsplititer" not in tams_subdict):
+        if "ntrajectories" not in tams_subdict or "nsplititer" not in tams_subdict:
             err_msg = "TAMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
             _logger.exception(err_msg)
             raise ValueError
 
-        n_traj : int = tams_subdict.get("ntrajectories")
-        n_split_iter : int = tams_subdict.get("nsplititer")
-        self._wallTime : float = tams_subdict.get("walltime", 24.0*3600.0)
+        n_traj: int = tams_subdict.get("ntrajectories")
+        n_split_iter: int = tams_subdict.get("nsplititer")
+        self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
         self._plot_diags = tams_subdict.get("diagnostics", False)
         self._init_pool_only = tams_subdict.get("pool_only", False)
 
         # Database
-        self._tdb = Database(fmodel_t,
-                             self._parameters,
-                             n_traj,
-                             n_split_iter)
+        self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter)
         self._tdb.load_data()
 
         # Time management uses UTC date
         # to make sure workers are always in sync
-        self._startDate : datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-        self._endDate : datetime.datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
+        self._startDate: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        self._endDate: datetime.datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
 
         # Initialize trajectory pool
         if self._tdb.is_empty():
@@ -138,7 +135,7 @@ class TAMS:
         Raises:
             ValueError: if the start date is not set
         """
-        delta : datetime.timedelta = datetime.datetime.now(tz=datetime.timezone.utc) - self._startDate
+        delta: datetime.timedelta = datetime.datetime.now(tz=datetime.timezone.utc) - self._startDate
         if delta:
             return delta.total_seconds()
 
@@ -167,7 +164,6 @@ class TAMS:
         """
         return self.remaining_walltime() < 0.05 * self._wallTime
 
-
     def generate_trajectory_pool(self) -> None:
         """Schedule the generation of a pool of stochastic trajectories.
 
@@ -184,13 +180,11 @@ class TAMS:
         inf_msg = f"Creating the initial pool of {self._tdb.n_traj()} trajectories"
         _logger.info(inf_msg)
 
-        with get_runner_type(self._parameters)(self._parameters,
-                                               pool_worker,
-                                               self._parameters.get("runner",{}).get("nworker_init", 1)) as runner:
+        with get_runner_type(self._parameters)(
+            self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_init", 1)
+        ) as runner:
             for t in self._tdb.traj_list():
-                task = [t,
-                        self._endDate,
-                        self._tdb.path()]
+                task = [t, self._endDate, self._tdb.path()]
                 runner.make_promise(task)
 
             try:
@@ -260,10 +254,9 @@ class TAMS:
         if ongoing_list:
             inf_msg = f"Unfinished splitting iteration detected, traj {self._tdb.get_ongoing()} need(s) finishing"
             _logger.info(inf_msg)
-            with get_runner_type(self._parameters)(self._parameters,
-                                                   pool_worker,
-                                                   self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
-
+            with get_runner_type(self._parameters)(
+                self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
+            ) as runner:
                 n_branch = len(ongoing_list)
                 for i in ongoing_list:
                     t = self._tdb.get_traj(i)
@@ -282,9 +275,7 @@ class TAMS:
                 self._tdb.set_k_split(k)
                 self._tdb.save_splitting_data()
 
-
-    def get_restart_at_random(self,
-                              min_idx_list : list[int]) -> list[int]:
+    def get_restart_at_random(self, min_idx_list: list[int]) -> list[int]:
         """Get a list of trajectory index to restart from at random.
 
         Select trajectories to restart from among the ones not
@@ -298,17 +289,16 @@ class TAMS:
         """
         # Enable deterministic runs by setting a (different) seed
         # for each splitting iteration
-        if self._parameters.get("tams",{}).get("deterministic", False):
-            rng = np.random.default_rng(seed=42*self._tdb.k_split())
+        if self._parameters.get("tams", {}).get("deterministic", False):
+            rng = np.random.default_rng(seed=42 * self._tdb.k_split())
         else:
             rng = np.random.default_rng()
         rest_idx = [-1] * len(min_idx_list)
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
             while rest_idx[i] in min_idx_list:
-                rest_idx[i] = rng.integers(low = 0, high = self._tdb.traj_list_len(), dtype = int)
+                rest_idx[i] = rng.integers(low=0, high=self._tdb.traj_list_len(), dtype=int)
         return rest_idx
-
 
     def do_multilevel_splitting(self) -> None:
         """Schedule splitting of the initial pool of stochastic trajectories.
@@ -337,9 +327,9 @@ class TAMS:
         # Initialize splitting iterations counter
         k = self._tdb.k_split()
 
-        with get_runner_type(self._parameters)(self._parameters,
-                                               ms_worker,
-                                               self._parameters.get("runner",{}).get("nworker_iter", 1)) as runner:
+        with get_runner_type(self._parameters)(
+            self._parameters, ms_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
+        ) as runner:
             while k < self._tdb.n_split_iter():
                 inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
@@ -369,11 +359,13 @@ class TAMS:
 
                 # Assemble a list of promises
                 for i in range(n_branch):
-                    task = [self._tdb.get_traj(rest_idx[i]),
-                            self._tdb.get_traj(min_idx_list[i]),
-                            min_vals[i],
-                            self._endDate,
-                            self._tdb.path()]
+                    task = [
+                        self._tdb.get_traj(rest_idx[i]),
+                        self._tdb.get_traj(min_idx_list[i]),
+                        min_vals[i],
+                        self._endDate,
+                        self._tdb.path(),
+                    ]
                     runner.make_promise(task)
 
                 try:
