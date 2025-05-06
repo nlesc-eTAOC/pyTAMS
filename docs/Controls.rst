@@ -33,6 +33,10 @@ and then run your code, providing a TOML input file which is described in the ne
 
   python myTAMSrun.py -i input.toml
 
+.. note::
+   TAMS should run multiple times in order to provide both an estimate of the probability
+   and the associated standard error.
+
 Controls
 --------
 
@@ -60,7 +64,6 @@ The TOML input file contains dictionaries associated with the various part of th
     end_time = 10.0          # [REQ] End time
     step_size = 0.01         # [REQ] Step size
     targetscore = 0.95       # [OPT, DEF = 0.95] Target score
-    stoichforcing = 1.0      # [OPT, DEF = 1.0] Stoichiometric forcing scaling parameter
     sparse_freq = 1          # [OPT, DEF = 1] Frequency of states sampling
     sparse_start = 0         # [OPT, DEF = 0] Starting index of states sampling
     chkfile_dump_all = false # [OPT, DEF = false] Update trajectory checkpoint file at each step
@@ -77,9 +80,9 @@ The TOML input file contains dictionaries associated with the various part of th
   .. code-block:: python
 
     [database]
-    DB_save = true           # [OPT, DEF = false] Trigger disk storage of TAMS database
-    DB_prefix = "TAMS"       # [OPT, DEF = "tams"] The database prefix
-    DB_restart = "tams.tdb"  # [OPT, no default] The path to a database to restart from
+    path = "TamsDB.tdb"      # [OPT, no default] The database path, in-memory database if not specified
+    restart = false          # [OPT, DEF = false] If true, move the existing database before starting fresh
+    archive_discarded = true # [OPT, DEF = false] Archive trajectories discarded during splitting iterations
 
 Additionally, when using a Dask runner, one has to provide configuration parameters for the
 Dask cluster:
