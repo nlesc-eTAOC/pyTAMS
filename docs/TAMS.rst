@@ -35,7 +35,7 @@ and :math:`K` needs to be of the order of :math:`1/p`, becoming computationally 
 functionalities into an Abstract Base Class (ABC). By decoupling the physics from the
 TAMS algorithm, it becomes easier to extend the algorithm to new physics.
 
-In particular, `pyTAMS` aims at tacking computationally expensive stochastic models, such as
+In particular, `pyTAMS` aims at tackling computationally expensive stochastic models, such as
 high-dimensional dynamical systems appearing in climate modeling or fluid dynamics, which requires
 High Performance Computing (HPC) platform to be used. As such, `pyTAMS` can be less efficient
 than more simplistic implementations where pure Python physics model can be efficiently vectorized.
