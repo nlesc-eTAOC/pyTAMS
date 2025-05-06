@@ -1,4 +1,5 @@
 """A set of functions used by TAMS workers."""
+
 import asyncio
 import concurrent.futures
 import datetime
@@ -13,9 +14,8 @@ from pytams.trajectory import WallTimeLimitError
 
 _logger = logging.getLogger(__name__)
 
-def traj_advance_with_exception(traj: Trajectory,
-                                walltime: float,
-                                a_db: Database | None) -> Trajectory:
+
+def traj_advance_with_exception(traj: Trajectory, walltime: float, a_db: Database | None) -> Trajectory:
     """Advance a trajectory with exception handling.
 
     Args:
@@ -45,9 +45,8 @@ def traj_advance_with_exception(traj: Trajectory,
 
     return traj
 
-def pool_worker(traj: Trajectory,
-                end_date: datetime.date,
-                db_path: str | None = None) -> Trajectory:
+
+def pool_worker(traj: Trajectory, end_date: datetime.date, db_path: str | None = None) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
@@ -60,7 +59,7 @@ def pool_worker(traj: Trajectory,
     """
     # Get wall time
     wall_time = -1.0
-    timedelta : datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
+    timedelta: datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
     if timedelta:
         wall_time = timedelta.total_seconds()
 
@@ -99,11 +98,11 @@ def ms_worker(
     """
     # Get wall time
     wall_time = -1.0
-    timedelta : datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
+    timedelta: datetime.timedelta = end_date - datetime.datetime.now(tz=datetime.timezone.utc)
     if timedelta:
         wall_time = timedelta.total_seconds()
 
-    if wall_time > 0.0 :
+    if wall_time > 0.0:
         db = None
         if db_path:
             # Fetch a handle to the trajectory we are branching in the database pool
@@ -132,10 +131,12 @@ def ms_worker(
 
     return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
 
+
 async def worker_async(
-    queue : asyncio.Queue[tuple[Callable[..., Any], Trajectory, float, bool, str]],
-    res_queue : asyncio.Queue[asyncio.Future[Trajectory]],
-    executor : concurrent.futures.Executor) -> None:
+    queue: asyncio.Queue[tuple[Callable[..., Any], Trajectory, float, bool, str]],
+    res_queue: asyncio.Queue[asyncio.Future[Trajectory]],
+    executor: concurrent.futures.Executor,
+) -> None:
     """An async worker for the asyncio taskrunner.
 
     It wraps the call to one of the above worker functions
@@ -149,7 +150,7 @@ async def worker_async(
     while True:
         func, *work_unit = await queue.get()
         loop = asyncio.get_running_loop()
-        traj : asyncio.Future[Trajectory] = await loop.run_in_executor(
+        traj: asyncio.Future[Trajectory] = await loop.run_in_executor(
             executor,
             functools.partial(func, *work_unit),
         )

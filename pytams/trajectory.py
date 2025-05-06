@@ -23,8 +23,8 @@ _logger = logging.getLogger(__name__)
 class WallTimeLimitError(Exception):
     """Exception for running into wall time limit."""
 
-def form_trajectory_id(n: int,
-                       nb : int = 0) -> str:
+
+def form_trajectory_id(n: int, nb: int = 0) -> str:
     """Helper to assemble a trajectory ID string.
 
     Args:
@@ -36,7 +36,8 @@ def form_trajectory_id(n: int,
     """
     return f"traj{n:06}_{nb:04}"
 
-def get_index_from_id(identity: str) -> tuple[int,int]:
+
+def get_index_from_id(identity: str) -> tuple[int, int]:
     """Helper to get trajectory index from ID string.
 
     Args:
@@ -46,6 +47,7 @@ def get_index_from_id(identity: str) -> tuple[int,int]:
         trajectory index and number of branching
     """
     return int(identity[-10:-5]), int(identity[-4:])
+
 
 @dataclass
 class Snapshot:
@@ -64,10 +66,11 @@ class Snapshot:
         noise : noise used to reach this snapshot
         state : model state
     """
-    time : float
-    score : float
-    noise : Any
-    state : Any | None = None
+
+    time: float
+    score: float
+    noise: Any
+    state: Any | None = None
 
     def has_state(self) -> bool:
         """Check if snapshot has state.
@@ -105,12 +108,14 @@ class Trajectory:
         _dt : the stochastic time step size
     """
 
-    def __init__(self,
-                 traj_id: int,
-                 fmodel_t: type[ForwardModelBaseClass] | None,
-                 parameters: dict[Any, Any],
-                 workdir: Path | None = None,
-                 frozen: bool = False) -> None:
+    def __init__(
+        self,
+        traj_id: int,
+        fmodel_t: type[ForwardModelBaseClass] | None,
+        parameters: dict[Any, Any],
+        workdir: Path | None = None,
+        frozen: bool = False,
+    ) -> None:
         """Create a trajectory.
 
         Args:
@@ -121,62 +126,59 @@ class Trajectory:
             frozen: whether the trajectory is frozen (no fmodel)
         """
         # Stash away the full parameters dict
-        self._parameters_full : dict[Any, Any] = parameters
+        self._parameters_full: dict[Any, Any] = parameters
 
         traj_params = parameters.get("trajectory", {})
-        if ("end_time" not in traj_params or
-            "step_size" not in traj_params):
+        if "end_time" not in traj_params or "step_size" not in traj_params:
             err_msg = "Trajectory 'end_time' and 'step_size' must be specified in the input file !"
             _logger.error(err_msg)
             raise ValueError
 
         # The workdir is a runtime parameter, not saved in the chkfile.
-        self._tid : int = traj_id
-        self._workdir : Path = Path.cwd() if workdir is None else workdir
-        self._score_max : float = 0.0
-        self._has_ended : bool = False
-        self._has_converged : bool = False
+        self._tid: int = traj_id
+        self._workdir: Path = Path.cwd() if workdir is None else workdir
+        self._score_max: float = 0.0
+        self._has_ended: bool = False
+        self._has_converged: bool = False
 
         # TAMS is expected to start at t = 0.0, but the forward model
         # itself can have a different internal starting point
         # or an entirely different time scale.
-        self._step : int = 0
-        self._t_cur : float = 0.0
-        self._t_end : float = traj_params.get("end_time")
-        self._dt : float = traj_params.get("step_size")
+        self._step: int = 0
+        self._t_cur: float = 0.0
+        self._t_end: float = traj_params.get("end_time")
+        self._dt: float = traj_params.get("step_size")
 
         # Trajectory convergence is defined by a target score, with
         # the score provided by the forward model, mapping the model state to
         # a s \in [0,1]. A default value of 0.95 is provided.
-        self._convergedVal : float = traj_params.get("targetscore", 0.95)
+        self._convergedVal: float = traj_params.get("targetscore", 0.95)
 
         # List of snapshots
-        self._snaps : list[Snapshot] = []
+        self._snaps: list[Snapshot] = []
 
         # When using sparse state or for other reasons, the noise for the next few
         # steps might be already available. This backlog is used to store them.
-        self._noise_backlog : list[Any] = []
+        self._noise_backlog: list[Any] = []
 
         # Keep track of the branching history during TAMS
         # iterations
-        self._branching_history : list[int] = []
+        self._branching_history: list[int] = []
 
         # For large models, the state may not be available at each snapshot due
         # to memory constraint (both in-memory and on-disk). Sparse state can
         # be specified. Finally, writing a chkfile to disk at each step might
         # incur a performance hit and is by default disabled.
-        self._sparse_state_int : int = traj_params.get("sparse_freq", 1)
-        self._sparse_state_beg : int = traj_params.get("sparse_start", 0)
-        self._write_chkfile_all : bool = traj_params.get("chkfile_dump_all", False)
-        self._checkFile : Path = Path(f"{self.idstr()}.xml")
+        self._sparse_state_int: int = traj_params.get("sparse_freq", 1)
+        self._sparse_state_beg: int = traj_params.get("sparse_start", 0)
+        self._write_chkfile_all: bool = traj_params.get("chkfile_dump_all", False)
+        self._checkFile: Path = Path(f"{self.idstr()}.xml")
 
         # Each trajectory has its own instance of the forward model
         if frozen or fmodel_t is None:
             self._fmodel = None
         else:
-            self._fmodel = fmodel_t(parameters,
-                                    self.idstr(),
-                                    self._workdir)
+            self._fmodel = fmodel_t(parameters, self.idstr(), self._workdir)
 
     def set_checkfile(self, path: Path) -> None:
         """Setter of the trajectory checkFile.
@@ -222,9 +224,7 @@ class Trajectory:
         """
         return form_trajectory_id(self._tid, self.get_nbranching())
 
-    def advance(self,
-                t_end: float = 1.0e12,
-                walltime: float = 1.0e12) -> None:
+    def advance(self, t_end: float = 1.0e12, walltime: float = 1.0e12) -> None:
         """Advance the trajectory to a prescribed end time.
 
         This is the main time loop of the trajectory object.
@@ -257,18 +257,16 @@ class Trajectory:
         # Set the initial snapshot
         # Always add the initial state
         if self._step == 0:
-           self._snaps.append(Snapshot(time=self._t_cur,
-                                       score=self._fmodel.score(),
-                                       noise=self._fmodel.get_noise(),
-                                       state=self._fmodel.get_current_state(),
-                                       ),
-                              )
+            self._snaps.append(
+                Snapshot(
+                    time=self._t_cur,
+                    score=self._fmodel.score(),
+                    noise=self._fmodel.get_noise(),
+                    state=self._fmodel.get_current_state(),
+                ),
+            )
 
-        while (
-            self._t_cur < end_time
-            and not self._has_converged
-            and remaining_time >= 0.05 * walltime
-        ):
+        while self._t_cur < end_time and not self._has_converged and remaining_time >= 0.05 * walltime:
             # Do a single and keep track of remaining walltime
             score = self._one_step()
 
@@ -282,12 +280,14 @@ class Trajectory:
         # force a state for the final step.
         if self._has_ended and not self._snaps[-1].has_state():
             self._snaps.pop(-1)
-            self._snaps.append(Snapshot(self._t_cur,
-                                        score,
-                                        self._fmodel.get_noise(),
-                                        self._fmodel.get_current_state(),
-                                        ),
-                               )
+            self._snaps.append(
+                Snapshot(
+                    self._t_cur,
+                    score,
+                    self._fmodel.get_noise(),
+                    self._fmodel.get_current_state(),
+                ),
+            )
 
         if self._has_ended:
             self._fmodel.clear()
@@ -324,19 +324,23 @@ class Trajectory:
         self._t_cur = self._t_cur + dt
         score = self._fmodel.score()
 
-        if ((self._sparse_state_beg + self._step)%self._sparse_state_int == 0):
-            self._snaps.append(Snapshot(time=self._t_cur,
-                                        score=score,
-                                        noise=self._fmodel.get_noise(),
-                                        state=self._fmodel.get_current_state(),
-                                        ),
-                               )
+        if (self._sparse_state_beg + self._step) % self._sparse_state_int == 0:
+            self._snaps.append(
+                Snapshot(
+                    time=self._t_cur,
+                    score=score,
+                    noise=self._fmodel.get_noise(),
+                    state=self._fmodel.get_current_state(),
+                ),
+            )
         else:
-            self._snaps.append(Snapshot(time=self._t_cur,
-                                        score=score,
-                                        noise=self._fmodel.get_noise(),
-                                        ),
-                               )
+            self._snaps.append(
+                Snapshot(
+                    time=self._t_cur,
+                    score=score,
+                    noise=self._fmodel.get_noise(),
+                ),
+            )
 
         if self._write_chkfile_all:
             self.store()
@@ -346,13 +350,9 @@ class Trajectory:
         # The default ABC method simply check for a score above
         # the target value, but concrete implementations can override
         # with mode complex convergence criteria
-        self._has_converged = self._fmodel.check_convergence(self._step,
-                                                             self._t_cur,
-                                                             score,
-                                                             self._convergedVal)
+        self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
 
         return score
-
 
     @classmethod
     def restore_from_checkfile(
@@ -375,12 +375,13 @@ class Trajectory:
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        rest_traj = Trajectory(traj_id=t_id,
-                              fmodel_t=fmodel_t,
-                              parameters=parameters,
-                              workdir = workdir,
-                              frozen=frozen,
-                              )
+        rest_traj = Trajectory(
+            traj_id=t_id,
+            fmodel_t=fmodel_t,
+            parameters=parameters,
+            workdir=workdir,
+            frozen=frozen,
+        )
 
         rest_traj._t_end = metadata["t_end"]
         rest_traj._t_cur = metadata["t_cur"]
@@ -404,7 +405,7 @@ class Trajectory:
             # Remove snapshots from the list until a state
             # is available
             need_update = False
-            for k in range(len(rest_traj._snaps)-1,-1,-1):
+            for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
                     rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop(k)
@@ -450,13 +451,13 @@ class Trajectory:
         # Check for empty trajectory
         if len(from_traj._snaps) == 0:
             tid, nb = get_index_from_id(rst_traj.idstr())
-            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
             fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
             rest_traj = Trajectory(
                 traj_id=rst_traj.id(),
                 fmodel_t=fmodel_t,
                 parameters=from_traj._parameters_full,
-                workdir = new_workdir,
+                workdir=new_workdir,
             )
             rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
             return rest_traj
@@ -469,18 +470,18 @@ class Trajectory:
         last_snap_with_state = 0
         while from_traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
-            if (from_traj._snaps[high_score_idx].has_state()):
+            if from_traj._snaps[high_score_idx].has_state():
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
         tid, nb = get_index_from_id(rst_traj.idstr())
-        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid,nb+1))
+        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
         fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
         rest_traj = Trajectory(
             traj_id=rst_traj.id(),
             fmodel_t=fmodel_t,
             parameters=from_traj._parameters_full,
-            workdir = new_workdir,
+            workdir=new_workdir,
         )
         rest_traj._branching_history = rst_traj._branching_history
         rest_traj._branching_history.append(from_traj.id())
@@ -489,7 +490,7 @@ class Trajectory:
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
-            if (k <= last_snap_with_state):
+            if k <= last_snap_with_state:
                 rest_traj._snaps.append(from_traj._snaps[k])
             else:
                 rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
@@ -523,12 +524,13 @@ class Trajectory:
         snaps_xml = ET.SubElement(root, "snapshots")
         for k in range(len(self._snaps)):
             snaps_xml.append(
-                make_xml_snapshot(k,
-                                  self._snaps[k].time,
-                                  self._snaps[k].score,
-                                  self._snaps[k].noise,
-                                  self._snaps[k].state,
-                                  ),
+                make_xml_snapshot(
+                    k,
+                    self._snaps[k].time,
+                    self._snaps[k].score,
+                    self._snaps[k].noise,
+                    self._snaps[k].state,
+                ),
             )
         tree = ET.ElementTree(root)
         ET.indent(tree, space="\t", level=0)
@@ -549,10 +551,9 @@ class Trajectory:
             new_score_max = max(new_score_max, snap.score)
         self._score_max = new_score_max
         if self._fmodel:
-            self._has_converged = self._fmodel.check_convergence(self._step,
-                                                                 self._t_cur,
-                                                                 self._score_max,
-                                                                 self._convergedVal)
+            self._has_converged = self._fmodel.check_convergence(
+                self._step, self._t_cur, self._score_max, self._convergedVal
+            )
         else:
             self._has_converged = False
         if self._t_cur >= self._t_end or self._has_converged:
