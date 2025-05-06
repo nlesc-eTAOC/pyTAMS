@@ -45,7 +45,7 @@ run parameters. The path to the TOML file can be provided using the `-i` option,
 the default name is `input.toml` in the current working directory.
 
 The TOML input file contains dictionaries associated with the various part of the algorithm:
- - TAMS algorithm parameters
+ - TAMS algorithm parameters:
   .. code-block:: python
 
     [tams]
@@ -57,7 +57,7 @@ The TOML input file contains dictionaries associated with the various part of th
     deterministic = false     # [OPT, DEF = false] Fix the various random seeds for reproducibility
     pool_only = false         # [OPT, DEF = false] Stop after the initial pool generation
 
- - Trajectory parameters
+ - Trajectory parameters:
   .. code-block:: python
 
     [trajectory]
@@ -68,7 +68,7 @@ The TOML input file contains dictionaries associated with the various part of th
     sparse_start = 0         # [OPT, DEF = 0] Starting index of states sampling
     chkfile_dump_all = false # [OPT, DEF = false] Update trajectory checkpoint file at each step
 
- - Runner parameters
+ - Runner parameters:
   .. code-block:: python
 
     [runner]
@@ -76,7 +76,7 @@ The TOML input file contains dictionaries associated with the various part of th
     nworker_init = 2         # [OPT, DEF = 1] Number of workers for initial pool generation
     nworker_iter = 2         # [OPT, DEF = 1] Number of workers for splitting iterations
 
- - Database parameters
+ - Database parameters:
   .. code-block:: python
 
     [database]

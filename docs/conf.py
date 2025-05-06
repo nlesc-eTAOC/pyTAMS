@@ -11,9 +11,13 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import pathlib
+import sys
+_rootpath = pathlib.Path(__file__).parents[1]
+print('Project root path: {}'.format(_rootpath))
+sys.path.insert(0, str(_rootpath))
+sys.path.insert(0, str(_rootpath / 'pytams'))
 
 # -- Project information -----------------------------------------------------
 
@@ -62,9 +66,27 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# So that autodoc catch the word Attribute
+napoleon_use_ivar = True
+napolean_use_param = True
+napoleon_google_docstring = True
+
 # -- Use autoapi.extension to run sphinx-apidoc -------
 
+autoapi_type = "python"
 autoapi_dirs = ['../pytams']
+autodoc_typehints = 'signature'
+add_module_names = False
+autoapi_template_dir = '_templates/autoapi'
+autoapi_keep_files = True
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "imported-members",
+]
+autoapi_add_toctree_entry = False
 
 # -- Options for HTML output ----------------------------------------------
 
