@@ -91,15 +91,15 @@ class DoubleWellModel3D(ForwardModelBaseClass):
 
 if __name__ == "__main__":
     fmodel = DoubleWellModel3D
-    nRuns = 1
+    nRuns = 10
     proba = []
     for _ in range(nRuns):
         tams = TAMS(fmodel_t=fmodel)
         proba.append(tams.compute_probability())
-        print("Transition probability: {}".format(proba[-1]))
+        print(f"Transition probability: {proba[-1]}")
     avg_proba = sum(proba) / nRuns
     var_proba = 0.0
     for prob in proba:
         var_proba = var_proba + (prob - avg_proba)**2
-    var_proba = var_proba / (nRuns)
-    print("Avg trans: {}, var: {}".format(avg_proba,var_proba))
+    var_proba = var_proba / (nRuns-1)
+    print(f"Averaged transition probability: {avg_proba}, variance: {var_proba}")

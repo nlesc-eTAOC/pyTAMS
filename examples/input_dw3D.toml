@@ -1,29 +1,19 @@
 [tams]
-ntrajectories = 100
+ntrajectories = 200
 nsplititer = 1000
-loglevel = "INFO"
+loglevel = "WARNING"
 walltime = 200.0
 diagnostics = false
-deterministic = true
 
 [trajectory]
 end_time = 10.0
 step_size = 0.01
 targetscore = 0.95
-#sparse_int = 17
 
 [model]
-test_param = "toto"
-noise_amplitude = 0.4
+noise_amplitude = 0.3
 
 [runner]
 type = "asyncio"
-nworker_init=2
+nworker_init=4
 nworker_iter=2
-
-[dask]
-backend = "local"
-
-[database]
-path = "3DTestDW"
-archive_discarded = true
