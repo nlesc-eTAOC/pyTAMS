@@ -42,7 +42,7 @@ python doubleWell3D.py -i input_dw3D.toml
 
 This minimal example runs TAMS 10 times in order to get an estimate of the transition probability
 as well as the corresponding standard error. For a more in-depth explanation about this case, setting up the
-model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyTAMS/tutorial/).
+model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyTAMS/tutorials.html).
 
 ## Documentation
 
