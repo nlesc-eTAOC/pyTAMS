@@ -37,6 +37,7 @@ to the `pyTAMS` main branch on GitHub. A local version can also be built as foll
    :maxdepth: 2
    :caption: Developer corner:
 
+   autoapi/pytams/index.rst
 
 Indices and tables
 ==================

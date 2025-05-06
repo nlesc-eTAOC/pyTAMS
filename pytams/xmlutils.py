@@ -1,3 +1,4 @@
+"""A set of utility for XML serializing."""
 import ast
 import logging
 import xml.etree.ElementTree as ET
