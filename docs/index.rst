@@ -31,6 +31,7 @@ to the `pyTAMS` main branch on GitHub. A local version can also be built as foll
 
    TAMS.rst
    Controls.rst
+   Tutorials.rst
 
 .. toctree::
    :maxdepth: 2

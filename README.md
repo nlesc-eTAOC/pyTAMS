@@ -28,6 +28,22 @@ cd pyTAMS
 python -m pip install .
 ```
 
+## Quick start
+
+To get started with *pyTAMS*, let's have a look at the classical double-well potential case.
+Although it is not a high-dimensional system, it provides a good overview of *pyTAMS* capabilities.
+A 3D version of the double-well is available in the [examples](examples) folder. To run the case,
+simply do:
+
+```console
+cd examples
+python doubleWell3D.py -i input_dw3D.toml
+```
+
+This minimal example runs TAMS 10 times in order to get an estimate of the transition probability
+as well as the corresponding standard error. For a more in-depth explanation about this case, setting up the
+model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyTAMS/tutorial/).
+
 ## Documentation
 
 [![doc](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/documentation.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyTAMS/actions/workflows/documentation.yml)
