@@ -170,7 +170,7 @@ class Trajectory:
         # be specified. Finally, writing a chkfile to disk at each step might
         # incur a performance hit and is by default disabled.
         self._sparse_state_int: int = traj_params.get("sparse_freq", 1)
-        self._sparse_state_beg: int = traj_params.get("sparse_start", 0)
+        self._sparse_state_beg: int = traj_params.get("sparse_start", 0) + 1
         self._write_chkfile_all: bool = traj_params.get("chkfile_dump_all", False)
         self._checkFile: Path = Path(f"{self.idstr()}.xml")
 
@@ -254,40 +254,14 @@ class Trajectory:
             _logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        # Set the initial snapshot
-        # Always add the initial state
-        if self._step == 0:
-            self._snaps.append(
-                Snapshot(
-                    time=self._t_cur,
-                    score=self._fmodel.score(),
-                    noise=self._fmodel.get_noise(),
-                    state=self._fmodel.get_current_state(),
-                ),
-            )
-
         while self._t_cur < end_time and not self._has_converged and remaining_time >= 0.05 * walltime:
-            # Do a single and keep track of remaining walltime
-            score = self._one_step()
+            # Do a single step and keep track of remaining walltime
+            _ = self._one_step()
 
             remaining_time = walltime - time.monotonic() + start_time
 
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
-
-        # If trajectory ended but no state
-        # was stored on the last step -> pop snapshot and
-        # force a state for the final step.
-        if self._has_ended and not self._snaps[-1].has_state():
-            self._snaps.pop(-1)
-            self._snaps.append(
-                Snapshot(
-                    self._t_cur,
-                    score,
-                    self._fmodel.get_noise(),
-                    self._fmodel.get_current_state(),
-                ),
-            )
 
         if self._has_ended:
             self._fmodel.clear()
@@ -309,12 +283,17 @@ class Trajectory:
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
-        if self._noise_backlog:
-            self._fmodel.set_noise(self._noise_backlog[0])
-            self._noise_backlog.pop(0)
+        # Add the initial snapshot to the list
+        if self._step == 0:
+            self._setup_noise()
+            self._append_snapshot()
+
+        # Trigger storing the end state of the current time step
+        # if the next trajectory snapshot needs it
+        need_end_state = (self._sparse_state_beg + self._step + 1) % self._sparse_state_int == 0
 
         try:
-            dt = self._fmodel.advance(self._dt)
+            dt = self._fmodel.advance(self._dt, need_end_state)
         except Exception:
             err_msg = f"ForwardModel advance error at step {self._step:08}"
             _logger.exception(err_msg)
@@ -324,23 +303,11 @@ class Trajectory:
         self._t_cur = self._t_cur + dt
         score = self._fmodel.score()
 
-        if (self._sparse_state_beg + self._step) % self._sparse_state_int == 0:
-            self._snaps.append(
-                Snapshot(
-                    time=self._t_cur,
-                    score=score,
-                    noise=self._fmodel.get_noise(),
-                    state=self._fmodel.get_current_state(),
-                ),
-            )
-        else:
-            self._snaps.append(
-                Snapshot(
-                    time=self._t_cur,
-                    score=score,
-                    noise=self._fmodel.get_noise(),
-                ),
-            )
+        # Prepare the noise for the next step
+        self._setup_noise()
+
+        # Append a snapshot at the beginning of the time step
+        self._append_snapshot()
 
         if self._write_chkfile_all:
             self.store()
@@ -353,6 +320,31 @@ class Trajectory:
         self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
 
         return score
+
+    def _setup_noise(self) -> None:
+        """Prepare the noise for the next step."""
+        # Set the noise for the next model step
+        # if a noise backlog is available, use it otherwise
+        # make a new noise increment
+        if self._fmodel:
+            if self._noise_backlog:
+                self._fmodel.set_noise(self._noise_backlog.pop())
+            else:
+                self._fmodel.set_noise(self._fmodel.make_noise())
+
+    def _append_snapshot(self) -> None:
+        """Append the current snapshot to the trajectory list."""
+        # Append the current snapshot to the trajectory list
+        if self._fmodel:
+            need_state = (self._sparse_state_beg + self._step) % self._sparse_state_int == 0 or self._step == 0
+            self._snaps.append(
+                Snapshot(
+                    time=self._t_cur,
+                    score=self._fmodel.score(),
+                    noise=self._fmodel.get_noise(),
+                    state=self._fmodel.get_current_state() if need_state else None,
+                ),
+            )
 
     @classmethod
     def restore_from_checkfile(
@@ -397,24 +389,33 @@ class Trajectory:
                 time, score, noise, state = read_xml_snapshot(snap)
                 rest_traj._snaps.append(Snapshot(time, score, noise, state))
 
-        rest_traj._step = len(rest_traj._snaps)
+        # Current step with python indexing, so remove 1
+        rest_traj._step = len(rest_traj._snaps)-1
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
         if rest_traj._fmodel:
-            # Remove snapshots from the list until a state
-            # is available
+            # Remove snapshots from the list until a state is available
             need_update = False
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
+                    # Append the noise history to the backlog
                     rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
-                    rest_traj._snaps.pop(k)
+                    rest_traj._snaps.pop()
                     need_update = True
                 else:
+                    # Because the noise in the snapshot is the noise
+                    # used to reach the next state, append the last to the backlog too
+                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
                     break
 
             rest_traj._t_cur = rest_traj._snaps[-1].time
 
+            # Current step with python indexing, so remove 1
+            rest_traj._step = len(rest_traj._snaps)-1
+
+            # Ensure everything is set to start the time stepping loop
+            rest_traj._setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
 
             # Reset score_max, ended and converged
@@ -423,7 +424,7 @@ class Trajectory:
 
             # Enable the model to perform tweaks
             # after a trajectory restore
-            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps), rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps)-1, rest_traj._t_cur)
 
         return rest_traj
 
@@ -490,21 +491,28 @@ class Trajectory:
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
-            if k <= last_snap_with_state:
+            if k < last_snap_with_state:
                 rest_traj._snaps.append(from_traj._snaps[k])
+            elif k == last_snap_with_state:
+                rest_traj._snaps.append(from_traj._snaps[k])
+                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
             else:
                 rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
 
+        # Reverse the backlog to ensure correct order
+        rest_traj._noise_backlog.reverse()
+
         # Update trajectory metadata
         rest_traj._t_cur = rest_traj._snaps[-1].time
-        rest_traj._step = len(rest_traj._snaps)
+        rest_traj._step = len(rest_traj._snaps) - 1
         if rest_traj._fmodel:
+            rest_traj._setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
             rest_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restart
-            rest_traj._fmodel.post_trajectory_restart_hook(len(rest_traj._snaps), rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps)-1, rest_traj._t_cur)
 
         return rest_traj
 
@@ -587,14 +595,14 @@ class Trajectory:
         """Return the trajectory check file name."""
         return self._checkFile
 
-    def get_time_array(self) -> npt.NDArray[np.float64]:
+    def get_time_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory time instants."""
         times = np.zeros(len(self._snaps))
         for k in range(len(self._snaps)):
             times[k] = self._snaps[k].time
         return times
 
-    def get_score_array(self) -> npt.NDArray[np.float64]:
+    def get_score_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory scores."""
         scores = np.zeros(len(self._snaps))
         for k in range(len(self._snaps)):
