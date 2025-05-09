@@ -390,7 +390,7 @@ class Trajectory:
                 rest_traj._snaps.append(Snapshot(time, score, noise, state))
 
         # Current step with python indexing, so remove 1
-        rest_traj._step = len(rest_traj._snaps)-1
+        rest_traj._step = len(rest_traj._snaps) - 1
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
@@ -412,7 +412,7 @@ class Trajectory:
             rest_traj._t_cur = rest_traj._snaps[-1].time
 
             # Current step with python indexing, so remove 1
-            rest_traj._step = len(rest_traj._snaps)-1
+            rest_traj._step = len(rest_traj._snaps) - 1
 
             # Ensure everything is set to start the time stepping loop
             rest_traj._setup_noise()
@@ -424,7 +424,7 @@ class Trajectory:
 
             # Enable the model to perform tweaks
             # after a trajectory restore
-            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps)-1, rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
 
         return rest_traj
 
@@ -512,7 +512,7 @@ class Trajectory:
 
             # Enable the model to perform tweaks
             # after a trajectory restart
-            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps)-1, rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
 
         return rest_traj
 
