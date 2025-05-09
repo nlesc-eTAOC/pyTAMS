@@ -202,7 +202,7 @@ class TAMS:
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
 
-    def check_exit_splitting_loop(self, k: int) -> tuple[bool, npt.NDArray[np.float64]]:
+    def check_exit_splitting_loop(self, k: int) -> tuple[bool, npt.NDArray[np.number]]:
         """Check for exit criterion of the splitting loop.
 
         Args:
