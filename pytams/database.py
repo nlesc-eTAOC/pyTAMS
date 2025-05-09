@@ -113,7 +113,7 @@ class Database:
         self._ksplit = 0
         self._l_bias: list[int] = []
         self._weights: list[float] = [1.0]
-        self._minmax: list[npt.NDArray[np.float64]] = []
+        self._minmax: list[npt.NDArray[np.number]] = []
         self._ongoing = None
 
         # Initialize only metadata at this point
@@ -659,7 +659,7 @@ class Database:
         """Append a bias to internal list."""
         self._l_bias.append(bias)
 
-    def append_minmax(self, ksplit: int, minofmaxes: float, maxofmaxes: float) -> None:
+    def append_minmax(self, ksplit: int, minofmaxes: np.number, maxofmaxes: np.number) -> None:
         """Append min/max of maxes to internal list."""
         self._minmax.append(np.array([float(ksplit), minofmaxes, maxofmaxes]))
 

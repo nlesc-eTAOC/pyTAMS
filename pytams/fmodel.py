@@ -27,7 +27,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     with TAMS requirements.
 
     Attributes:
-        _prescribed_noise: whether the noise is provided or need to be generated
         _noise: the noise to be used in the next model step
         _step: the current stochastic step counter
         _time: the current stochastic time
@@ -44,7 +43,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         parameter dictionary to ensure the 'deterministic' parameter
         is always available in the model dictionary.
 
-        Upon initializing the model, a first call to _make_noise
+        Upon initializing the model, a first call to make_noise
         is made to ensure the proper type is generated.
 
         Args:
@@ -53,7 +52,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             workdir: an optional path to the working directory
         """
         # Initialize common tooling
-        self._prescribed_noise: bool = False
         self._noise: Any = None
         self._step: int = 0
         self._time: float = 0.0
@@ -71,10 +69,10 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         # Generate the first noise increment
         # to at least get the proper type.
-        self._noise = self._make_noise()
+        self._noise = self.make_noise()
 
     @final
-    def advance(self, dt: float) -> float:
+    def advance(self, dt: float, need_end_state: bool) -> float:
         """Base class advance function of the model.
 
         This is the advance function called by TAMS internals. It
@@ -84,18 +82,13 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         Args:
             dt: the time step size over which to advance
+            need_end_state: whether the step end state is needed
 
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
-        # Get noise for the next model step
-        # only if the noise has not been prescribed by
-        # other mechanism already (rewinding trajectory for example).
-        if not self._prescribed_noise:
-            self._noise = self._make_noise()
-
         try:
-            actual_dt = self._advance(self._step, self._time, dt, self._noise)
+            actual_dt = self._advance(self._step, self._time, dt, self._noise, need_end_state)
             # Update internal counter. Note that actual_dt may differ
             # from requested dt in some occasions.
             self._step = self._step + 1
@@ -104,9 +97,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             err_msg = "Advance function ran into an error !"
             _logger.exception(err_msg)
             raise
-
-        # After a step, always reset flag to false
-        self._prescribed_noise = False
 
         return actual_dt
 
@@ -118,7 +108,6 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     @final
     def set_noise(self, a_noise: Any) -> None:
         """Set the model's next noise increment."""
-        self._prescribed_noise = True
         self._noise = a_noise
 
     @final
@@ -145,7 +134,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _advance(self, step: int, time: float, dt: float, noise: Any) -> float:
+    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
         """Concrete class advance function.
 
         This is the model-specific advance function.
@@ -155,6 +144,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             time: the starting time of the advance call
             dt: the time step size over which to advance
             noise: the noise to be used in the model step
+            need_end_state: whether the step end state is needed
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
@@ -172,12 +162,12 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """Return the model's current state score."""
 
     @abstractmethod
-    def _make_noise(self) -> Any:
+    def make_noise(self) -> Any:
         """Return the model's latest noise increment."""
 
     @final
-    def post_trajectory_restart_hook(self, step: int, time: float) -> None:
-        """Model post trajectory restart hook.
+    def post_trajectory_branching_hook(self, step: int, time: float) -> None:
+        """Model post trajectory branching hook.
 
         Args:
             step: the current step counter
@@ -185,10 +175,10 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
         self._step = step
         self._time = time
-        self._trajectory_restart_hook()
+        self._trajectory_branching_hook()
 
-    def _trajectory_restart_hook(self) -> None:
-        """Model-specific post trajectory restart hook."""
+    def _trajectory_branching_hook(self) -> None:
+        """Model-specific post trajectory branching hook."""
 
     @final
     def post_trajectory_restore_hook(self, step: int, time: float) -> None:

@@ -7,6 +7,7 @@ from pytams.trajectory import Snapshot
 from pytams.trajectory import Trajectory
 from pytams.utils import moving_avg
 from tests.models import SimpleFModel
+from tests.models import DoubleWellModel
 
 
 def test_initSnapshot():
@@ -155,10 +156,10 @@ def test_sparseSimpleTraj():
     t_test.advance(0.012)
     assert isclose(t_test.score_max(), 0.12, abs_tol=1e-9)
     assert t_test.is_converged() is False
-    assert isclose(t_test.get_last_state(), 0.01, abs_tol=1e-9)
+    assert isclose(t_test.get_last_state(), 0.009, abs_tol=1e-9)
     t_test.advance()
     assert t_test.is_converged() is True
-    assert isclose(t_test.get_last_state(), 0.025, abs_tol=1e-9)
+    assert isclose(t_test.get_last_state(), 0.024, abs_tol=1e-9)
 
 def test_storeAndRestartSparseSimpleTraj():
     """Test a sparse trajectory with simple model."""
@@ -190,3 +191,49 @@ def test_scoreMovingAverage():
     score = t_test.get_score_array()
     avg_score = moving_avg(score, 10)
     assert isclose(avg_score[0],0.0045,abs_tol=1e-9)
+
+def test_sparseDWTrajWithRestore():
+    """Test restore a sparse trajectory with DW model."""
+    fmodel = DoubleWellModel
+    parameters = {"tams" : {"deterministic" : True},
+                  "trajectory" : {"end_time": 15.0,
+                                  "step_size": 0.01,
+                                  "targetscore": 0.95,
+                                  "sparse_freq": 10},
+                  "model": {"noise_amplitude" : 0.8},
+                  }
+    t_test = Trajectory(1, fmodel, parameters)
+    t_test.advance(4.07)
+    chkFile = Path("./test.xml")
+    t_test.store(chkFile)
+    assert isclose(t_test.score_max(), 0.49989802245025605, abs_tol=1e-9)
+    assert t_test.is_converged() == False
+    rst_test = Trajectory.restore_from_checkfile(chkFile, fmodel, parameters, frozen=False)
+    rst_test.advance()
+    assert rst_test.score_max() > 0.95
+    assert rst_test.is_converged() == True
+
+def test_sparseDWTrajWithBranching():
+    """Test branching a sparse trajectory with simple model."""
+    fmodel = DoubleWellModel
+    parameters = {"tams" : {"deterministic" : True},
+                  "trajectory" : {"end_time": 2.0,
+                                  "step_size": 0.01,
+                                  "targetscore": 0.95,
+                                  "sparse_freq": 10},
+                  "model": {"noise_amplitude" : 0.3},
+                  }
+    t_test = [Trajectory(1, fmodel, parameters), Trajectory(2, fmodel, parameters)]
+    t_test[0].advance()
+    t_test[1].advance()
+    if t_test[0].score_max() > t_test[1].score_max():
+        rst_idx = 1
+        from_idx = 0
+        rst_val = t_test[1].score_max()
+    else:
+        rst_idx = 0
+        from_idx = 1
+        rst_val = t_test[0].score_max()
+    branched_test = Trajectory.branch_from_trajectory(t_test[from_idx], t_test[rst_idx], rst_val)
+    branched_test.advance()
+    assert branched_test.score_max() > t_test[rst_idx].score_max()

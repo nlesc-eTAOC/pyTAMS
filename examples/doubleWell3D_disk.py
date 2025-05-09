@@ -10,9 +10,12 @@ from pytams.tams import TAMS
 class DoubleWellModel3DDisk(ForwardModelBaseClass):
     """3D double well forward model.
 
-    This version of the double well model writes the state
-    to disk instead of keeping it in memory. This is closer
+    This version of the double well model state is a file
+    on disk instead of the numpy array. This is closer
     to the behavior of high dimensional models.
+    Note that the model still store the state in memory
+    from one step to the next.
+
 
     V(x,y,z) = x^4/4 - x^2/2 + y^2 + z^4
 
@@ -34,10 +37,14 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
             params: a dict containing parameters
             ioprefix: an optional string defining run folder
         """
+        if not params.get("database",{}).get("path"):
+            raise RuntimeError("Database path needed for disk-based model.")
+
         self._db_path = self._workdir.parents[1]
         if not os.path.exists(self._workdir):
             os.makedirs(self._workdir)
 
+        self._state_data = None
         self._state = self.initCondition()
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
         self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
@@ -67,25 +74,28 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
         """
         state_file = "init_state.npy"
         state_path = Path(self._workdir / state_file)
-        state_data = np.array([-1.0, 0.0, 0.0])
-        np.save(state_path, state_data)
+        self._state_data = np.array([-1.0, 0.0, 0.0])
+        np.save(state_path, self._state_data)
         return state_path.relative_to(self._db_path).as_posix()
 
     def _advance(self,
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any) -> float:
+                 noise: Any,
+                 need_end_state: bool) -> float:
         """Override the template."""
-        state_path = Path(self._db_path / self._state)
-        state_data = np.load(state_path)
         new_state = (
-                state_data + dt * self.__RHS(state_data) + self._noise_amplitude * self.__dW(dt, noise[:3])
+                self._state_data + dt * self.__RHS(self._state_data) + self._noise_amplitude * self.__dW(dt, noise[:3])
         )
-        state_file = f"state_{step:06}.npy"
-        state_path = Path(self._workdir / state_file)
-        np.save(state_path, new_state)
-        self._state = state_path.relative_to(self._db_path).as_posix()
+        self._state_data = new_state
+        if need_end_state:
+            state_file = f"state_{step+1:06}.npy"
+            state_path = Path(self._workdir / state_file)
+            self._state = state_path.relative_to(self._db_path).as_posix()
+            np.save(state_path, self._state_data)
+        else:
+            self._state = None
         return dt
 
     def get_current_state(self):
@@ -95,22 +105,22 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
     def set_current_state(self, state):
         """Override the template."""
         self._state = state
+        state_path = Path(self._db_path / self._state)
+        self._state_data = np.load(state_path)
 
     def score(self):
         """Override the template."""
-        state_path = Path(self._db_path / self._state)
-        state_data = np.load(state_path)
         a = np.array([-1.0, 0.0, 0.0])
         b = np.array([1.0, 0.0, 0.0])
-        vA = state_data - a
-        vB = state_data - b
+        vA = self._state_data - a
+        vB = self._state_data - b
         da = np.sum(vA**2, axis=0)
         db = np.sum(vB**2, axis=0)
         f1 = 0.5
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
-    def _make_noise(self):
+    def make_noise(self):
         """Override the template."""
         return self._rng.standard_normal(3)
 

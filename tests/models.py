@@ -22,7 +22,8 @@ class SimpleFModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any) -> float:
+                 noise: Any,
+                 need_end_state: bool) -> float:
         """Override the template."""
         self._state = self._state + dt
         return dt
@@ -39,7 +40,7 @@ class SimpleFModel(ForwardModelBaseClass):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
-    def _make_noise(self) -> float:
+    def make_noise(self) -> float:
         """Override the template."""
         return 0.0
 
@@ -66,7 +67,8 @@ class FailingFModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any) -> float:
+                 noise: Any,
+                 need_end_state: bool) -> float:
         """Override the template."""
         if self.score() > 0.5:
             raise RuntimeError("Failing model")
@@ -85,7 +87,7 @@ class FailingFModel(ForwardModelBaseClass):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
-    def _make_noise(self) -> float:
+    def make_noise(self) -> float:
         """Override the template."""
         return 0.0
 
@@ -140,7 +142,8 @@ class DoubleWellModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any) -> float:
+                 noise: Any,
+                 need_end_state: bool) -> float:
         """Override the template."""
         self._state = (
             self._state + dt * self.__RHS(self._state) + self._noise_amplitude * self.__dW(dt, noise)
@@ -167,7 +170,7 @@ class DoubleWellModel(ForwardModelBaseClass):
         f2 = 1.0 - f1
         return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
 
-    def _make_noise(self):
+    def make_noise(self):
         """Override the template."""
         return self._rng.standard_normal(2)
 
