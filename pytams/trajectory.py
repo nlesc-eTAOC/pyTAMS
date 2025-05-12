@@ -332,7 +332,7 @@ class Trajectory:
             else:
                 self._fmodel.set_noise(self._fmodel.make_noise())
 
-    def _append_snapshot(self, score: float | None  = None) -> None:
+    def _append_snapshot(self, score: float | None = None) -> None:
         """Append the current snapshot to the trajectory list."""
         # Append the current snapshot to the trajectory list
         if self._fmodel:
