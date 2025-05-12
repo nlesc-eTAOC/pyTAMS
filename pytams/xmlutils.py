@@ -1,4 +1,5 @@
 """A set of utility for XML serializing."""
+
 import ast
 import logging
 import xml.etree.ElementTree as ET
@@ -17,8 +18,8 @@ def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
     np.set_printoptions(linewidth=np.iinfo(np.int32).max, precision=12)
-    np.set_printoptions(**oldoptions)
     yield
+    np.set_printoptions(**oldoptions)
 
 
 class XMLUtilsError(Exception):

@@ -349,7 +349,8 @@ class MOCModel(ForwardModelBaseClass):
                  step: int,
                  time: float,
                  dt: float,
-                 noise: Any) -> float:
+                 noise: Any,
+                 need_end_state: bool) -> float:
         """Override the template."""
         self.system(self._state, self._dW(dt, noise), dt)
         self._state = self.update_vars()
@@ -537,7 +538,7 @@ class MOCModel(ForwardModelBaseClass):
             return (self.q_N_on - q_N) / (self.q_N_on - z)
         return (self.q_N_off_full - q_N) / (self.q_N_off_full - self.q_N_on)
 
-    def _make_noise(self):
+    def make_noise(self):
         """Return a random noise."""
         return np.random.normal()
 
