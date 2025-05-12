@@ -307,7 +307,7 @@ class Trajectory:
         self._setup_noise()
 
         # Append a snapshot at the beginning of the time step
-        self._append_snapshot()
+        self._append_snapshot(score)
 
         if self._write_chkfile_all:
             self.store()
@@ -332,7 +332,7 @@ class Trajectory:
             else:
                 self._fmodel.set_noise(self._fmodel.make_noise())
 
-    def _append_snapshot(self) -> None:
+    def _append_snapshot(self, score: float | None  = None) -> None:
         """Append the current snapshot to the trajectory list."""
         # Append the current snapshot to the trajectory list
         if self._fmodel:
@@ -340,7 +340,7 @@ class Trajectory:
             self._snaps.append(
                 Snapshot(
                     time=self._t_cur,
-                    score=self._fmodel.score(),
+                    score=score if score else self._fmodel.score(),
                     noise=self._fmodel.get_noise(),
                     state=self._fmodel.get_current_state() if need_state else None,
                 ),
