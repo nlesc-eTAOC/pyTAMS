@@ -1,0 +1,369 @@
+pytams.database
+===============
+
+.. py:module:: pytams.database
+
+.. autoapi-nested-parse::
+
+   A database class for TAMS.
+
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   pytams.database.DatabaseError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.database.Database
+
+
+Module Contents
+---------------
+
+.. py:exception:: DatabaseError
+
+   Bases: :py:obj:`Exception`
+
+
+   Exception class for TAMS Database.
+
+
+.. py:class:: Database(fmodel_t: type[pytams.fmodel.ForwardModelBaseClass], params: dict[Any, Any], ntraj: int | None = None, nsplititer: int | None = None)
+
+   A database class for TAMS.
+
+   The database class for TAMS is a container for
+   all the trajectory and splitting data. When the
+   user provides a path to store the database, a local folder is
+   created holding a number of readable files, any output
+   from the model and an SQL file used to lock/release
+   trajectories as the TAMS algorithm proceeds.
+
+   The readable files are currently in an XML format.
+
+   A database can be loaded independently from the TAMS
+   algorithm and used for post-processing.
+
+   :ivar _fmodel_t: the forward model type
+   :ivar _save_to_disk: boolean to trigger saving the database to disk
+   :ivar _path: a path to an existing database to restore or a new path
+   :ivar _restart: a bool to override an existing database
+   :ivar _parameters: the dictionary of parameters
+   :ivar _trajs_db: the list of trajectories
+   :ivar _ksplit: the current splitting iteration
+   :ivar _l_bias: the list of bias
+   :ivar _weights: the list of weights
+   :ivar _ongoing: the list of ongoing branches if unfinished splitting iteration.
+
+
+
+   .. py:method:: n_traj() -> int
+
+      Return the number of trajectory used for TAMS.
+
+      Note that this is the requested number of trajectory, not
+      the current length of the trajectory pool.
+
+      :returns: number of trajectory
+
+
+
+   .. py:method:: n_split_iter() -> int
+
+      Return the number of splitting iteration used for TAMS.
+
+      Note that this is the requested number of splitting iteration, not
+      the current splitting iteration.
+
+      :returns: number of splitting iteration
+
+
+
+   .. py:method:: path() -> str | None
+
+      Return the path to the database.
+
+
+
+   .. py:method:: load(a_path: pathlib.Path) -> Database
+      :classmethod:
+
+
+      Instanciate a TAMS database from disk.
+
+      :param a_path: the path to the database
+
+      :returns: a TAMS database object
+
+
+
+   .. py:method:: init_pool() -> None
+
+      Initialize the requested number of trajectories.
+
+
+
+   .. py:method:: save_trajectory(traj: pytams.trajectory.Trajectory) -> None
+
+      Save a trajectory to disk in the database.
+
+      :param traj: the trajectory to save
+
+
+
+   .. py:method:: save_splitting_data(ongoing_trajs: list[int] | None = None) -> None
+
+      Write splitting data to the database.
+
+      :param ongoing_trajs: an optional list of ongoing trajectories
+
+
+
+   .. py:method:: load_data(load_archived_trajectories: bool = False) -> None
+
+      Load data stored into the database.
+
+      The initialization of the database only populate the metadata
+      but not the full trajectories data.
+
+      :param load_archived_trajectories: whether to load archived trajectories
+
+
+
+   .. py:method:: name() -> str
+
+      Accessor to DB name.
+
+      :returns: DB name
+
+
+
+   .. py:method:: append_traj(a_traj: pytams.trajectory.Trajectory, update_db: bool) -> None
+
+      Append a Trajectory to the internal list.
+
+      :param a_traj: the trajectory
+      :param update_db: True to update the SQL DB content
+
+
+
+   .. py:method:: traj_list() -> list[pytams.trajectory.Trajectory]
+
+      Access to the trajectory list.
+
+      :returns: Trajectory list
+
+
+
+   .. py:method:: get_traj(idx: int) -> pytams.trajectory.Trajectory
+
+      Access to a given trajectory.
+
+      :param idx: the index
+
+      :returns: Trajectory
+
+      :raises ValueError if idx is out of range:
+
+
+
+   .. py:method:: overwrite_traj(idx: int, traj: pytams.trajectory.Trajectory) -> None
+
+      Deep copy a trajectory into internal list.
+
+      :param idx: the index of the trajectory to override
+      :param traj: the new trajectory
+
+      :raises ValueError if idx is out of range:
+
+
+
+   .. py:method:: header_file() -> str
+
+      Helper returning the DB header file.
+
+      :returns: Header file
+
+
+
+   .. py:method:: pool_file() -> str
+
+      Helper returning the DB trajectory pool file.
+
+      :returns: Pool file
+
+
+
+   .. py:method:: is_empty() -> bool
+
+      Check if list of trajectories is empty.
+
+      :returns: True if the list of trajectories is empty
+
+
+
+   .. py:method:: traj_list_len() -> int
+
+      Length of the trajectory list.
+
+      :returns: Trajectory list length
+
+
+
+   .. py:method:: archived_traj_list_len() -> int
+
+      Length of the archived trajectory list.
+
+      :returns: Trajectory list length
+
+
+
+   .. py:method:: update_traj_list(a_traj_list: list[pytams.trajectory.Trajectory]) -> None
+
+      Overwrite the trajectory list.
+
+      :param a_traj_list: the new trajectory list
+
+
+
+   .. py:method:: archive_trajectory(traj: pytams.trajectory.Trajectory) -> None
+
+      Archive a trajectory about to be discarded.
+
+      :param traj: the trajectory to archive
+
+
+
+   .. py:method:: lock_trajectory(tid: int, allow_completed_lock: bool = False) -> bool
+
+      Lock a trajectory in the SQL DB.
+
+      :param tid: the trajectory id
+      :param allow_completed_lock: True if the trajectory can be locked even if it is completed
+
+      :returns: True if no disk DB and the trajectory was locked
+
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: unlock_trajectory(tid: int, has_ended: bool) -> None
+
+      Unlock a trajectory in the SQL DB.
+
+      :param tid: the trajectory id
+      :param has_ended: True if the trajectory has ended
+
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: update_trajectory_file(traj_id: int, checkfile: pathlib.Path) -> None
+
+      Update a trajectory file in the DB.
+
+      :param traj_id: The trajectory id
+      :param checkfile: The new checkfile of that trajectory
+
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: weights() -> list[float]
+
+      Splitting iterations weights.
+
+
+
+   .. py:method:: append_weight(weight: float) -> None
+
+      Append a weight to internal list.
+
+
+
+   .. py:method:: biases() -> list[int]
+
+      Splitting iterations biases.
+
+
+
+   .. py:method:: append_bias(bias: int) -> None
+
+      Append a bias to internal list.
+
+
+
+   .. py:method:: append_minmax(ksplit: int, minofmaxes: numpy.number, maxofmaxes: numpy.number) -> None
+
+      Append min/max of maxes to internal list.
+
+
+
+   .. py:method:: k_split() -> int
+
+      Splitting iteration counter.
+
+
+
+   .. py:method:: done_with_splitting() -> bool
+
+      Check if we are done with splitting.
+
+
+
+   .. py:method:: reset_ongoing() -> None
+
+      Reset the list of trajectories undergoing branching.
+
+
+
+   .. py:method:: get_ongoing() -> list[int] | None
+
+      Return the list of trajectories undergoing branching or None.
+
+
+
+   .. py:method:: set_k_split(ksplit: int) -> None
+
+      Set splitting iteration counter.
+
+
+
+   .. py:method:: count_ended_traj() -> int
+
+      Return the number of trajectories that ended.
+
+
+
+   .. py:method:: count_converged_traj() -> int
+
+      Return the number of trajectories that converged.
+
+
+
+   .. py:method:: get_transition_probability() -> float
+
+      Return the transition probability.
+
+
+
+   .. py:method:: info() -> None
+
+      Print database info to screen.
+
+
+
+   .. py:method:: plot_score_functions(fname: str | None = None, plot_archived: bool = False) -> None
+
+      Plot the score as function of time for all trajectories.
+
+
+
