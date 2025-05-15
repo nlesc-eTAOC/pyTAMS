@@ -6,7 +6,7 @@ Usage
 =====
 
 Running pyTAMS
---------------
+==============
 
 Using `pyTAMS` requires formulating your physics problem within the API defined by the
 `pyTAMS` ABC interface.
@@ -38,7 +38,7 @@ and then run your code, providing a TOML input file which is described in the ne
    and the associated standard error.
 
 Controls
---------
+========
 
 Upon instantiation of a `TAMS` object, the code search for a TOML file containing the
 run parameters. The path to the TOML file can be provided using the `-i` option, and
