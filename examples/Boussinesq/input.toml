@@ -1,0 +1,30 @@
+[tams]
+ntrajectories = 20
+nsplititer = 1000
+loglevel = "INFO"
+walltime = 7200.0
+diagnostics = true
+
+[trajectory]
+end_time = 20.0
+step_size = 0.005
+targetscore = 0.95
+sparse_freq = 10
+
+[model]
+size_M = 40
+size_N = 80
+epsilon = 0.01
+K = 4
+
+[runner]
+type = "dask"
+nworker_init=5
+nworker_iter=2
+
+[dask]
+backend = "local"
+
+[database]
+path = "2DBoussinesq.tdb"
+archive_discarded = true
