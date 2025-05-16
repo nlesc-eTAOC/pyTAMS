@@ -9,7 +9,7 @@ authors = [
     { name = "Lucas Esclapez", email = "l.esclapez@esciencecenter.nl" }
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: Apache Software License",
   "Natural Language :: English",
@@ -23,13 +23,12 @@ description = "An implementation of the trajectory-adaptive multilevel splitting
 keywords = ["Rare events", "Stochastic systems", "Multilevel splitting"]
 license = {file = "LICENSE"}
 readme = {file = "README.md", content-type = "text/markdown"}
-urls = {Repository = "https://github.com/esciencecenter/pyTAMS", Documentation = "https://pytams.readthedocs.io/en/latest/", Issues = "https://github.com/esciencecenter/pyTAMS/issues"}
+urls = {Repository = "https://github.com/nlesc-eTAOC/pyTAMS", Documentation = "https://nlesc-etaoc.github.io/pyTAMS/", Issues = "https://github.com/nlesc-eTAOC/pyTAMS/issues"}
 requires-python = ">=3.10"
 dependencies = [
   "toml",
   "numpy",
   "matplotlib",
-  "netCDF4",
   "dask",
   "dask [distributed]",
   "dask-jobqueue",
@@ -62,6 +61,10 @@ publishing = [
     "build",
     "twine",
     "wheel",
+]
+exec = [
+  "netCDF4",
+  "scipy",
 ]
 
 [tool.pytest.ini_options]
