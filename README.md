@@ -29,6 +29,16 @@ cd pyTAMS
 python -m pip install .
 ```
 
+Note that the latest version of *pyTAMS* is available on PyPI [here](https://pypi.org/project/pytams/)
+and can be installed with `pip install pytams`.
+
+Finally, a few example cases are shipped with *pyTAMS*, but additional dependencies are required.
+To install the examples dependencies, run:
+
+```console
+python -m pip install .[exec]
+```
+
 ## Quick start
 
 To get started with *pyTAMS*, let's have a look at the classical double-well potential case.
