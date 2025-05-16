@@ -29,7 +29,6 @@ dependencies = [
   "toml",
   "numpy",
   "matplotlib",
-  "netCDF4",
   "dask",
   "dask [distributed]",
   "dask-jobqueue",
@@ -62,6 +61,10 @@ publishing = [
     "build",
     "twine",
     "wheel",
+]
+exec = [
+  "netCDF4",
+  "scipy",
 ]
 
 [tool.pytest.ini_options]
