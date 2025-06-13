@@ -145,9 +145,10 @@ class Boussinesq2D {
 
   void init_state() {
     m_w = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
-    m_S = Eigen::MatrixXd::Constant(m_M + 1, m_N + 1, 1.0);
-    m_T = Eigen::MatrixXd::Constant(m_M + 1, m_N + 1, 0.45);
+    m_S = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    m_T = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
     m_psi = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    load_state("AlmostONState.bin");
   }
 
   void make_x_operators() {
@@ -267,9 +268,18 @@ class Boussinesq2D {
   }
 
   void write_state() {
+    write_state("state", m_step, m_w, m_S, m_T, m_psi);
+  }
+
+  void write_state(const std::string a_prefix,
+                   int a_step,
+                   const Eigen::MatrixXd& a_w,
+                   const Eigen::MatrixXd& a_S,
+                   const Eigen::MatrixXd& a_T,
+                   const Eigen::MatrixXd& a_psi) {
     // Setup filename
-    std::string step_str = std::to_string(m_step);
-    std::string filename = "state" + std::string(6 - step_str.length(), '0') + step_str + ".bin";
+    std::string step_str = std::to_string(a_step);
+    std::string filename = a_prefix + std::string(6 - step_str.length(), '0') + step_str + ".bin";
 
     std::cout << "Writing state to " << filename << std::endl;
 
@@ -287,14 +297,14 @@ class Boussinesq2D {
     (*os).write((char*)m_zz.data(), (sizeof(double) * m_zz.size()));
 
     // State
-    (*os).write((char*)m_w.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*os).write((char*)m_S.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*os).write((char*)m_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*os).write((char*)m_psi.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*os).write((char*)a_w.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*os).write((char*)a_S.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*os).write((char*)a_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*os).write((char*)a_psi.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
 
     ofs.close();
 
-    std::string xmlfilename = "state" + std::string(6 - step_str.length(), '0') + step_str + ".xmf";
+    std::string xmlfilename = a_prefix + std::string(6 - step_str.length(), '0') + step_str + ".xmf";
 
     std::ofstream ofs_xml(xmlfilename);
     int offset = sizeof(int) + sizeof(int) + sizeof(double);
@@ -356,20 +366,30 @@ class Boussinesq2D {
     ifs.open(filename, std::ifstream::in | std::ifstream::binary);
 
     // Header
-    (*is).read((char*)&m_M, sizeof(int));
-    (*is).read((char*)&m_N, sizeof(int));
-    (*is).read((char*)&m_t, sizeof(double));
+    int l_M{0};
+    int l_N{0};
+    double l_t{0.0};
+    (*is).read((char*)&l_M, sizeof(int));
+    (*is).read((char*)&l_N, sizeof(int));
+    (*is).read((char*)&l_t, sizeof(double));
+    if (l_M != m_M || l_N != m_N) {
+      std::cout << "Error: incompatible mesh size\n";
+      exit(0);
+    }
 
     // Mesh
-    (*is).read((char*)&m_xx, sizeof(double) * (m_M + 1));
-    (*is).read((char*)&m_zz, sizeof(double) * (m_N + 1));
+    Eigen::VectorXd l_xx = Eigen::VectorXd::Zero(m_M + 1);
+    Eigen::VectorXd l_zz = Eigen::VectorXd::Zero(m_N + 1);
+    (*is).read((char*)l_xx.data(), sizeof(double) * l_xx.size());
+    (*is).read((char*)l_zz.data(), sizeof(double) * l_zz.size());
 
     // State
     (*is).read((char*)m_w.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*is).read((char*)m_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
     (*is).read((char*)m_S.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*is).read((char*)m_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
     (*is).read((char*)m_psi.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
 
+    std::cout << "State loaded from " << filename << std::endl;
     ifs.close();
   }
 
@@ -437,11 +457,18 @@ class Boussinesq2D {
     m_step += 1;
   }
 
+  void one_step() {
+    Eigen::VectorXd normal_zero = Eigen::VectorXd::Zero(m_K*2);
+    one_step(normal_zero);
+    if (m_step % 50 == 0) write_state();
+  }
+
   void advance_trajectory(const double &t_end) {
+    write_state();
     while (m_t < t_end) {
       Eigen::VectorXd normal_zero = Eigen::VectorXd::Zero(m_K*2);
       one_step(normal_zero);
-      if (m_step % 50 == 0) write_state();
+      if (m_step % 100 == 0 || m_t >= t_end) write_state();
     }
   }
 };
