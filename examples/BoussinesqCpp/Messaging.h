@@ -43,7 +43,7 @@ enum MessageType {
  *   This struct is used to pass messages between the C++ and Python sides.
  */
 struct Message {
-  MessageType type{MessageType::Null};
+  MessageType type = MessageType::Null;
   int size{0};
   std::unique_ptr<char[]> data;
 
