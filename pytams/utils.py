@@ -57,7 +57,7 @@ def get_min_scored(maxes: npt.NDArray[Any], nworkers: int) -> tuple[list[int], n
         if len(min_idx_list) > 0:
             is_same_min = maxes[idx] == maxes[min_idx_list[-1]]
         if len(min_idx_list) < nworkers or is_same_min:
-            min_idx_list.append(idx)
+            min_idx_list.append(int(idx))
 
     min_vals = maxes[min_idx_list]
     return min_idx_list, min_vals
