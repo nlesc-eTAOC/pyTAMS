@@ -8,6 +8,14 @@
 #include <random>
 #include "eigen_lapack_interf.h"
 
+/**
+ * @file Boussinesq.h
+ * @author: Lucas Esclapez
+ * @date: 2025-06-01
+ * @brief Implementation of the Boussinesq model in 2D
+ */
+
+
 class Boussinesq2D {
   public:
 
@@ -26,7 +34,13 @@ class Boussinesq2D {
     double m_eps{0.05};
     double m_t{0.0};
     int m_step{0};
-    int m_K{4};
+    int m_K{0};
+
+    std::ofstream m_logfile;
+
+    std::string m_statefile;
+    std::string m_workdir;
+    int m_saveState{0};
 
     // Grid containers
     Eigen::VectorXd m_xx;
@@ -63,15 +77,21 @@ class Boussinesq2D {
     Eigen::MatrixXd m_cos_term;
     Eigen::MatrixXd m_sin_term;
 
+    // Score bounds
+    double m_score_ON{0.0};
+    double m_score_OFF{0.0};
+
     // Solution matrices
     Eigen::MatrixXd m_S;
     Eigen::MatrixXd m_T;
     Eigen::MatrixXd m_psi;
     Eigen::MatrixXd m_w;
 
-  Boussinesq2D(int M, int N, double dt) : m_M{M},
+  Boussinesq2D(int M, int N, int K, double &eps, double &dt) : m_M{M},
     m_N{N},
-    m_dt{dt} {
+    m_K{K},
+    m_dt{dt},
+    m_eps{eps} {
       // Initialize the computational grid
       m_xx = Eigen::VectorXd::LinSpaced(m_M + 1, 0.0, m_A);
       m_dx = m_xx[1] - m_xx[0];
@@ -92,7 +112,30 @@ class Boussinesq2D {
       init_state();
     };
 
-  ~Boussinesq2D() {}
+  ~Boussinesq2D() {
+    m_logfile.close();
+  }
+
+  void set_statefile(std::string statefile) {
+    m_statefile = statefile;
+    load_state(m_statefile);
+  }
+
+  void set_workdir(std::string workdir) {
+    m_workdir = workdir;
+
+    // Initialize the log file
+    m_logfile.open(m_workdir + "/log.txt");
+
+    // Dump some general information
+    m_logfile << "Boussinesq C++ model initialized with M = " << m_M <<
+      ", N = " << m_N <<
+      ", beta = " << m_beta << std::endl;
+    m_logfile << "Noise parameters: " <<
+      ", K = " << m_K <<
+      ", eps = " << m_eps << std::endl;
+
+  }
 
   double h(double z) {
       return exp(-(1.0 - z) / m_delta);
@@ -145,10 +188,9 @@ class Boussinesq2D {
 
   void init_state() {
     m_w = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
-    m_S = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
-    m_T = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    m_S = Eigen::MatrixXd::Constant(m_M + 1, m_N + 1, 1.0);
+    m_T = Eigen::MatrixXd::Constant(m_M + 1, m_N + 1, 0.45);
     m_psi = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
-    load_state("AlmostONState.bin");
   }
 
   void make_x_operators() {
@@ -268,28 +310,37 @@ class Boussinesq2D {
   }
 
   void write_state() {
-    write_state("state", m_step, m_w, m_S, m_T, m_psi);
+    // Setup filename
+    std::string outputprefix = m_workdir + "/state_";
+    std::string step_str = std::to_string(m_step);
+    std::string fileroot = outputprefix + std::string(6 - step_str.length(), '0') + step_str;
+
+    write_state(fileroot, m_step, m_w, m_S, m_T, m_psi);
+    m_statefile = fileroot + ".bin";
+    m_saveState = 0;
   }
 
-  void write_state(const std::string a_prefix,
+  void write_state(const std::string fileroot,
                    int a_step,
                    const Eigen::MatrixXd& a_w,
                    const Eigen::MatrixXd& a_S,
                    const Eigen::MatrixXd& a_T,
                    const Eigen::MatrixXd& a_psi) {
-    // Setup filename
-    std::string step_str = std::to_string(a_step);
-    std::string filename = a_prefix + std::string(6 - step_str.length(), '0') + step_str + ".bin";
 
-    std::cout << "Writing state to " << filename << std::endl;
+    std::string filename = fileroot + ".bin";
+    m_logfile << "Writing state to " << filename << std::endl;
 
     std::ofstream ofs;
     std::ostream* os = (std::ostream*)(&ofs);
     ofs.open(filename, std::ofstream::out | std::ofstream::binary);
 
-    // Header
+    // Header case
     (*os).write((char*)&m_M, sizeof(int));
     (*os).write((char*)&m_N, sizeof(int));
+    (*os).write((char*)&m_K, sizeof(int));
+
+    // Time
+    (*os).write((char*)&a_step, sizeof(int));
     (*os).write((char*)&m_t, sizeof(double));
 
     // Mesh
@@ -304,10 +355,10 @@ class Boussinesq2D {
 
     ofs.close();
 
-    std::string xmlfilename = a_prefix + std::string(6 - step_str.length(), '0') + step_str + ".xmf";
+    std::string xmlfilename = fileroot + ".xmf";
 
     std::ofstream ofs_xml(xmlfilename);
-    int offset = sizeof(int) + sizeof(int) + sizeof(double);
+    int offset = sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(double);
     if (ofs_xml.is_open()) {
       ofs_xml.precision(8);
       ofs_xml << "<?xml version=\"1.0\"?>\n";
@@ -360,22 +411,43 @@ class Boussinesq2D {
   }
 
   void load_state(std::string filename) {
+    load_state(filename, m_step, m_t, m_w, m_S, m_T, m_psi);
+  }
+
+  void load_state(std::string filename,
+                  int &a_step,
+                  double &a_t,
+                  Eigen::MatrixXd &a_w,
+                  Eigen::MatrixXd &a_S,
+                  Eigen::MatrixXd &a_T,
+                  Eigen::MatrixXd &a_psi) {
 
     std::ifstream ifs;
     std::istream* is = (std::istream*)(&ifs);
     ifs.open(filename, std::ifstream::in | std::ifstream::binary);
+    if (!ifs.is_open()) {
+      std::cout << "Error: cannot open file " << filename << std::endl;
+      exit(0);
+    }
 
     // Header
     int l_M{0};
     int l_N{0};
-    double l_t{0.0};
+    int l_K{0};
     (*is).read((char*)&l_M, sizeof(int));
     (*is).read((char*)&l_N, sizeof(int));
-    (*is).read((char*)&l_t, sizeof(double));
+    (*is).read((char*)&l_K, sizeof(int));
     if (l_M != m_M || l_N != m_N) {
-      std::cout << "Error: incompatible mesh size\n";
+      std::cout << "Error: incompatible file mesh size [" << l_M << ", " << l_N << "] with current mesh size [" << m_M << ", " << m_N << "]\n";
       exit(0);
     }
+    if (l_K != m_K) {
+      std::cout << "Error: incompatible file forcing K [" << l_K << "] with current one [" << m_K << "]\n";
+      exit(0);
+    }
+
+    (*is).read((char*)&a_step, sizeof(int));
+    (*is).read((char*)&a_t, sizeof(double));
 
     // Mesh
     Eigen::VectorXd l_xx = Eigen::VectorXd::Zero(m_M + 1);
@@ -384,12 +456,12 @@ class Boussinesq2D {
     (*is).read((char*)l_zz.data(), sizeof(double) * l_zz.size());
 
     // State
-    (*is).read((char*)m_w.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*is).read((char*)m_S.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*is).read((char*)m_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
-    (*is).read((char*)m_psi.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*is).read((char*)a_w.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*is).read((char*)a_S.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*is).read((char*)a_T.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
+    (*is).read((char*)a_psi.data(), sizeof(double) * (m_M + 1) * (m_N + 1));
 
-    std::cout << "State loaded from " << filename << std::endl;
+    //std::cout << "State loaded from " << filename << std::endl;
     ifs.close();
   }
 
@@ -414,9 +486,9 @@ class Boussinesq2D {
     return (U_lp * Y) * V_lp.conjugate().transpose();
   }
 
-  void one_step(const Eigen::VectorXd &normal_noise) {
+  double one_step(const Eigen::VectorXd &normal_noise) {
 
-    std::cout << " Advance to t = " << m_t + m_dt << std::endl;
+    m_logfile << " Advance to t = " << m_t + m_dt << std::endl;
 
     Eigen::MatrixXd Fxpsi = m_Fx * m_psi;
     Eigen::MatrixXd psiFz = m_psi * m_FzT;
@@ -455,12 +527,43 @@ class Boussinesq2D {
 
     m_t += m_dt;
     m_step += 1;
+
+    if (m_saveState == 1) write_state();
+
+    return get_score();
   }
 
-  void one_step() {
+  void init_score(std::string const &onfile,
+                  std::string const &offfile) {
+    Eigen::MatrixXd w = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    Eigen::MatrixXd S = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    Eigen::MatrixXd T = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+    Eigen::MatrixXd psi = Eigen::MatrixXd::Zero(m_M + 1, m_N + 1);
+
+    double t = 0.0;
+    int step = 0;
+    load_state(onfile, step, t, w, S, T, psi);
+    m_score_ON = psi(Eigen::seq(5,15), Eigen::seq(32,48)).mean();
+
+    load_state(offfile, step, t, w, S, T, psi);
+    m_score_OFF = psi(Eigen::seq(5,15), Eigen::seq(32,48)).mean();
+  }
+
+  double get_score() {
+    if (m_score_ON == 0.0 && m_score_OFF == 0.0) {
+      std::cout << "Calling get_score before init_score" << std::endl;
+      exit(0);
+    }
+    auto psi_south = m_psi(Eigen::seq(5,15), Eigen::seq(32,48)).mean();
+    auto score = (psi_south - m_score_ON) / (m_score_OFF - m_score_ON);
+    return score;
+  }
+
+  double one_step() {
     Eigen::VectorXd normal_zero = Eigen::VectorXd::Zero(m_K*2);
-    one_step(normal_zero);
-    if (m_step % 50 == 0) write_state();
+    double score = one_step(normal_zero);
+    if (m_saveState == 1) write_state();
+    return score;
   }
 
   void advance_trajectory(const double &t_end) {
@@ -468,7 +571,7 @@ class Boussinesq2D {
     while (m_t < t_end) {
       Eigen::VectorXd normal_zero = Eigen::VectorXd::Zero(m_K*2);
       one_step(normal_zero);
-      if (m_step % 100 == 0 || m_t >= t_end) write_state();
+      if (m_saveState == 1) write_state();
     }
   }
 };
