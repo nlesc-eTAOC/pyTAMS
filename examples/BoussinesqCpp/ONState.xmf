@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="Grid">
+      <Topology TopologyType="3DRectMesh" NumberOfElements="1 81 41"/>
+      <Geometry GeometryType="VXVYVZ">
+        <DataItem Dimensions="41" NumberType="Float" Precision="8" Format="Binary" Seek="24">
+          ./ONState.bin
+        </DataItem>
+        <DataItem Dimensions="81" NumberType="Float" Precision="8" Format="Binary" Seek="352">
+          ./ONState.bin
+        </DataItem>
+        <DataItem Dimensions="1" NumberType="Float" Precision="8">
+          0.0
+        </DataItem>
+      </Geometry>
+      <Attribute Name="vorticity" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="1 81 41" NumberType="Float" Precision="8" Format="Binary" Seek="1000">
+          ./ONState.bin
+        </DataItem>
+      </Attribute>
+      <Attribute Name="salinity" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="1 81 41" NumberType="Float" Precision="8" Format="Binary" Seek="27568">
+          ./ONState.bin
+        </DataItem>
+      </Attribute>
+      <Attribute Name="temperature" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="1 81 41" NumberType="Float" Precision="8" Format="Binary" Seek="54136">
+          ./ONState.bin
+        </DataItem>
+      </Attribute>
+      <Attribute Name="streamfunction" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="1 81 41" NumberType="Float" Precision="8" Format="Binary" Seek="80704">
+          ./ONState.bin
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>
