@@ -357,6 +357,10 @@ class TAMS:
                 self._tdb.append_bias(n_branch)
                 self._tdb.append_weight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._tdb.n_traj()))
 
+                self._tdb.append_splitting_data(
+                    k, n_branch, min_idx_list, rest_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
+                )
+
                 # Assemble a list of promises
                 for i in range(n_branch):
                     task = [

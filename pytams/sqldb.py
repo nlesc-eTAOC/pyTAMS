@@ -37,6 +37,20 @@ class ArchivedTrajectory(Base):
     traj_file: Mapped[str] = mapped_column(nullable=False)
 
 
+class SplittingIterations(Base):
+    """A table storing the splitting iterations."""
+
+    __tablename__ = "splitting_iterations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    split_id: Mapped[int] = mapped_column(nullable=False)
+    rst_traj_count: Mapped[int] = mapped_column(nullable=False)
+    rst_traj_ids: Mapped[str] = mapped_column(nullable=False)
+    from_traj_ids: Mapped[str] = mapped_column(nullable=False)
+    min_vals: Mapped[str] = mapped_column(nullable=False)
+    min_max: Mapped[str] = mapped_column(nullable=False)
+
+
 valid_statuses = ["locked", "idle", "completed"]
 
 
@@ -351,6 +365,38 @@ class SQLFile:
         finally:
             session.close()
 
+    def add_splitting_data(
+        self, k: int, n_rst: int, rst_ids: list[int], from_ids: list[int], min_vals: list[float], min_max: list[float]
+    ) -> None:
+        """Add a new splitting data to the DB.
+
+        Args:
+            k : The splitting iteration index
+            n_rst : The number of restarted trajectories
+            rst_ids : The list of restarted trajectory ids
+            from_ids : The list of trajectories used to restart
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+        """
+        session = self._Session()
+        try:
+            new_split = SplittingIterations(
+                split_id=k,
+                rst_traj_count=n_rst,
+                rst_traj_ids=" ".join(str(x) for x in rst_ids),
+                from_traj_ids=" ".join(str(x) for x in from_ids),
+                min_vals=" ".join(str(x) for x in min_vals),
+                min_max=" ".join(str(x) for x in min_max),
+            )
+            session.add(new_split)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to add splitting data")
+            raise
+        finally:
+            session.close()
+
     def dump_file_json(self) -> None:
         """Dump the content of the trajectory table to a json file."""
         db_data = {}
@@ -362,9 +408,20 @@ class SQLFile:
             db_data["archived_trajectories"] = {
                 traj.id - 1: {"file": traj.traj_file} for traj in session.query(ArchivedTrajectory).all()
             }
+            db_data["splitting_data"] = {
+                split.id: {
+                    "k": str(split.split_id),
+                    "min_max_start": split.min_max,
+                    "n_rst": str(split.rst_traj_count),
+                    "rst_ids": split.rst_traj_ids,
+                    "from_ids": split.from_traj_ids,
+                    "min_vals": split.min_vals,
+                }
+                for split in session.query(SplittingIterations).all()
+            }
         except SQLAlchemyError:
             session.rollback()
-            _logger.exception("Failed to count the number of archived trajectories")
+            _logger.exception("Failed to query the content of the DB")
             raise
         finally:
             session.close()
