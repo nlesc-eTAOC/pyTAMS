@@ -651,6 +651,30 @@ class Database:
         """Append a weight to internal list."""
         self._weights.append(weight)
 
+    def append_splitting_data(
+        self,
+        ksplit: int,
+        n_rst: int,
+        rst_ids: list[int],
+        from_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
+    ) -> None:
+        """Append a set of splitting data to internal list.
+
+        Args:
+            ksplit : The splitting iteration index
+            n_rst : The number of restarted trajectories
+            rst_ids : The list of restarted trajectory ids
+            from_ids : The list of trajectories used to restart
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+        """
+        if not self._save_to_disk or not self._pool_db:
+            return
+
+        self._pool_db.add_splitting_data(ksplit, n_rst, rst_ids, from_ids, min_vals, min_max)
+
     def biases(self) -> list[int]:
         """Splitting iterations biases."""
         return self._l_bias
