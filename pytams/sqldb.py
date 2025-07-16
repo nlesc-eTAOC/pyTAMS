@@ -365,6 +365,18 @@ class SQLFile:
         finally:
             session.close()
 
+    def clear_archived_trajectories(self) -> None:
+        """Clear the archive."""
+        session = self._Session()
+        try:
+            session.query(ArchivedTrajectory).delete()
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to clear the archive")
+        finally:
+            session.close()
+
     def add_splitting_data(
         self, k: int, n_rst: int, rst_ids: list[int], from_ids: list[int], min_vals: list[float], min_max: list[float]
     ) -> None:
@@ -394,6 +406,18 @@ class SQLFile:
             session.rollback()
             _logger.exception("Failed to add splitting data")
             raise
+        finally:
+            session.close()
+
+    def clear_splitting_data(self) -> None:
+        """Clear the splitting data."""
+        session = self._Session()
+        try:
+            session.query(SplittingIterations).delete()
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to clear the splitting data")
         finally:
             session.close()
 
