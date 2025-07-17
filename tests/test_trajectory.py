@@ -61,7 +61,7 @@ def test_restartEmptyTraj():
                                   "step_size": 0.01}}
     fromTraj = Trajectory(1, fmodel, parameters)
     rstTraj = Trajectory(2, fmodel, parameters)
-    rst_test = Trajectory.branch_from_trajectory(fromTraj, rstTraj, 0.1)
+    rst_test = Trajectory.branch_from_trajectory(fromTraj, rstTraj, 0.1, -1.0)
     assert rst_test.current_time() == 0.0
 
 
@@ -129,8 +129,20 @@ def test_restartSimpleTraj():
     fromTraj = Trajectory(1, fmodel, parameters)
     fromTraj.advance(0.01)
     rstTraj = Trajectory(2, fmodel, parameters)
-    rst_test = Trajectory.branch_from_trajectory(fromTraj, rstTraj, 0.05)
+    rst_test = Trajectory.branch_from_trajectory(fromTraj, rstTraj, 0.05, -1.0)
     assert rst_test.current_time() == 0.006
+
+def test_earlyRestartSimpleTraj():
+    """Test trajectory early restart."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.04,
+                                  "step_size": 0.001,
+                                  "targetscore": 0.25}}
+    fromTraj = Trajectory(1, fmodel, parameters)
+    fromTraj.advance(0.01)
+    rstTraj = Trajectory(2, fmodel, parameters)
+    rst_test = Trajectory.branch_from_trajectory(fromTraj, rstTraj, 0.05, 0.0011)
+    assert rst_test.current_time() == 0.004
 
 
 def test_accessDataSimpleTraj():
@@ -234,6 +246,6 @@ def test_sparseDWTrajWithBranching():
         rst_idx = 0
         from_idx = 1
         rst_val = t_test[0].score_max()
-    branched_test = Trajectory.branch_from_trajectory(t_test[from_idx], t_test[rst_idx], rst_val)
+    branched_test = Trajectory.branch_from_trajectory(t_test[from_idx], t_test[rst_idx], rst_val, -1.0)
     branched_test.advance()
     assert branched_test.score_max() > t_test[rst_idx].score_max()
