@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 import logging
 import time
 import xml.etree.ElementTree as ET
@@ -434,6 +435,7 @@ class Trajectory:
         from_traj: Trajectory,
         rst_traj: Trajectory,
         score: float,
+        early_restart_delay: float,
     ) -> Trajectory:
         """Create a new trajectory.
 
@@ -448,6 +450,7 @@ class Trajectory:
             from_traj: an already existing trajectory to restart from
             rst_traj: the trajectory being restarted
             score: a threshold score
+            early_restart_delay: an early restart delay
         """
         # Check for empty trajectory
         if len(from_traj._snaps) == 0:
@@ -474,6 +477,23 @@ class Trajectory:
             if from_traj._snaps[high_score_idx].has_state():
                 last_snap_with_state = high_score_idx
 
+        # If we have an early restart delay, backtrack by the delay
+        if early_restart_delay > 0.0:
+            backtrack = True
+            target_time = max(0.0, from_traj._snaps[high_score_idx].time - early_restart_delay)
+            while backtrack:
+                if from_traj._snaps[high_score_idx].time > target_time:
+                    high_score_idx -= 1
+
+                backtrack = from_traj._snaps[high_score_idx].time > target_time
+
+                if not backtrack:
+                    has_last_state = from_traj._snaps[high_score_idx].has_state()
+                    last_snap_with_state = high_score_idx
+                    while not has_last_state:
+                        last_snap_with_state -= 1
+                        has_last_state = from_traj._snaps[last_snap_with_state].has_state()
+
         # Init empty trajectory
         tid, nb = get_index_from_id(rst_traj.idstr())
         new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
@@ -484,7 +504,7 @@ class Trajectory:
             parameters=from_traj._parameters_full,
             workdir=new_workdir,
         )
-        rest_traj._branching_history = rst_traj._branching_history
+        rest_traj._branching_history = copy.deepcopy(rst_traj._branching_history)
         rest_traj._branching_history.append(from_traj.id())
         rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
 

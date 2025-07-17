@@ -2,6 +2,7 @@
 
 import asyncio
 import concurrent.futures
+import copy
 import datetime
 import functools
 import logging
@@ -84,6 +85,7 @@ def ms_worker(
     from_traj: Trajectory,
     rst_traj: Trajectory,
     min_val: float,
+    early_restart_delay: float,
     end_date: datetime.date,
     db_path: str | None = None,
 ) -> Trajectory:
@@ -93,6 +95,7 @@ def ms_worker(
         from_traj: a trajectory to restart from
         rst_traj: the trajectory being restarted
         min_val: the value of the score function to restart from
+        early_restart_delay: an early restart delay
         end_date: the time limit to advance the trajectory
         db_path: a database path or None
     """
@@ -120,16 +123,39 @@ def ms_worker(
         inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_restart_delay)
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
         if db:
             db.update_trajectory_file(traj.id(), traj.get_checkfile())
+            traj.store()
 
-        return traj_advance_with_exception(traj, wall_time, db)
+        # Try advancing the trajectory, because of early restart the target
+        # min_val might not be reached. We need to try multiple times.
+        #straj = copy.deepcopy(traj)
+        new_max_score = 0.0
+        maxtries = 100
+        trycnt = 1
+        while new_max_score < min_val and trycnt < maxtries:
+            new_traj = traj_advance_with_exception(copy.deepcopy(traj), wall_time, db)
+            new_max_score = new_traj.score_max()
+            inf_msg = f"[{trycnt}] Restarted {new_traj.idstr()} new max score: {new_max_score}, target {min_val}"
+            _logger.info(inf_msg)
+            if new_max_score < min_val:
+                traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_restart_delay)
+                trycnt += 1
 
-    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+        return new_traj, trycnt-1
+
+    traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_restart_delay)
+    # The branched trajectory has a new checkfile
+    # Update the database to point to the latest one.
+    if db:
+        db.update_trajectory_file(traj.id(), traj.get_checkfile())
+        traj.store()
+
+    return traj, 0
 
 
 async def worker_async(
