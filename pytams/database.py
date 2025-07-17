@@ -115,6 +115,7 @@ class Database:
         self._weights: list[float] = [1.0]
         self._minmax: list[npt.NDArray[np.number]] = []
         self._ongoing = None
+        self._discarded_count: list[int] = []
 
         # Initialize only metadata at this point
         # so that the object remains lightweight
@@ -355,6 +356,7 @@ class Database:
             root.append(new_element("bias", np.array(self._l_bias, dtype=int)))
             root.append(new_element("weight", np.array(self._weights, dtype=float)))
             root.append(new_element("minmax", np.array(self._minmax, dtype=float)))
+            root.append(new_element("discarded_count", np.array(self._discarded_count, dtype=int)))
             if ongoing_trajs:
                 root.append(new_element("ongoing", np.array(ongoing_trajs)))
             tree = ET.ElementTree(root)
@@ -378,6 +380,10 @@ class Database:
             self._l_bias = datafromxml["bias"].tolist()
             self._weights = datafromxml["weight"].tolist()
             self._minmax = list(np.reshape(datafromxml["minmax"], [3, -1], order="F").T)
+            if "discarded_count" in datafromxml:
+                self._discarded_count = datafromxml["discarded_count"].tolist()
+            else:
+                self._discarded_count = [0]
             if "ongoing" in datafromxml:
                 self._ongoing = datafromxml["ongoing"].tolist()
         else:
@@ -650,6 +656,10 @@ class Database:
     def append_weight(self, weight: float) -> None:
         """Append a weight to internal list."""
         self._weights.append(weight)
+
+    def append_discarded_count(self, count: int) -> None:
+        """Append a discarded count to internal list."""
+        self._discarded_count.append(count)
 
     def append_splitting_data(
         self,
