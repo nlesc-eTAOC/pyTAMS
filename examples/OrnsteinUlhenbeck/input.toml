@@ -1,0 +1,23 @@
+[tams]
+ntrajectories = 100
+nsplititer = 2000
+loglevel = "WARNING"
+walltime = 500.0
+#diagnostics = true
+
+[trajectory]
+end_time = 10.0
+step_size = 0.005
+targetscore = 1.00
+
+[model]
+theta = 1.0 
+epsilon = 0.5
+
+[database]
+#path = "test.tdb"
+
+[runner]
+type = "asyncio"
+nworker_init=4
+nworker_iter=1
