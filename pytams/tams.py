@@ -97,10 +97,10 @@ class TAMS:
         n_traj: int = tams_subdict.get("ntrajectories")
         n_split_iter: int = tams_subdict.get("nsplititer")
         self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
-        self._plot_diags : bool = tams_subdict.get("diagnostics", False)
-        self._init_pool_only : bool = tams_subdict.get("pool_only", False)
-        self._early_restart : bool = tams_subdict.get("early_restart", False)
-        self._early_restart_delay : float = tams_subdict.get("early_restart_delay", 0.0)
+        self._plot_diags: bool = tams_subdict.get("diagnostics", False)
+        self._init_pool_only: bool = tams_subdict.get("pool_only", False)
+        self._early_restart: bool = tams_subdict.get("early_restart", False)
+        self._early_restart_delay: float = tams_subdict.get("early_restart_delay", 0.0)
 
         # Database
         self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter)
@@ -376,7 +376,7 @@ class TAMS:
                     runner.make_promise(task)
 
                 try:
-                    restarted_trajs, discarded_counts = zip(*runner.execute_promises())
+                    restarted_trajs, discarded_counts = zip(*runner.execute_promises(), strict=False)
                 except Exception:
                     err_msg = f"Failed to branch {n_branch} trajectories at iteration {k}"
                     _logger.exception(err_msg)

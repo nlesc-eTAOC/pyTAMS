@@ -88,7 +88,7 @@ def ms_worker(
     early_restart_delay: float,
     end_date: datetime.date,
     db_path: str | None = None,
-) -> Trajectory:
+) -> tuple[Trajectory, int]:
     """A worker to restart trajectories.
 
     Args:
@@ -133,7 +133,6 @@ def ms_worker(
 
         # Try advancing the trajectory, because of early restart the target
         # min_val might not be reached. We need to try multiple times.
-        #straj = copy.deepcopy(traj)
         new_max_score = 0.0
         maxtries = 100
         trycnt = 1
@@ -146,7 +145,7 @@ def ms_worker(
                 traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_restart_delay)
                 trycnt += 1
 
-        return new_traj, trycnt-1
+        return new_traj, trycnt - 1
 
     traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_restart_delay)
     # The branched trajectory has a new checkfile

@@ -82,6 +82,45 @@ class Snapshot:
         return self.state is not None
 
 
+def scan_ancestor(ancestor_snaps: list[Snapshot], threshold: float, early_restart_delta: float) -> tuple[int, int]:
+    """Scan the ancestor trajectory to find the branching point.
+
+    Args:
+        ancestor_snaps: the list of snapshots of the ancestor trajectory
+        threshold: a threshold score value
+        early_restart_delta: an early restart delay
+    """
+    # To ensure that TAMS converges, branching occurs on
+    # the first snapshot with a score *strictly* above the threshold
+    # Traverse the trajectory until a snapshot with a score >
+    # the threshold is encountered
+    high_score_idx = 0
+    last_snap_with_state = 0
+    while ancestor_snaps[high_score_idx].score <= threshold:
+        high_score_idx += 1
+        if ancestor_snaps[high_score_idx].has_state():
+            last_snap_with_state = high_score_idx
+
+    # If we have an early restart delay, backtrack by the delay
+    if early_restart_delta > 0.0:
+        backtrack = True
+        target_time = max(0.0, ancestor_snaps[high_score_idx].time - early_restart_delta)
+        while backtrack:
+            if ancestor_snaps[high_score_idx].time > target_time:
+                high_score_idx -= 1
+
+            backtrack = ancestor_snaps[high_score_idx].time > target_time
+
+            if not backtrack:
+                has_last_state = ancestor_snaps[high_score_idx].has_state()
+                last_snap_with_state = high_score_idx
+                while not has_last_state:
+                    last_snap_with_state -= 1
+                    has_last_state = ancestor_snaps[last_snap_with_state].has_state()
+
+    return high_score_idx, last_snap_with_state
+
+
 class Trajectory:
     """A class defining a stochastic trajectory.
 
@@ -432,109 +471,85 @@ class Trajectory:
     @classmethod
     def branch_from_trajectory(
         cls,
-        from_traj: Trajectory,
-        rst_traj: Trajectory,
-        score: float,
-        early_restart_delay: float,
+        ancestor_tr: Trajectory,
+        discarded_tr: Trajectory,
+        threshold: float,
+        early_restart_delta: float,
     ) -> Trajectory:
         """Create a new trajectory.
 
         Loading the beginning of a provided trajectory
-        for all entries with score below a given score.
+        for all entries with score below a given threshold.
         This effectively branches the trajectory.
 
-        Although the rst_traj is provided as an argument, it is
-        only used to set metadata of the branched trajectory.
+        Although the discarded trajectory is provided as an argument, it is
+        only used to set metadata of the child trajectory.
 
         Args:
-            from_traj: an already existing trajectory to restart from
-            rst_traj: the trajectory being restarted
-            score: a threshold score
-            early_restart_delay: an early restart delay
+            ancestor_tr: an already existing trajectory to restart from
+            discarded_tr: the trajectory being restarted
+            threshold: a threshold score value
+            early_restart_delta: an early restart delta
         """
         # Check for empty trajectory
-        if len(from_traj._snaps) == 0:
-            tid, nb = get_index_from_id(rst_traj.idstr())
-            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-            fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-            rest_traj = Trajectory(
-                traj_id=rst_traj.id(),
+        if len(ancestor_tr._snaps) == 0:
+            tid, nb = get_index_from_id(discarded_tr.idstr())
+            new_workdir = Path(discarded_tr.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+            fmodel_t = type(ancestor_tr._fmodel) if ancestor_tr._fmodel else None
+            child_tr = Trajectory(
+                traj_id=discarded_tr.id(),
                 fmodel_t=fmodel_t,
-                parameters=from_traj._parameters_full,
+                parameters=ancestor_tr._parameters_full,
                 workdir=new_workdir,
             )
-            rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
-            return rest_traj
+            child_tr.set_checkfile(Path(discarded_tr.get_checkfile().parents[0] / f"{child_tr.idstr()}.xml"))
+            return child_tr
 
-        # To ensure that TAMS converges, branching occurs on
-        # the first snapshot with a score *strictly* above the target
-        # Traverse the trajectory until a snapshot with a score >
-        # the target is encountered
-        high_score_idx = 0
-        last_snap_with_state = 0
-        while from_traj._snaps[high_score_idx].score <= score:
-            high_score_idx += 1
-            if from_traj._snaps[high_score_idx].has_state():
-                last_snap_with_state = high_score_idx
-
-        # If we have an early restart delay, backtrack by the delay
-        if early_restart_delay > 0.0:
-            backtrack = True
-            target_time = max(0.0, from_traj._snaps[high_score_idx].time - early_restart_delay)
-            while backtrack:
-                if from_traj._snaps[high_score_idx].time > target_time:
-                    high_score_idx -= 1
-
-                backtrack = from_traj._snaps[high_score_idx].time > target_time
-
-                if not backtrack:
-                    has_last_state = from_traj._snaps[high_score_idx].has_state()
-                    last_snap_with_state = high_score_idx
-                    while not has_last_state:
-                        last_snap_with_state -= 1
-                        has_last_state = from_traj._snaps[last_snap_with_state].has_state()
+        high_score_idx, last_snap_with_state = scan_ancestor(
+            ancestor_tr.get_snapshots(), threshold, early_restart_delta
+        )
 
         # Init empty trajectory
-        tid, nb = get_index_from_id(rst_traj.idstr())
-        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-        fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-        rest_traj = Trajectory(
-            traj_id=rst_traj.id(),
+        tid, nb = get_index_from_id(discarded_tr.idstr())
+        new_workdir = Path(discarded_tr.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+        fmodel_t = type(ancestor_tr._fmodel) if ancestor_tr._fmodel else None
+        child_tr = Trajectory(
+            traj_id=discarded_tr.id(),
             fmodel_t=fmodel_t,
-            parameters=from_traj._parameters_full,
+            parameters=ancestor_tr._parameters_full,
             workdir=new_workdir,
         )
-        rest_traj._branching_history = copy.deepcopy(rst_traj._branching_history)
-        rest_traj._branching_history.append(from_traj.id())
-        rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
+        child_tr._branching_history = copy.deepcopy(discarded_tr._branching_history)
+        child_tr._branching_history.append(ancestor_tr.id())
+        child_tr.set_checkfile(Path(discarded_tr.get_checkfile().parents[0] / f"{child_tr.idstr()}.xml"))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
             if k < last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
+                child_tr._snaps.append(ancestor_tr._snaps[k])
             elif k == last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                child_tr._snaps.append(ancestor_tr._snaps[k])
+                child_tr._noise_backlog.append(ancestor_tr._snaps[k].noise)
             else:
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                child_tr._noise_backlog.append(ancestor_tr._snaps[k].noise)
 
         # Reverse the backlog to ensure correct order
-        rest_traj._noise_backlog.reverse()
+        child_tr._noise_backlog.reverse()
 
         # Update trajectory metadata
-        rest_traj._t_cur = rest_traj._snaps[-1].time
-        rest_traj._step = len(rest_traj._snaps) - 1
-        if rest_traj._fmodel:
-            rest_traj._setup_noise()
-            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
-            rest_traj.update_metadata()
+        child_tr._t_cur = child_tr._snaps[-1].time
+        child_tr._step = len(child_tr._snaps) - 1
+        if child_tr._fmodel:
+            child_tr._setup_noise()
+            child_tr._fmodel.set_current_state(child_tr._snaps[-1].state)
+            child_tr.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restart
-            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
+            child_tr._fmodel.post_trajectory_branching_hook(len(child_tr._snaps) - 1, child_tr._t_cur)
 
-        return rest_traj
+        return child_tr
 
     def store(self, traj_file: Path | None = None) -> None:
         """Store the trajectory to an XML chkfile."""
@@ -614,6 +629,10 @@ class Trajectory:
     def get_checkfile(self) -> Path:
         """Return the trajectory check file name."""
         return self._checkFile
+
+    def get_snapshots(self) -> list[Snapshot]:
+        """Return the trajectory snapshots."""
+        return self._snaps
 
     def get_time_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory time instants."""
