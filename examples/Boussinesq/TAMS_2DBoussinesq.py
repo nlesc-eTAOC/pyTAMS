@@ -38,6 +38,9 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._M = subparms.get("size_M", 40)  # Horizontals
         self._N = subparms.get("size_N", 80)  # Verticals
         self._eps = subparms.get("epsilon", 0.05)  # Noise level
+        self._hosing_rate = subparms.get("hosing_rate", 0.0)
+        self._hosing_start = subparms.get("hosing_start", 0.0)
+        self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
         self._K = subparms.get("K", 4)  # Number of forcing modes = 2*K
 
         # Initialize random number generator
@@ -61,6 +64,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._B = Boussinesq(self._M, self._N, dt)
         self._B.make_FS(self._beta_span)
         self._B.init_Snoise(self._B.zz, self._K, self._eps)
+        self._B.init_hosing(self._hosing_start, self._hosing_start_val, self._hosing_rate)
 
         # Initial conditions from ON state
         # Create the workdir if it doesn't exist
@@ -140,7 +144,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             self._B.Dx @ self._state_arrays[1:3]
         )
         rhs_temp = temp_old + dt * (adv_t + self._B.FT)
-        rhs_sal = sal_old + dt * (adv_s + self._B.FS) + np.sqrt(dt) * full_noise
+        rhs_sal = sal_old + dt * (adv_s + self._B.FS + self._B.get_hosing(time)) + np.sqrt(dt) * full_noise
 
         temp_new = sp.linalg.solve_sylvester(self._B.AT, self._B.BT, rhs_temp)
         sal_new = sp.linalg.solve_sylvester(self._B.AS, self._B.BS, rhs_sal)
