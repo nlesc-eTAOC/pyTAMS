@@ -6,6 +6,7 @@ import scipy as sp
 from Boussinesq_2DAMOC import Boussinesq
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
+from PODScore import PODScore
 
 _logger = logging.getLogger(__name__)
 
@@ -38,10 +39,18 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._M = subparms.get("size_M", 40)  # Horizontals
         self._N = subparms.get("size_N", 80)  # Verticals
         self._eps = subparms.get("epsilon", 0.05)  # Noise level
+        self._K = subparms.get("K", 4)  # Number of forcing modes = 2*K
+
+        # Hosing parameters
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
         self._hosing_start = subparms.get("hosing_start", 0.0)
         self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
-        self._K = subparms.get("K", 4)  # Number of forcing modes = 2*K
+
+        # Score function parameters
+        self._score_builder = None
+        self._score_method = subparms.get("score_method", "default")
+        if self._score_method == "PODdecomp":
+            self._pod_data_file = subparms.get("pod_data_file", None)
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
@@ -175,20 +184,37 @@ class Boussinesq2DModel(ForwardModelBaseClass):
     def score(self) -> float:
         """Compute the score function.
 
-        The current score function is a nomalized distance between the ON
-        and OFF states in the stream function space (specifically the
-        mean streamfunction in the southern ocean).
+        The current score function accept one of two options:
+         - a nomalized distance between the ON and OFF states in the
+           stream function space (specifically the mean streamfunction
+           in the southern ocean).
+         - a score function based on the POD decomposition of the model
+           dynamics.
 
         Return:
             the score
         """
         if self._state_arrays is None:
-            err_msg = "Model state is not initialized while calling advance"
+            err_msg = "Model state is not initialized while calling score"
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
-        psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
 
-        return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+        if self._score_method == "default":
+            psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
+
+            return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+
+        elif self._score_method == "PODdecomp":
+            if self._score_builder is None:
+                self._score_builder = PODScore(self._M+1, self._N+1, self._pod_data_file)
+
+            return self._score_builder.get_score(self._state_arrays)
+
+        else:
+            err_msg = f"Unknown score method {self._score_method} !"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
+
 
     def make_noise(self) -> Any:
         """Return a random noise."""
