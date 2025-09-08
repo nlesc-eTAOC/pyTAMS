@@ -63,6 +63,60 @@ def compute_score_function(field_POD, ref_psi_POD):
     score = (it+1)/float(ntime)*alpha
     return score
 
+def compute_score_function_curv_abs(field_POD, ref_psi_POD, curv_abs):
+    """ Computes score function using curvilinear abs
+    Parameters
+    ----------
+        field_POD: np array
+            POD coefficients of field snapshot [nmodes]
+        ref_psi_POD: np array
+            Reference trajectory POD coefficients [ntime, nmodes]
+        curv_abs: np array
+            The curvilinear abcissa along the reference traj [ntime]
+    Returns
+    -------
+        score: float
+            score value
+    """
+
+    # Get length of trajectory data
+    ntime = ref_psi_POD.shape[0]
+
+    # Computes the Euclidian distance in POD space
+    # between snapshot and trajectory points
+    dist = np.zeros(ntime)
+    for t in range(ntime):
+        dist[t] = np.sum((field_POD[:]-ref_psi_POD[t,:])**2)
+        dist[t] = np.sqrt(dist[t])
+
+    # Get closest index
+    it = np.argmin(dist)
+
+    if (it > 0 and it < len(dist)-1):
+        # Get next adjacent index
+        it_next = it+1 if dist[it+1] <= dist[it-1] else it-1
+
+        # dot product
+        dot = np.sum((field_POD[:]-ref_psi_POD[it,:]) * (ref_psi_POD[it_next,:] - ref_psi_POD[it,:]))
+        segment_norm = np.sum((ref_psi_POD[it_next,:] - ref_psi_POD[it,:]) * (ref_psi_POD[it_next,:] - ref_psi_POD[it,:]))
+
+        frac = dot/segment_norm if np.abs(dot/segment_norm) <= 1.0 else 0.0
+        closest_point = ref_psi_POD[it,:] + frac * (ref_psi_POD[it_next,:] - ref_psi_POD[it,:])
+        distance = np.sum((field_POD[:]-closest_point[:])**2)
+        distance = np.sqrt(distance)
+        curv = curv_abs[it] + frac * (curv_abs[it_next] - curv_abs[it])
+
+    else:
+        distance = dist[it]
+        curv = curv_abs[it]
+
+    # Computes penalty coefficient
+    alpha = 1.0 * np.exp(-distance**2/1.0) # function of dist[it] in the future
+
+    score = curv*alpha
+    return score
+
+
 class PODScore():
     """A class to hold POD data required for evaluating the score function."""
     def __init__(self,
@@ -113,8 +167,9 @@ class PODScore():
         self._weights = nc_POD_in["spatial_weights"][:,:]
         self._scaling_stream = nc_POD_in["scaling_stream"][:]
         self._scaling_salt = nc_POD_in["scaling_salt"][:]
+        self._curv_abs = nc_POD_in["curv_abs"][:]
 
-    def get_score(self, model_state: Any) -> float:
+    def get_score(self, model_state) -> float:
         """Compute the score function of the given model state.
 
         Args:
@@ -129,4 +184,5 @@ class PODScore():
 
         field_POD = project_in_POD_space(field, self._phi_POD, self._weights)
 
-        return compute_score_function(field_POD, self._psi_POD[self._ntraj_ref_start:self._ntraj_ref_end,:])
+        #return compute_score_function(field_POD, self._psi_POD[self._ntraj_ref_start:self._ntraj_ref_end,:])
+        return compute_score_function_curv_abs(field_POD, self._psi_POD[self._ntraj_ref_start:self._ntraj_ref_end,:], self._curv_abs)
