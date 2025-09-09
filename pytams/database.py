@@ -102,7 +102,7 @@ class Database:
             self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
             self._version = version(__package__)
 
-        self._store_archive = params.get("database", {}).get("archive_discarded", False)
+        self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
         # Trajectory pools
         self._trajs_db: list[Trajectory] = []
