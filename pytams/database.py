@@ -105,9 +105,11 @@ class Database:
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
         # Trajectory pools
+        # In-memory container
         self._trajs_db: list[Trajectory] = []
-        self._pool_db: SQLFile | None = None
         self._archived_trajs_db: list[Trajectory] = []
+        # Disk-based container
+        self._pool_db: SQLFile | None = None
 
         # Splitting data
         self._ksplit = 0
@@ -789,6 +791,32 @@ class Database:
         plt.yticks(fontsize="x-large")
         plt.grid(linestyle="dotted")
         plt.tight_layout()  # to fit everything in the prescribed area
+        plt.savefig(pltfile, dpi=300)
+        plt.clf()
+        plt.close()
+
+    def plot_min_max_span(self, fname: str | None = None) -> None:
+        """Plot the evolution of the ensemble min/max during iterations."""
+        pltfile = fname if fname else Path(self._name).stem + "_minmax.png"
+
+        plt.figure(figsize=(6, 4))
+
+        # From list to np arrays
+        kidx = np.zeros(len(self._minmax))
+        minmax = np.zeros(len(self._minmax))
+        maxmax = np.zeros(len(self._minmax))
+        for i in range(len(self._minmax)):
+            kidx[i] = self._minmax[i][0]
+            minmax[i] = self._minmax[i][1]
+            maxmax[i] = self._minmax[i][2]
+        plt.plot(kidx, minmax, linewidth=1.0, label="min of maxes")
+        plt.plot(kidx, maxmax, linewidth=1.0, label="max of maxes")
+        plt.grid(linestyle="dotted")
+        ax = plt.gca()
+        ax.set_ylim(0.0, 1.0)
+        ax.set_xlim(0.0, np.max(kidx))
+        ax.legend()
+        plt.tight_layout()
         plt.savefig(pltfile, dpi=300)
         plt.clf()
         plt.close()
