@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
-    np.set_printoptions(linewidth=np.iinfo(np.int32).max, precision=12)
+    np.set_printoptions(threshold=np.iinfo(np.int32).max, linewidth=np.iinfo(np.int32).max, precision=12)
     yield
     np.set_printoptions(**oldoptions)
 
@@ -53,6 +53,7 @@ def manual_cast(elem: ET.Element) -> Any:
 POD_cast_dict: dict[str, Callable[..., Any]] = {
     "int": int,
     "float": float,
+    "float32": float,
     "float64": np.float64,
     "complex": complex,
     "str": str,

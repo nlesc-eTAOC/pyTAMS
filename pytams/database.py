@@ -723,6 +723,21 @@ class Database:
                 count = count + 1
         return count
 
+    def count_computed_steps(self) -> int:
+        """Return the total number of steps taken.
+
+        This total count includes both the active and
+        discarded trajectories.
+        """
+        count = 0
+        for t in self._trajs_db:
+            count = count + t.get_computed_steps_count()
+
+        for t in self._archived_trajs_db:
+            count = count + t.get_computed_steps_count()
+
+        return count
+
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
         if self.count_ended_traj() < self._ntraj:
@@ -751,6 +766,7 @@ class Database:
             # Number of 'Ended' trajectories: {self.count_ended_traj():16} #
             # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
             # Current splitting iter counter: {self._ksplit:16} #
+            # Current total number of steps: {self.count_computed_steps():17} #
             # Transition probability: {self.get_transition_probability():24} #
             {pretty_line}
         """
