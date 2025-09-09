@@ -741,8 +741,6 @@ class Database:
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
         if self.count_ended_traj() < self._ntraj:
-            wrn_msg = "TAMS initialization still ongoing, probability estimate not available yet"
-            _logger.warning(wrn_msg)
             return 0.0
 
         w = self._ntraj * self._weights[-1]
