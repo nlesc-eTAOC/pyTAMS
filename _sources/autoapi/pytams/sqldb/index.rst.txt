@@ -1,0 +1,262 @@
+pytams.sqldb
+============
+
+.. py:module:: pytams.sqldb
+
+.. autoapi-nested-parse::
+
+   A class for the TAMS data as an SQL database using SQLAlchemy.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.sqldb.valid_statuses
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.sqldb.Base
+   pytams.sqldb.Trajectory
+   pytams.sqldb.ArchivedTrajectory
+   pytams.sqldb.SplittingIterations
+   pytams.sqldb.SQLFile
+
+
+Module Contents
+---------------
+
+.. py:class:: Base
+
+   Bases: :py:obj:`sqlalchemy.orm.DeclarativeBase`
+
+
+   A base class for the tables.
+
+
+.. py:class:: Trajectory
+
+   Bases: :py:obj:`Base`
+
+
+   A table storing the active trajectories.
+
+
+   .. py:attribute:: id
+      :type:  sqlalchemy.orm.Mapped[int]
+
+
+   .. py:attribute:: traj_file
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+   .. py:attribute:: status
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+.. py:class:: ArchivedTrajectory
+
+   Bases: :py:obj:`Base`
+
+
+   A table storing the archived trajectories.
+
+
+   .. py:attribute:: id
+      :type:  sqlalchemy.orm.Mapped[int]
+
+
+   .. py:attribute:: traj_file
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+.. py:class:: SplittingIterations
+
+   Bases: :py:obj:`Base`
+
+
+   A table storing the splitting iterations.
+
+
+   .. py:attribute:: id
+      :type:  sqlalchemy.orm.Mapped[int]
+
+
+   .. py:attribute:: split_id
+      :type:  sqlalchemy.orm.Mapped[int]
+
+
+   .. py:attribute:: rst_traj_count
+      :type:  sqlalchemy.orm.Mapped[int]
+
+
+   .. py:attribute:: rst_traj_ids
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+   .. py:attribute:: from_traj_ids
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+   .. py:attribute:: min_vals
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+   .. py:attribute:: min_max
+      :type:  sqlalchemy.orm.Mapped[str]
+
+
+.. py:data:: valid_statuses
+   :value: ['locked', 'idle', 'completed']
+
+
+.. py:class:: SQLFile(file_name: str, in_memory: bool = False, ro_mode: bool = False)
+
+   An SQL file.
+
+   Allows atomic access to an SQL database from all
+   the workers.
+
+   Note: TAMS works with Python indexing starting at 0,
+   while SQL indexing starts at 1. Trajectory ID is
+   updated accordingly when accessing/updating the DB.
+
+   :ivar _file_name: The file name
+
+
+
+   .. py:method:: add_trajectory(traj_file: str) -> None
+
+      Add a new trajectory to the DB.
+
+      :param traj_file: The trajectory file of that trajectory
+
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: update_trajectory_file(traj_id: int, traj_file: str) -> None
+
+      Update a trajectory file in the DB.
+
+      :param traj_id: The trajectory id
+      :param traj_file: The new trajectory file of that trajectory
+
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: lock_trajectory(traj_id: int, allow_completed_lock: bool = False) -> bool
+
+      Set the status of a trajectory to "locked" if possible.
+
+      :param traj_id: The trajectory id
+      :param allow_completed_lock: Allow to lock a "completed" trajectory
+
+      :returns: True if the trajectory was successfully locked, False otherwise
+
+      :raises ValueError if the trajectory with the given id does not exist:
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: mark_trajectory_as_completed(traj_id: int) -> None
+
+      Set the status of a trajectory to "completed" if possible.
+
+      :param traj_id: The trajectory id
+
+      :raises ValueError if the trajectory with the given id does not exist:
+      :raises SQLAlchemyError if the DB could not be accessed:
+
+
+
+   .. py:method:: release_trajectory(traj_id: int) -> None
+
+      Set the status of a trajectory to "idle" if possible.
+
+      :param traj_id: The trajectory id
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: get_trajectory_count() -> int
+
+      Get the number of trajectories in the DB.
+
+      :returns: The number of trajectories
+
+
+
+   .. py:method:: fetch_trajectory(traj_id: int) -> str
+
+      Get the trajectory file of a trajectory.
+
+      :param traj_id: The trajectory id
+
+      :returns: The trajectory file
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: release_all_trajectories() -> None
+
+      Release all trajectories in the DB.
+
+
+
+   .. py:method:: archive_trajectory(traj_file: str) -> None
+
+      Add a new trajectory to the archive container.
+
+      :param traj_file: The trajectory file of that trajectory
+
+
+
+   .. py:method:: fetch_archived_trajectory(traj_id: int) -> str
+
+      Get the trajectory file of a trajectory in the archive.
+
+      :param traj_id: The trajectory id
+
+      :returns: The trajectory file
+
+      :raises ValueError if the trajectory with the given id does not exist:
+
+
+
+   .. py:method:: get_archived_trajectory_count() -> int
+
+      Get the number of trajectories in the archive.
+
+      :returns: The number of trajectories
+
+
+
+   .. py:method:: add_splitting_data(k: int, n_rst: int, rst_ids: list[int], from_ids: list[int], min_vals: list[float], min_max: list[float]) -> None
+
+      Add a new splitting data to the DB.
+
+      :param k: The splitting iteration index
+      :param n_rst: The number of restarted trajectories
+      :param rst_ids: The list of restarted trajectory ids
+      :param from_ids: The list of trajectories used to restart
+      :param min_vals: The list of minimum values
+      :param min_max: The score minimum and maximum values
+
+
+
+   .. py:method:: dump_file_json() -> None
+
+      Dump the content of the trajectory table to a json file.
+
+
+
