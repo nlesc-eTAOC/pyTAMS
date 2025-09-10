@@ -19,7 +19,7 @@ class Base(DeclarativeBase):
 
 
 class Trajectory(Base):
-    """A table storing the trajectories."""
+    """A table storing the active trajectories."""
 
     __tablename__ = "trajectories"
 
@@ -68,14 +68,23 @@ class SQLFile:
         _file_name : The file name
     """
 
-    def __init__(self, file_name: str) -> None:
+    def __init__(self, file_name: str, in_memory: bool = False, ro_mode: bool = False) -> None:
         """Initialize the file.
 
         Args:
             file_name : The file name
+            in_memory: a bool to trigger in-memory creation
+            ro_mode: a bool to trigger read-only access to the database
         """
         self._file_name = file_name
-        self._engine = create_engine(f"sqlite:///{file_name}", echo=False)
+        if in_memory:
+            self._engine = create_engine(f"sqlite:///{file_name}?mode=memory&cache=shared&uri=true", echo=False)
+        else:
+            self._engine = (
+                create_engine(f"sqlite:///{file_name}?mode=ro&uri=true", echo=False)
+                if ro_mode
+                else create_engine(f"sqlite:///{file_name}", echo=False)
+            )
         self._Session = sessionmaker(bind=self._engine)
         self._init_db()
 
