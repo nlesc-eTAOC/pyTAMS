@@ -99,8 +99,9 @@ class Database:
                 raise DatabaseError(err_msg)
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
-            self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
-            self._version = version(__package__)
+
+        self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self._version = version(__package__)
 
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
@@ -447,6 +448,9 @@ class Database:
 
     def load_archived_trajectories(self) -> None:
         """Load the archived trajectories data."""
+        if not self._save_to_disk:
+            return
+
         if not self._pool_db:
             err_msg = "Database is not initialized !"
             _logger.exception(err_msg)
