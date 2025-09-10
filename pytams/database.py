@@ -99,15 +99,18 @@ class Database:
                 raise DatabaseError(err_msg)
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
-            self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
-            self._version = version(__package__)
 
-        self._store_archive = params.get("database", {}).get("archive_discarded", False)
+        self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self._version = version(__package__)
+
+        self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
         # Trajectory pools
+        # In-memory container
         self._trajs_db: list[Trajectory] = []
-        self._pool_db: SQLFile | None = None
         self._archived_trajs_db: list[Trajectory] = []
+        # Disk-based container
+        self._pool_db: SQLFile | None = None
 
         # Splitting data
         self._ksplit = 0
@@ -439,21 +442,33 @@ class Database:
         # Those are loaded as 'frozen', i.e. the internal model
         # is not available and advance function disabled.
         if load_archived_trajectories:
-            archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
-            for n in range(archived_ntraj_in_db):
-                traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
-                if traj_checkfile.exists():
-                    self._archived_trajs_db.append(
-                        Trajectory.restore_from_checkfile(
-                            traj_checkfile,
-                            fmodel_t=self._fmodel_t,
-                            parameters=self._parameters,
-                            workdir=None,
-                            frozen=True,
-                        ),
-                    )
+            self.load_archived_trajectories()
 
         self.info()
+
+    def load_archived_trajectories(self) -> None:
+        """Load the archived trajectories data."""
+        if not self._save_to_disk:
+            return
+
+        if not self._pool_db:
+            err_msg = "Database is not initialized !"
+            _logger.exception(err_msg)
+            raise DatabaseError(err_msg)
+
+        archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
+        for n in range(archived_ntraj_in_db):
+            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+            if traj_checkfile.exists():
+                self._archived_trajs_db.append(
+                    Trajectory.restore_from_checkfile(
+                        traj_checkfile,
+                        fmodel_t=self._fmodel_t,
+                        parameters=self._parameters,
+                        workdir=None,
+                        frozen=True,
+                    ),
+                )
 
     def name(self) -> str:
         """Accessor to DB name.
@@ -741,8 +756,6 @@ class Database:
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
         if self.count_ended_traj() < self._ntraj:
-            wrn_msg = "TAMS initialization still ongoing, probability estimate not available yet"
-            _logger.warning(wrn_msg)
             return 0.0
 
         w = self._ntraj * self._weights[-1]
@@ -791,6 +804,32 @@ class Database:
         plt.yticks(fontsize="x-large")
         plt.grid(linestyle="dotted")
         plt.tight_layout()  # to fit everything in the prescribed area
+        plt.savefig(pltfile, dpi=300)
+        plt.clf()
+        plt.close()
+
+    def plot_min_max_span(self, fname: str | None = None) -> None:
+        """Plot the evolution of the ensemble min/max during iterations."""
+        pltfile = fname if fname else Path(self._name).stem + "_minmax.png"
+
+        plt.figure(figsize=(6, 4))
+
+        # From list to np arrays
+        kidx = np.zeros(len(self._minmax))
+        minmax = np.zeros(len(self._minmax))
+        maxmax = np.zeros(len(self._minmax))
+        for i in range(len(self._minmax)):
+            kidx[i] = self._minmax[i][0]
+            minmax[i] = self._minmax[i][1]
+            maxmax[i] = self._minmax[i][2]
+        plt.plot(kidx, minmax, linewidth=1.0, label="min of maxes")
+        plt.plot(kidx, maxmax, linewidth=1.0, label="max of maxes")
+        plt.grid(linestyle="dotted")
+        ax = plt.gca()
+        ax.set_ylim(0.0, 1.0)
+        ax.set_xlim(0.0, np.max(kidx))
+        ax.legend()
+        plt.tight_layout()
         plt.savefig(pltfile, dpi=300)
         plt.clf()
         plt.close()

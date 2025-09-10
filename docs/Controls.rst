@@ -82,7 +82,7 @@ The TOML input file contains dictionaries associated with the various part of th
     [database]
     path = "TamsDB.tdb"      # [OPT, no default] The database path, in-memory database if not specified
     restart = false          # [OPT, DEF = false] If true, move the existing database before starting fresh
-    archive_discarded = true # [OPT, DEF = false] Archive trajectories discarded during splitting iterations
+    archive_discarded = true # [OPT, DEF = true] Archive trajectories discarded during splitting iterations
 
 Additionally, when using a Dask runner, one has to provide configuration parameters for the
 Dask cluster:
@@ -99,3 +99,56 @@ Dask cluster:
 Finally, note that the entire TOML file content is passed as a dictionary to the forward model
 initializer. The user can then simply add an `[model]` dictionary to the TOML file to define
 model-specific parameters.
+
+Loading the database
+====================
+
+If requested (see above the `[database]` section), `pyTAMS` will write to disk the data
+generated while running TAMS. In practice, most large models require to save the data
+to disk due to memory limitations or if the model IOs is not controlled by the user.
+
+.. note::
+   It is advised to always set `path = "a_valid_path"` in the [database] section of
+   your input file unless testing some very small models.
+
+It is then possible to access the data (algorithm data, trajectory data, ...) independently
+from the TAMS runs itself. To do so, in a separate Python script, one can:
+
+.. code-block:: python
+
+  from pathlib import Path
+  from pytams.utils import setup_logger
+  from pytams.database import Database
+
+  if __name__ == "__main__":
+      # Ensure we catch loading errors
+      setup_logger({"tams" : {"loglevel" : "INFO"}})
+
+      # Initiate the Database object, only (light) loading algorithm data from disk
+      tdb = Database.load(Path("./TestDB.tdb"))
+
+      # Load trajectory data
+      tdb.load_data(load_archived_trajectories=True)
+
+The optional argument to `load_data` (defaulting to false) enable loading the discarded
+trajectories data. Upon loading the data, a summary of the database state is logged to screen, e.g.:
+
+.. code-block:: shell
+
+    [INFO] 2025-09-09 11:41:08,481 - 200 trajectories loaded
+    [INFO] 2025-09-09 11:41:12,018 -
+            ####################################################
+            # TAMS v0.0.5             trajectory database      #
+            # Date: 2025-09-09 09:30:13.998659+00:00           #
+            # Model: DoubleWellModel3D                         #
+            ####################################################
+            # Requested # of traj:                         200 #
+            # Requested # of splitting iter:               500 #
+            # Number of 'Ended' trajectories:              200 #
+            # Number of 'Converged' trajectories:            7 #
+            # Current splitting iter counter:              500 #
+            # Current total number of steps:            463247 #
+            # Transition probability:     0.002829586512164506 #
+            ####################################################
+
+One can then access the data in the database using the `database API <./autoapi/pytams/database/index.html>`_.
