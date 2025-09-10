@@ -441,21 +441,30 @@ class Database:
         # Those are loaded as 'frozen', i.e. the internal model
         # is not available and advance function disabled.
         if load_archived_trajectories:
-            archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
-            for n in range(archived_ntraj_in_db):
-                traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
-                if traj_checkfile.exists():
-                    self._archived_trajs_db.append(
-                        Trajectory.restore_from_checkfile(
-                            traj_checkfile,
-                            fmodel_t=self._fmodel_t,
-                            parameters=self._parameters,
-                            workdir=None,
-                            frozen=True,
-                        ),
-                    )
+            self.load_archived_trajectories()
 
         self.info()
+
+    def load_archived_trajectories(self) -> None:
+        """Load the archived trajectories data."""
+        if not self._pool_db:
+            err_msg = "Database is not initialized !"
+            _logger.exception(err_msg)
+            raise DatabaseError(err_msg)
+
+        archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
+        for n in range(archived_ntraj_in_db):
+            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+            if traj_checkfile.exists():
+                self._archived_trajs_db.append(
+                    Trajectory.restore_from_checkfile(
+                        traj_checkfile,
+                        fmodel_t=self._fmodel_t,
+                        parameters=self._parameters,
+                        workdir=None,
+                        frozen=True,
+                    ),
+                )
 
     def name(self) -> str:
         """Accessor to DB name.
