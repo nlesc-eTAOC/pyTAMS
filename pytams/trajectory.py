@@ -95,6 +95,10 @@ class Trajectory:
     method to move forward in time, methods to save/load the trajectory to/from disk
     as well as accessor to the trajectory history (time, state, score, ...).
 
+    The _computed_steps variable store the number of steps actually taken by the
+    trajectory. It differs from the _step variable when a trajectory is branched
+    from an ancestor.
+
     Attributes:
         _parameters_full : the full parameters dictionary
         _tid : the trajectory index
@@ -103,6 +107,7 @@ class Trajectory:
         _score_max : the maximum score
         _snaps : a list of snapshots
         _step : the current step counter
+        _computed_steps : the number of steps explicitly advanced by the trajectory
         _t_cur : the current time
         _t_end : the end time
         _dt : the stochastic time step size
@@ -140,6 +145,7 @@ class Trajectory:
         self._score_max: float = 0.0
         self._has_ended: bool = False
         self._has_converged: bool = False
+        self._computed_steps: int = 0
 
         # TAMS is expected to start at t = 0.0, but the forward model
         # itself can have a different internal starting point
@@ -244,6 +250,7 @@ class Trajectory:
 
         Raises:
             WallTimeLimitError: if the walltime limit is reached
+            RuntimeError: if the model advance run into a problem
         """
         start_time = time.monotonic()
         remaining_time = walltime - time.monotonic() + start_time
@@ -319,6 +326,9 @@ class Trajectory:
         # with mode complex convergence criteria
         self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
 
+        # Increment the computed step counter
+        self._computed_steps += 1
+
         return score
 
     def _setup_noise(self) -> None:
@@ -382,6 +392,7 @@ class Trajectory:
         rest_traj._has_ended = metadata["ended"]
         rest_traj._has_converged = metadata["converged"]
         rest_traj._branching_history = metadata["branching_history"].tolist()
+        rest_traj._computed_steps = metadata.get("c_step", 0)
 
         snapshots = root.find("snapshots")
         if snapshots is not None:
@@ -529,6 +540,7 @@ class Trajectory:
         mdata.append(new_element("ended", self._has_ended))
         mdata.append(new_element("converged", self._has_converged))
         mdata.append(new_element("branching_history", np.array(self._branching_history, dtype=int)))
+        mdata.append(new_element("c_step", self._computed_steps))
         snaps_xml = ET.SubElement(root, "snapshots")
         for k in range(len(self._snaps)):
             snaps_xml.append(
@@ -623,6 +635,10 @@ class Trajectory:
     def get_nbranching(self) -> int:
         """Return the number of branching events."""
         return len(self._branching_history)
+
+    def get_computed_steps_count(self) -> int:
+        """Return the number of compute steps taken."""
+        return self._computed_steps
 
     def get_last_state(self) -> Any | None:
         """Return the last state in the trajectory."""

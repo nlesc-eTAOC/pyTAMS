@@ -445,9 +445,16 @@ class TAMS:
             _logger.warning(warn_msg)
             return -1.0
 
-        trans_prob = self._tdb.get_transition_probability()
+        transition_probability = self._tdb.get_transition_probability()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
 
-        return trans_prob
+        # Load the archived trajectories data since the workers
+        # discarded them but the persistent Python process did not
+        # kept track
+        self._tdb.load_archived_trajectories()
+
+        self._tdb.info()
+
+        return transition_probability

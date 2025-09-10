@@ -78,6 +78,20 @@ def test_simpleModelTraj():
     t_test.advance()
     assert t_test.is_converged() is True
 
+def test_branchSimpleModelTraj():
+    """Test branching a trajectory with simple model."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.04,
+                                  "step_size": 0.0002,
+                                  "targetscore": 0.45}}
+    t_ancestor = Trajectory(1, fmodel, parameters)
+    t_ancestor.advance()
+    assert t_ancestor.get_computed_steps_count() == 201
+    t_branched = Trajectory(2, fmodel, parameters)
+    t_branched = Trajectory.branch_from_trajectory(t_ancestor, t_branched, 0.1)
+    assert t_branched.get_computed_steps_count() == 0
+    t_branched.advance()
+    assert t_branched.get_computed_steps_count() == 150
 
 def test_storeAndRestoreSimpleTraj():
     """Test store and restoring trajectory with simple model."""
