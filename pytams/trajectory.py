@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import shutil
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -647,3 +648,9 @@ class Trajectory:
                 return snap.state
 
         return None
+
+    def delete(self) -> None:
+        """Clear the trajectory on-disk data."""
+        self._checkFile.unlink()
+        if self._workdir.exists():
+            shutil.rmtree(self._workdir)
