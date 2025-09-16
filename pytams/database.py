@@ -432,7 +432,7 @@ class Database:
                 )
                 self.append_traj(t, False)
 
-        inf_msg = f"{n_traj_restored} trajectories loaded"
+        inf_msg = f"{n_traj_restored} active trajectories loaded"
         _logger.info(inf_msg)
 
         # Load splitting data
@@ -456,19 +456,27 @@ class Database:
             _logger.exception(err_msg)
             raise DatabaseError(err_msg)
 
+        n_traj_restored = 0
+
         archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
         for n in range(archived_ntraj_in_db):
             traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+            workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
-                self._archived_trajs_db.append(
+                n_traj_restored += 1
+                self.append_archived_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
-                        workdir=None,
+                        workdir=workdir,
                         frozen=True,
                     ),
+                    False,
                 )
+
+        inf_msg = f"{n_traj_restored} archived trajectories loaded"
+        _logger.info(inf_msg)
 
     def name(self) -> str:
         """Accessor to DB name.
@@ -495,6 +503,22 @@ class Database:
                 self._pool_db.add_trajectory(checkfile_str)
 
         self._trajs_db.append(a_traj)
+
+    def append_archived_traj(self, a_traj: Trajectory, update_db: bool) -> None:
+        """Append an archived Trajectory to the internal list.
+
+        Args:
+            a_traj: the trajectory
+            update_db: True to update the SQL DB content
+        """
+        if self._save_to_disk and self._pool_db:
+            checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
+            checkfile = Path(self._abs_path) / checkfile_str
+            a_traj.set_checkfile(checkfile)
+            if update_db:
+                self._pool_db.archive_trajectory(checkfile_str)
+
+        self._archived_trajs_db.append(a_traj)
 
     def traj_list(self) -> list[Trajectory]:
         """Access to the trajectory list.
@@ -784,6 +808,55 @@ class Database:
             {pretty_line}
         """
         _logger.info(inf_tbl)
+
+    def reset_pool_stage(self) -> None:
+        """Reset the database content to the final pool stage.
+
+        In particular, the splitting iteration data is cleared, the
+        list of active trajectories restored and any branched trajectory
+        data deleted.
+
+        First, the active list in the SQL db is updated, the archived list
+        cleared and a new call to load_data update the in-memory data.
+        """
+        if self.traj_list_len() == 0 or not self._pool_db:
+            err_msg = "Database data not loaded or empty. Try load_data()"
+            _logger.exception(err_msg)
+            raise DatabaseError(err_msg)
+
+        # Update the active trajectories list in the SQL db
+        # while deleting the checkfiles from the trajectory we updaate
+        for t in self._trajs_db:
+            tid = t.id()
+            if t.get_nbranching() > 0:
+                for at in self._archived_trajs_db:
+                    if at.id() == tid and at.get_nbranching() == 0:
+                        self.update_trajectory_file(tid, at.get_checkfile())
+                        t.delete()
+
+        # Delete checkfiles of all the archived trajectories we did not
+        # restored as active
+        for at in self._archived_trajs_db:
+            if at.get_nbranching() > 0:
+                at.delete()
+
+        # Clear the obsolete content of the SQL file
+        self._pool_db.clear_archived_trajectories()
+        self._pool_db.clear_splitting_data()
+
+        self._trajs_db.clear()
+        self._archived_trajs_db.clear()
+
+        # Reset splitting data in-memory and update disk data
+        self._ksplit = 0
+        self._l_bias = []
+        self._weights = [1.0]
+        self._minmax = []
+        self._ongoing = None
+        self.save_splitting_data()
+
+        # Reload the data
+        self.load_data()
 
     def plot_score_functions(self, fname: str | None = None, plot_archived: bool = False) -> None:
         """Plot the score as function of time for all trajectories."""
