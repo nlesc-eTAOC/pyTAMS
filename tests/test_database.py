@@ -168,13 +168,22 @@ def test_accessTrajDataInDB():
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_exploreTDB():
-    """Test generation of TDB and loading the TDB."""
+    """Test loading the TDB."""
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
     tdb.load_data()
-    tdb.info()
     tdb.plot_score_functions("test.png")
     assert tdb.get_transition_probability() > 0.2
-    shutil.rmtree("dwTest.tdb")
     os.remove("test.png")
+
+@pytest.mark.dependency(depends=["genDB"])
+def test_restoreTDB():
+    """Test loading and restoring the TDB."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"path": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    tdb.load_data()
+    tdb.reset_pool_stage()
+    assert tdb.k_split() == 0
+    shutil.rmtree("dwTest.tdb")
