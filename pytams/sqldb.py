@@ -374,6 +374,25 @@ class SQLFile:
         finally:
             session.close()
 
+    def clear_archived_trajectories(self) -> int:
+        """Delete the content of the archived traj table.
+
+        Returns:
+            The number of entries deleted
+        """
+        session = self._Session()
+        try:
+            ndelete = session.query(ArchivedTrajectory).delete()
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to clear archived trajectories")
+            raise
+        else:
+            return ndelete
+        finally:
+            session.close()
+
     def add_splitting_data(
         self, k: int, n_rst: int, rst_ids: list[int], from_ids: list[int], min_vals: list[float], min_max: list[float]
     ) -> None:
@@ -406,8 +425,31 @@ class SQLFile:
         finally:
             session.close()
 
-    def dump_file_json(self) -> None:
-        """Dump the content of the trajectory table to a json file."""
+    def clear_splitting_data(self) -> int:
+        """Delete the content of the splitting data table.
+
+        Returns:
+            The number of entries deleted
+        """
+        session = self._Session()
+        try:
+            ndelete = session.query(SplittingIterations).delete()
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to clear splitting iterations data.")
+            raise
+        else:
+            return ndelete
+        finally:
+            session.close()
+
+    def dump_file_json(self, json_file: str | None = None) -> None:
+        """Dump the content of the trajectory table to a json file.
+
+        Args:
+            json_file: an optional file name (or path) to dump the data to
+        """
         db_data = {}
         session = self._Session()
         try:
@@ -435,6 +477,6 @@ class SQLFile:
         finally:
             session.close()
 
-        json_file = Path(f"{Path(self._file_name).stem}.json")
-        with json_file.open("w") as f:
+        json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
+        with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
