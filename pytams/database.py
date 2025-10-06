@@ -39,7 +39,7 @@ class Database:
     all the trajectory and splitting data. When the
     user provides a path to store the database, a local folder is
     created holding a number of readable files, any output
-    from the model and an SQL file used to lock/release
+    from the model and SQL files used to lock/release
     trajectories as the TAMS algorithm proceeds.
 
     The readable files are currently in an XML format.
@@ -82,13 +82,17 @@ class Database:
             ntraj: [OPT] number of traj to hold
             nsplititer: [OPT] number of splitting iteration to hold
         """
-        # Stash away the model class
-        self._fmodel_t = fmodel_t
-
-        # Metadata
-        self._save_to_disk = False
-        self._parameters = params
+        # For posterity
+        self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self._version = version(__package__)
         self._name = "TAMS_" + fmodel_t.name()
+
+        # Stash away the model class and parameters
+        self._fmodel_t = fmodel_t
+        self._parameters = params
+
+        # Database format/storage parameters
+        self._save_to_disk = False
         self._path: str | None = params.get("database", {}).get("path", None)
         if self._path:
             self._save_to_disk = True
@@ -101,9 +105,6 @@ class Database:
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
 
-        self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
-        self._version = version(__package__)
-
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
         # Trajectory pools
@@ -115,7 +116,7 @@ class Database:
         self._pool_db: SQLFile | None = None
 
         # Splitting data
-        self._ksplit = 0
+        self._ksplit: int = 0
         self._l_bias: list[int] = []
         self._weights: list[float] = [1.0]
         self._minmax: list[npt.NDArray[np.number]] = []
@@ -123,33 +124,9 @@ class Database:
 
         # Initialize only metadata at this point
         # so that the object remains lightweight
-        self._init_metadata(ntraj, nsplititer)
-
-    def n_traj(self) -> int:
-        """Return the number of trajectory used for TAMS.
-
-        Note that this is the requested number of trajectory, not
-        the current length of the trajectory pool.
-
-        Return:
-            number of trajectory
-        """
-        return self._ntraj
-
-    def n_split_iter(self) -> int:
-        """Return the number of splitting iteration used for TAMS.
-
-        Note that this is the requested number of splitting iteration, not
-        the current splitting iteration.
-
-        Return:
-            number of splitting iteration
-        """
-        return self._nsplititer
-
-    def path(self) -> str | None:
-        """Return the path to the database."""
-        return self._path
+        self._ntraj: int | None = ntraj
+        self._nsplititer: int | None = nsplititer
+        self._init_metadata()
 
     @classmethod
     def load(cls, a_path: Path) -> Database:
@@ -183,33 +160,19 @@ class Database:
 
         return cls(model, db_params)
 
-    def _init_metadata(self, ntraj: int | None = None, nsplititer: int | None = None) -> None:
+    def _init_metadata(self) -> None:
         """Initialize the database.
 
         Initialize database internal metadata (only) and setup
         the database on disk if needed.
-
-        Args:
-            ntraj: [OPT] number of traj to hold
-            nsplititer: [OPT] number of splitting iteration to hold
         """
         # Initialize or load disk-based database metadata
         if self._save_to_disk:
             # Check for an existing database:
             db_exists = self._abs_path.exists()
 
-            # Regardless of a pre-existing path we initialize from scratch
+            # If no previous db or we force restart
             if not db_exists or self._restart:
-                if not ntraj:
-                    err_msg = "Initializing TAMS database from scratch require ntraj !"
-                    _logger.error(err_msg)
-                    raise DatabaseError(err_msg)
-                if not nsplititer:
-                    err_msg = "Initializing TAMS database from scratch require nsplititer !"
-                    _logger.error(err_msg)
-                    raise DatabaseError(err_msg)
-                self._ntraj = ntraj
-                self._nsplititer = nsplititer
                 self._setup_tree()
 
             # Load the database
@@ -221,18 +184,19 @@ class Database:
                     read_in_params = toml.load(f)
                 self._parameters.update(read_in_params)
 
+            # Initialize the SQL pool file
+            self._pool_db = SQLFile(self.pool_file())
+
         # Initialize in-memory database metadata
         else:
-            if not ntraj:
-                err_msg = "Initializing TAMS database from scratch require ntraj !"
-                _logger.error(err_msg)
-                raise DatabaseError(err_msg)
-            if not nsplititer:
-                err_msg = "Initializing TAMS database from scratch require nsplititer !"
-                _logger.error(err_msg)
-                raise DatabaseError(err_msg)
-            self._ntraj = ntraj
-            self._nsplititer = nsplititer
+            self._pool_db = SQLFile("", in_memory = True)
+
+        # Check minimal parameters
+        if (self._ntraj is None or self._nsplititer is None):
+            err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
+            _logger.error(err_msg)
+            raise DatabaseError(err_msg)
+
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -254,7 +218,7 @@ class Database:
             with Path(self._abs_path / "input_params.toml").open("w") as f:
                 toml.dump(self._parameters, f)
 
-            # Header file with metadata and pool DB
+            # Header file with metadata
             self._write_metadata()
 
             # Serialize the model
@@ -283,9 +247,6 @@ class Database:
 
             # Initialialize splitting data file
             self.save_splitting_data()
-
-            # Initialize the SQL pool file
-            self._pool_db = SQLFile(self.pool_file())
         else:
             err_msg = f"Unsupported TAMS database format: {self._format} !"
             _logger.error(err_msg)
@@ -311,9 +272,6 @@ class Database:
                     err_msg = f"Database model {db_model} is different from call {self._fmodel_t.name()}"
                     _logger.error(err_msg)
                     raise DatabaseError(err_msg)
-
-                # Initialize the SQL pool file
-                self._pool_db = SQLFile(self.pool_file())
             else:
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
                 _logger.error(err_msg)
@@ -715,6 +673,32 @@ class Database:
             return
 
         self._pool_db.add_splitting_data(ksplit, n_rst, rst_ids, from_ids, min_vals, min_max)
+
+    def n_traj(self) -> int:
+        """Return the number of trajectory used for TAMS.
+
+        Note that this is the requested number of trajectory, not
+        the current length of the trajectory pool.
+
+        Return:
+            number of trajectory
+        """
+        return self._ntraj
+
+    def n_split_iter(self) -> int:
+        """Return the number of splitting iteration used for TAMS.
+
+        Note that this is the requested number of splitting iteration, not
+        the current splitting iteration.
+
+        Return:
+            number of splitting iteration
+        """
+        return self._nsplititer
+
+    def path(self) -> str | None:
+        """Return the path to the database."""
+        return self._path
 
     def biases(self) -> list[int]:
         """Splitting iterations biases."""

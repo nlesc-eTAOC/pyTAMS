@@ -80,7 +80,7 @@ class SQLFile:
         """
         self._file_name = file_name
         if in_memory:
-            self._engine = create_engine(f"sqlite:///{file_name}?mode=memory&cache=shared&uri=true", echo=False)
+            self._engine = create_engine("sqlite:///:memory:", echo=False)
         else:
             self._engine = (
                 create_engine(f"sqlite:///{file_name}?mode=ro&uri=true", echo=False)
