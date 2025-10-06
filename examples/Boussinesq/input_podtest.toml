@@ -16,6 +16,9 @@ size_M = 40
 size_N = 80
 epsilon = 0.01
 K = 7
+score_method = "PODdecomp"
+pod_data_file = "/Users/lucas/Documents/Work/UU/Boussinesq/Instanton/POD_Decomp/POD_decomp_InstModes.nc"
+pod_d0 = 100.0
 
 [runner]
 type = "dask"
@@ -26,4 +29,4 @@ nworker_iter=2
 backend = "local"
 
 [database]
-path = "2DBoussinesq.tdb"
+path = "2DBoussinesq_K7_dt0p01_eps0p02_Inst.tdb"
