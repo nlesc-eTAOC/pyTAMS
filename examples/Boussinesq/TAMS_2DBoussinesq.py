@@ -4,9 +4,9 @@ from typing import Any
 import numpy as np
 import scipy as sp
 from Boussinesq_2DAMOC import Boussinesq
+from podscore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
-from PODScore import PODScore
 
 _logger = logging.getLogger(__name__)
 
@@ -51,6 +51,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._score_method = subparms.get("score_method", "default")
         if self._score_method == "PODdecomp":
             self._pod_data_file = subparms.get("pod_data_file", None)
+            self._score_pod_d0 = subparms.get("pod_d0", 1.0)
+            self._score_pod_ndim = subparms.get("pod_ndim", 8)
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
@@ -204,17 +206,17 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
             return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
 
-        elif self._score_method == "PODdecomp":
+        if self._score_method == "PODdecomp":
             if self._score_builder is None:
-                self._score_builder = PODScore(self._M+1, self._N+1, self._pod_data_file)
+                self._score_builder = PODScore(
+                    self._M + 1, self._N + 1, self._pod_data_file, self._score_pod_ndim, self._score_pod_d0
+                )
 
             return self._score_builder.get_score(self._state_arrays)
 
-        else:
-            err_msg = f"Unknown score method {self._score_method} !"
-            _logger.exception(err_msg)
-            raise RuntimeError(err_msg)
-
+        err_msg = f"Unknown score method {self._score_method} !"
+        _logger.exception(err_msg)
+        raise RuntimeError(err_msg)
 
     def make_noise(self) -> Any:
         """Return a random noise."""

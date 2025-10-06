@@ -33,7 +33,7 @@ class Boussinesq:
         self.zz = self.z_j(np.arange(self.N + 1))
 
         # Hosing parameters
-        self.hosing_t0 = 0.0    # Start of rate increase
+        self.hosing_t0 = 0.0  # Start of rate increase
         self.hosing_sval = 0.0  # Initial hosing value at t0
         self.hosing_rate = 0.0  # Rate of change of hosing
 
@@ -59,7 +59,7 @@ class Boussinesq:
         the northern part if the amplitude is positive (while
         removing freshwater in the southern part to conserve salinity).
         """
-        return -ampl * np.tanh(20. * (x / self.A - 1 / 2))
+        return -ampl * np.tanh(20.0 * (x / self.A - 1 / 2))
 
     def init_hosing(self, t0, h0, rate):
         self.hosing_t0 = t0
@@ -151,7 +151,9 @@ class Boussinesq:
 
     def get_hosing(self, time):
         ampl = self.hosing_sval + max(0, (time - self.hosing_t0)) * self.hosing_rate
-        return self.h(self.z_j(np.arange(self.N + 1)))[np.newaxis] * self.hosing(self.xx, ampl)[:, np.newaxis] / self.tauS
+        return (
+            self.h(self.z_j(np.arange(self.N + 1)))[np.newaxis] * self.hosing(self.xx, ampl)[:, np.newaxis] / self.tauS
+        )
 
     def integration_matrices(self):
         self.AT = np.identity(self.M + 1) - self.dt * self.Dxx
