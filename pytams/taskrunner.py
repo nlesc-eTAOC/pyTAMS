@@ -214,7 +214,7 @@ class DaskRunner(BaseRunner):
                 if not Path(self.slurm_config_file).exists():
                     err_msg = f"Specified slurm_config_file do not exists: {self.slurm_config_file}"
                     _logger.exception(err_msg)
-                    raise RunnerError(err_msg)
+                    raise FileNotFoundError(err_msg)
 
                 config_file = ntpath.basename(self.slurm_config_file)
                 shutil.move(
