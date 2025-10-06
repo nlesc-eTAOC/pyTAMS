@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import logging
 import shutil
 import time
@@ -648,6 +649,24 @@ class Trajectory:
                 return snap.state
 
         return None
+
+    def get_metadata_json(self) -> str:
+        """Return a json string with metadata.
+
+        Returns:
+            A json string with the trajectory metadata
+        """
+        return json.dumps(
+            {
+                "ended": self._has_ended,
+                "converged": self._has_converged,
+                "score_max": self._score_max,
+                "length": self.get_length(),
+                "nbranching": self.get_nbranching(),
+                "nstep_compute": self._computed_steps,
+            },
+            default=str,
+        )
 
     def delete(self) -> None:
         """Clear the trajectory on-disk data."""

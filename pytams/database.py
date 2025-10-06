@@ -82,6 +82,7 @@ class Database:
             ntraj: [OPT] number of traj to hold
             nsplititer: [OPT] number of splitting iteration to hold
         """
+        # Stash away the model class
         self._fmodel_t = fmodel_t
 
         # Metadata
@@ -109,6 +110,7 @@ class Database:
         # In-memory container
         self._trajs_db: list[Trajectory] = []
         self._archived_trajs_db: list[Trajectory] = []
+
         # Disk-based container
         self._pool_db: SQLFile | None = None
 
@@ -500,7 +502,7 @@ class Database:
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
             if update_db:
-                self._pool_db.add_trajectory(checkfile_str)
+                self._pool_db.add_trajectory(checkfile_str, a_traj.get_metadata_json())
 
         self._trajs_db.append(a_traj)
 
@@ -516,7 +518,7 @@ class Database:
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
             if update_db:
-                self._pool_db.archive_trajectory(checkfile_str)
+                self._pool_db.archive_trajectory(checkfile_str, a_traj.get_metadata_json())
 
         self._archived_trajs_db.append(a_traj)
 
@@ -629,7 +631,7 @@ class Database:
         # Update the list of archived trajectories in the SQL DB
         if self._save_to_disk and self._pool_db:
             checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-            self._pool_db.archive_trajectory(checkfile_str)
+            self._pool_db.archive_trajectory(checkfile_str, traj.get_metadata_json())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
