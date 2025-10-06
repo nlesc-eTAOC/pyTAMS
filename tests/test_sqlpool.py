@@ -5,47 +5,58 @@ from sqlalchemy.exc import SQLAlchemyError
 from pytams.sqldb import SQLFile
 
 
-def test_createDB():
+def test_createdb():
     """Initialize a SQLFile."""
-    poolFile = SQLFile("test.db")
-    assert poolFile._file_name == "test.db"
+    poolfile = SQLFile("test.db")
+    assert poolfile.name() == "test.db"
     Path("./test.db").unlink(missing_ok=True)
 
-def test_createDBFail():
+def test_createdb_inmemory():
+    """Initialize a SQLFile in memory."""
+    poolfile = SQLFile("", in_memory=True)
+    assert poolfile.name() is None
+
+def test_createdb_fail():
     """Fail to initialize a SQLFile."""
     with pytest.raises(RuntimeError):
         _ = SQLFile("/test.db")
 
-def test_add_traj_to_DB():
+def test_add_traj_to_db():
     """Add a trajectory to SQLFile."""
-    poolFile = SQLFile("test.db")
-    poolFile.add_trajectory("test.xml","")
-    assert poolFile.get_trajectory_count() == 1
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    assert poolfile.get_trajectory_count() == 1
     Path("./test.db").unlink(missing_ok=True)
 
-def test_add_traj_to_missing_DB():
+def test_add_traj_to_db_inmemory():
+    """Add a trajectory to SQL database in memory."""
+    poolfile = SQLFile("", in_memory=True)
+    poolfile.add_trajectory("test.xml","")
+    assert poolfile.get_trajectory_count() == 1
+
+def test_add_traj_to_missing_db():
     """Add a trajectory to a deleted SQLFile."""
-    poolFile = SQLFile("test.db")
-    poolFile.add_trajectory("test.xml","")
-    assert poolFile.get_trajectory_count() == 1
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    assert poolfile.get_trajectory_count() == 1
     Path("./test.db").unlink(missing_ok=True)
     with pytest.raises(SQLAlchemyError):
-        poolFile.add_trajectory("test2.xml","")
+        poolfile.add_trajectory("test2.xml","")
 
-def test_archive_traj_to_DB():
+def test_archive_traj_to_db():
     """Archive a trajectory to SQLFile."""
-    poolFile = SQLFile("test.db")
-    poolFile.archive_trajectory("test.xml","")
-    assert poolFile.get_archived_trajectory_count() == 1
+    poolfile = SQLFile("test.db")
+    poolfile.archive_trajectory("test.xml","")
+    assert poolfile.get_archived_trajectory_count() == 1
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_fetch():
     """Add a trajectory and fetch from SQLFile."""
-    poolFile = SQLFile("test.db")
-    poolFile.add_trajectory("test.xml","")
-    poolFile.add_trajectory("test_2.xml","")
-    assert poolFile.get_trajectory_count() == 2
-    traj = poolFile.fetch_trajectory(0)
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    poolfile.add_trajectory("test_2.xml","")
+    assert poolfile.get_trajectory_count() == 2
+    traj = poolfile.fetch_trajectory(0)
     assert traj == "test.xml"
     Path("./test.db").unlink(missing_ok=True)
 
@@ -78,9 +89,9 @@ def test_fetch_unknown_archived_traj():
 
 def test_lock_trajectory():
     """Lock a trajectory in the SQLFile."""
-    poolFile = SQLFile("test.db")
-    poolFile.add_trajectory("test.xml","")
-    status = poolFile.lock_trajectory(0)
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    status = poolfile.lock_trajectory(0)
     assert status
     Path("./test.db").unlink(missing_ok=True)
 
@@ -111,7 +122,7 @@ def test_lock_and_release_multiple_trajectory():
         status = poolFile.lock_trajectory(0)
     poolFile.release_all_trajectories()
     status = True
-    for i in range(10):
+    for _ in range(10):
         status = status or poolFile.lock_trajectory(0)
     assert status
     Path("./test.db").unlink(missing_ok=True)
@@ -140,12 +151,19 @@ def test_release_unknown_trajectory():
         poolFile.release_trajectory(1)
     Path("./test.db").unlink(missing_ok=True)
 
+def test_splitting_data_add():
+    """Adding splitting data to the database."""
+    poolfile = SQLFile("test.db")
+    for i in range(10):
+        poolfile.add_splitting_data(i, 1, 0.1, [0], [0], [0.0], [0.0, 0.0])
+    Path("./test.db").unlink(missing_ok=True)
+
 def test_dump_json():
     """Dump the content of the DB to a json file."""
-    poolFile = SQLFile("test.db")
-    poolFile.add_trajectory("test.xml","")
-    poolFile.archive_trajectory("test_arch.xml","")
-    poolFile.dump_file_json()
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    poolfile.archive_trajectory("test_arch.xml","")
+    poolfile.dump_file_json()
     assert Path("./test.json").exists() is True
     Path("./test.db").unlink(missing_ok=True)
     Path("./test.json").unlink(missing_ok=True)
