@@ -28,10 +28,6 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class DatabaseError(Exception):
-    """Exception class for TAMS Database."""
-
-
 class Database:
     """A database class for TAMS.
 
@@ -55,17 +51,14 @@ class Database:
         _parameters: the dictionary of parameters
         _trajs_db: the list of trajectories
         _ksplit: the current splitting iteration
-        _l_bias: the list of bias
-        _weights: the list of weights
-        _ongoing: the list of ongoing branches if unfinished splitting iteration.
     """
 
     def __init__(
         self,
         fmodel_t: type[ForwardModelBaseClass],
         params: dict[Any, Any],
-        ntraj: int | None = None,
-        nsplititer: int | None = None,
+        ntraj: int = -1,
+        nsplititer: int = -1,
     ) -> None:
         """Initialize a TAMS database.
 
@@ -101,7 +94,7 @@ class Database:
             if self._format not in ["XML"]:
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
                 _logger.error(err_msg)
-                raise DatabaseError(err_msg)
+                raise ValueError(err_msg)
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
 
@@ -112,20 +105,13 @@ class Database:
         self._trajs_db: list[Trajectory] = []
         self._archived_trajs_db: list[Trajectory] = []
 
-        # Disk-based container
-        self._pool_db: SQLFile | None = None
-
         # Splitting data
         self._ksplit: int = 0
-        self._l_bias: list[int] = []
-        self._weights: list[float] = [1.0]
-        self._minmax: list[npt.NDArray[np.number]] = []
-        self._ongoing = None
 
         # Initialize only metadata at this point
         # so that the object remains lightweight
-        self._ntraj: int | None = ntraj
-        self._nsplititer: int | None = nsplititer
+        self._ntraj: int = ntraj
+        self._nsplititer: int = nsplititer
         self._init_metadata()
 
     @classmethod
@@ -141,7 +127,7 @@ class Database:
         if not a_path.exists():
             err_msg = f"Database {a_path} does not exist !"
             _logger.error(err_msg)
-            raise DatabaseError(err_msg)
+            raise FileNotFoundError(err_msg)
 
         # Load necessary elements to call the constructor
         # Ensure that the database is not restarted at this step
@@ -189,14 +175,13 @@ class Database:
 
         # Initialize in-memory database metadata
         else:
-            self._pool_db = SQLFile("", in_memory = True)
+            self._pool_db = SQLFile("", in_memory=True)
 
         # Check minimal parameters
-        if (self._ntraj is None or self._nsplititer is None):
+        if self._ntraj == -1 or self._nsplititer == -1:
             err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
             _logger.error(err_msg)
-            raise DatabaseError(err_msg)
-
+            raise ValueError(err_msg)
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -244,13 +229,10 @@ class Database:
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(header_file)
-
-            # Initialialize splitting data file
-            self.save_splitting_data()
         else:
             err_msg = f"Unsupported TAMS database format: {self._format} !"
             _logger.error(err_msg)
-            raise DatabaseError(err_msg)
+            raise ValueError(err_msg)
 
     def _load_metadata(self) -> None:
         """Read the database Metadata from the header."""
@@ -271,11 +253,11 @@ class Database:
                 if db_model != self._fmodel_t.name():
                     err_msg = f"Database model {db_model} is different from call {self._fmodel_t.name()}"
                     _logger.error(err_msg)
-                    raise DatabaseError(err_msg)
+                    raise RuntimeError(err_msg)
             else:
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
                 _logger.error(err_msg)
-                raise DatabaseError(err_msg)
+                raise ValueError(err_msg)
 
     def init_pool(self) -> None:
         """Initialize the requested number of trajectories."""
@@ -300,54 +282,6 @@ class Database:
 
         traj.store()
 
-    def save_splitting_data(self, ongoing_trajs: list[int] | None = None) -> None:
-        """Write splitting data to the database.
-
-        Args:
-            ongoing_trajs: an optional list of ongoing trajectories
-        """
-        if not self._save_to_disk:
-            return
-
-        # Splitting data file
-        if self._format == "XML":
-            splitting_data_file = f"{self._name}/splittingData.xml"
-            root = ET.Element("splitting")
-            root.append(new_element("nsplititer", self._nsplititer))
-            root.append(new_element("ksplit", self._ksplit))
-            root.append(new_element("bias", np.array(self._l_bias, dtype=int)))
-            root.append(new_element("weight", np.array(self._weights, dtype=float)))
-            root.append(new_element("minmax", np.array(self._minmax, dtype=float)))
-            if ongoing_trajs:
-                root.append(new_element("ongoing", np.array(ongoing_trajs)))
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="\t", level=0)
-            tree.write(splitting_data_file)
-        else:
-            err_msg = f"Unsupported TAMS database format: {self._format} !"
-            _logger.error(err_msg)
-            raise DatabaseError(err_msg)
-
-    def _read_splitting_data(self) -> None:
-        """Read splitting data."""
-        # Read data file
-        if self._format == "XML":
-            splitting_data_file = f"{self._name}/splittingData.xml"
-            tree = ET.parse(splitting_data_file)
-            root = tree.getroot()
-            datafromxml = xml_to_dict(root)
-            self._nsplititer = datafromxml["nsplititer"]
-            self._ksplit = datafromxml["ksplit"]
-            self._l_bias = datafromxml["bias"].tolist()
-            self._weights = datafromxml["weight"].tolist()
-            self._minmax = list(np.reshape(datafromxml["minmax"], [3, -1], order="F").T)
-            if "ongoing" in datafromxml:
-                self._ongoing = datafromxml["ongoing"].tolist()
-        else:
-            err_msg = f"Unsupported TAMS database format: {self._format} !"
-            _logger.error(err_msg)
-            raise DatabaseError(err_msg)
-
     def load_data(self, load_archived_trajectories: bool = False) -> None:
         """Load data stored into the database.
 
@@ -363,7 +297,7 @@ class Database:
         if not self._pool_db:
             err_msg = "Database is not initialized !"
             _logger.exception(err_msg)
-            raise DatabaseError(err_msg)
+            raise RuntimeError(err_msg)
 
         # Counter for number of trajectory loaded
         n_traj_restored = 0
@@ -395,9 +329,6 @@ class Database:
         inf_msg = f"{n_traj_restored} active trajectories loaded"
         _logger.info(inf_msg)
 
-        # Load splitting data
-        self._read_splitting_data()
-
         # Load the archived trajectories if requested.
         # Those are loaded as 'frozen', i.e. the internal model
         # is not available and advance function disabled.
@@ -414,7 +345,7 @@ class Database:
         if not self._pool_db:
             err_msg = "Database is not initialized !"
             _logger.exception(err_msg)
-            raise DatabaseError(err_msg)
+            raise RuntimeError(err_msg)
 
         n_traj_restored = 0
 
@@ -642,18 +573,14 @@ class Database:
         checkfile_str = checkfile.relative_to(self._abs_path).as_posix()
         self._pool_db.update_trajectory_file(traj_id, checkfile_str)
 
-    def weights(self) -> list[float]:
+    def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
-        return self._weights
+        return self._pool_db.get_weights()
 
-    def append_weight(self, weight: float) -> None:
-        """Append a weight to internal list."""
-        self._weights.append(weight)
-
-    def append_splitting_data(
+    def append_splitting_iteration_data(
         self,
         ksplit: int,
-        n_rst: int,
+        bias: int,
         rst_ids: list[int],
         from_ids: list[int],
         min_vals: list[float],
@@ -663,16 +590,21 @@ class Database:
 
         Args:
             ksplit : The splitting iteration index
-            n_rst : The number of restarted trajectories
+            bias : The number of restarted trajectories, also ref. to as bias
             rst_ids : The list of restarted trajectory ids
             from_ids : The list of trajectories used to restart
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
         """
-        if not self._save_to_disk or not self._pool_db:
-            return
+        # Compute the weight of the ensemble at the current iteration
+        # Insert 1.0 at the front of the weight array
+        weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
+        new_weight = weights[-1] * (1.0 - bias / self._ntraj)
+        self._pool_db.add_splitting_data(ksplit, bias, new_weight, rst_ids, from_ids, min_vals, min_max)
 
-        self._pool_db.add_splitting_data(ksplit, n_rst, rst_ids, from_ids, min_vals, min_max)
+    def mark_last_splitting_iteration_as_done(self) -> None:
+        """Flag the last splitting iteration as done."""
+        self._pool_db.mark_last_iteration_as_completed()
 
     def n_traj(self) -> int:
         """Return the number of trajectory used for TAMS.
@@ -700,33 +632,25 @@ class Database:
         """Return the path to the database."""
         return self._path
 
-    def biases(self) -> list[int]:
-        """Splitting iterations biases."""
-        return self._l_bias
-
-    def append_bias(self, bias: int) -> None:
-        """Append a bias to internal list."""
-        self._l_bias.append(bias)
-
-    def append_minmax(self, ksplit: int, minofmaxes: np.number, maxofmaxes: np.number) -> None:
-        """Append min/max of maxes to internal list."""
-        self._minmax.append(np.array([float(ksplit), minofmaxes, maxofmaxes]))
-
-    def k_split(self) -> int:
-        """Splitting iteration counter."""
-        return self._ksplit
-
     def done_with_splitting(self) -> bool:
         """Check if we are done with splitting."""
         return self._ksplit >= self._nsplititer
 
-    def reset_ongoing(self) -> None:
-        """Reset the list of trajectories undergoing branching."""
-        self._ongoing = None
-
     def get_ongoing(self) -> list[int] | None:
-        """Return the list of trajectories undergoing branching or None."""
-        return self._ongoing
+        """Return the list of trajectories undergoing branching or None.
+
+        Ongoing trajectories are extracted from the last splitting
+        iteration data if it has not been flaged as "completed".
+        """
+        return self._pool_db.get_ongoing()
+
+    def k_split(self) -> int:
+        """Get the splitting iteration index.
+
+        Returns:
+            Internal splitting iteration index
+        """
+        return self._ksplit
 
     def set_k_split(self, ksplit: int) -> None:
         """Set splitting iteration counter."""
@@ -768,11 +692,15 @@ class Database:
         if self.count_ended_traj() < self._ntraj:
             return 0.0
 
-        w = self._ntraj * self._weights[-1]
-        for i in range(len(self._l_bias)):
-            w += self._l_bias[i] * self._weights[i]
+        # Insert a first element to the weight array
+        weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
+        biases = self._pool_db.get_biases()
 
-        return self.count_converged_traj() * self._weights[-1] / w
+        w = self._ntraj * weights[-1]
+        for i in range(biases.shape[0]):
+            w += biases[i] * weights[i]
+
+        return float(self.count_converged_traj() * weights[-1] / w)
 
     def info(self) -> None:
         """Print database info to screen."""
@@ -808,7 +736,7 @@ class Database:
         if self.traj_list_len() == 0 or not self._pool_db:
             err_msg = "Database data not loaded or empty. Try load_data()"
             _logger.exception(err_msg)
-            raise DatabaseError(err_msg)
+            raise RuntimeError(err_msg)
 
         # Update the active trajectories list in the SQL db
         # while deleting the checkfiles from the trajectory we updaate
@@ -835,11 +763,7 @@ class Database:
 
         # Reset splitting data in-memory and update disk data
         self._ksplit = 0
-        self._l_bias = []
-        self._weights = [1.0]
-        self._minmax = []
         self._ongoing = None
-        self.save_splitting_data()
 
         # Reload the data
         self.load_data()
@@ -873,20 +797,13 @@ class Database:
 
         plt.figure(figsize=(6, 4))
 
-        # From list to np arrays
-        kidx = np.zeros(len(self._minmax))
-        minmax = np.zeros(len(self._minmax))
-        maxmax = np.zeros(len(self._minmax))
-        for i in range(len(self._minmax)):
-            kidx[i] = self._minmax[i][0]
-            minmax[i] = self._minmax[i][1]
-            maxmax[i] = self._minmax[i][2]
-        plt.plot(kidx, minmax, linewidth=1.0, label="min of maxes")
-        plt.plot(kidx, maxmax, linewidth=1.0, label="max of maxes")
+        min_max_data = self._pool_db.get_minmax()
+        plt.plot(min_max_data[0], min_max_data[1], linewidth=1.0, label="min of maxes")
+        plt.plot(min_max_data[0], min_max_data[2], linewidth=1.0, label="max of maxes")
         plt.grid(linestyle="dotted")
         ax = plt.gca()
         ax.set_ylim(0.0, 1.0)
-        ax.set_xlim(0.0, np.max(kidx))
+        ax.set_xlim(0.0, np.max(min_max_data[0], min_max_data[1]))
         ax.legend()
         plt.tight_layout()
         plt.savefig(pltfile, dpi=300)
