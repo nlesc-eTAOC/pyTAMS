@@ -25,6 +25,7 @@ class Trajectory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     traj_file: Mapped[str] = mapped_column(nullable=False)
+    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
     status: Mapped[str] = mapped_column(default="idle", nullable=False)
 
 
@@ -34,6 +35,7 @@ class ArchivedTrajectory(Base):
     __tablename__ = "archived_trajectories"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
     traj_file: Mapped[str] = mapped_column(nullable=False)
 
 
@@ -101,18 +103,19 @@ class SQLFile:
             _logger.exception(err_msg)
             raise RuntimeError(err_msg) from e
 
-    def add_trajectory(self, traj_file: str) -> None:
+    def add_trajectory(self, traj_file: str, metadata: str) -> None:
         """Add a new trajectory to the DB.
 
         Args:
             traj_file : The trajectory file of that trajectory
+            metadata: a json representation of the traj metadata
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
         session = self._Session()
         try:
-            new_traj = Trajectory(traj_file=traj_file)
+            new_traj = Trajectory(traj_file=traj_file, t_metadata=metadata)
             session.add(new_traj)
             session.commit()
         except SQLAlchemyError:
@@ -310,15 +313,16 @@ class SQLFile:
         finally:
             session.close()
 
-    def archive_trajectory(self, traj_file: str) -> None:
+    def archive_trajectory(self, traj_file: str, metadata: str) -> None:
         """Add a new trajectory to the archive container.
 
         Args:
             traj_file : The trajectory file of that trajectory
+            metadata: a json representation of the traj metadata
         """
         session = self._Session()
         try:
-            new_traj = ArchivedTrajectory(traj_file=traj_file)
+            new_traj = ArchivedTrajectory(traj_file=traj_file, t_metadata=metadata)
             session.add(new_traj)
             session.commit()
         except SQLAlchemyError:
