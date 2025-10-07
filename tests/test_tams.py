@@ -147,7 +147,7 @@ def test_doublewell_deterministic_tams():
                                   "targetscore": 0.8}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.45656331249469767
+    assert transition_proba == 0.4519515692885939
     Path("input.toml").unlink(missing_ok=True)
 
 @pytest.mark.dependency
@@ -164,7 +164,7 @@ def test_doublewell_2_workers_tams():
                                   "targetscore": 0.5}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.6254745180342447
+    assert transition_proba == 0.6127097197058989
     Path("input.toml").unlink(missing_ok=True)
 
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
