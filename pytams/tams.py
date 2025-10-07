@@ -212,12 +212,6 @@ class TAMS:
             bool to trigger splitting loop break
             array of maximas accros all trajectories
         """
-        # Check for walltime
-        if self.out_of_time():
-            warn_msg = f"Ran out of time after {k} splitting iterations"
-            _logger.warning(warn_msg)
-            return True, np.empty(1)
-
         # Gather max score from all trajectories
         # and check for early convergence
         all_converged = True
@@ -226,11 +220,17 @@ class TAMS:
             maxes[i] = self._tdb.get_traj(i).score_max()
             all_converged = all_converged and self._tdb.get_traj(i).is_converged()
 
+        # Check for walltime
+        if self.out_of_time():
+            warn_msg = f"Ran out of time after {k} splitting iterations"
+            _logger.warning(warn_msg)
+            return True, maxes
+
         # Exit if our work is done
         if all_converged:
             inf_msg = f"All trajectories converged after {k} splitting iterations"
             _logger.info(inf_msg)
-            return True, np.empty(1)
+            return True, maxes
 
         # Exit if splitting is stalled
         if (np.amax(maxes) - np.amin(maxes)) < STALL_TOL:
@@ -243,8 +243,8 @@ class TAMS:
     def finish_ongoing_splitting(self) -> None:
         """Check and finish unfinished splitting iterations.
 
-        If the run was interupted during a splitting iteration,
-        the branched trajectory might not have ended yet. In that case,
+        If the run was interrupted during a splitting iteration,
+        the branched trajectories might not have ended yet. In that case,
         a list of trajectories to finish is listed in the database.
         """
         # Check the database for unfinished splitting iteration when restarting.
@@ -267,13 +267,11 @@ class TAMS:
                 for t in finished_traj:
                     self._tdb.overwrite_traj(t.id(), t)
 
-                # Clear list of ongoing branches
-                self._tdb.reset_ongoing()
-
-                # Increment splitting index
+                # Wrap up the iteration by updating its status in the
+                # database and incrementing the iteration counter
+                self._tdb.mark_last_splitting_iteration_as_done()
                 k = self._tdb.k_split() + n_branch
                 self._tdb.set_k_split(k)
-                self._tdb.save_splitting_data()
 
     def get_restart_at_random(self, min_idx_list: list[int]) -> list[int]:
         """Get a list of trajectory index to restart from at random.
@@ -305,7 +303,7 @@ class TAMS:
 
         Perform the multi-level splitting iterations, possibly restarting multiple
         trajectories at each iterations. All the trajectories in an iterations are
-        advanced together, such each iteration takes the maximum duration among
+        advanced together, such that each iteration takes the maximum duration among
         the branched trajectories.
 
         If the walltime is exceeded, the splitting loop is stopped and ongoing
@@ -334,17 +332,13 @@ class TAMS:
                 inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
 
-                # Check for early exit conditions
-                early_exit, maxes = self.check_exit_splitting_loop(k)
-                if early_exit:
-                    break
-
-                self._tdb.append_minmax(k, np.min(maxes), np.max(maxes))
-
                 # Plot trajectory database scores
                 if self._plot_diags:
                     pltfile = f"Score_k{k:05}.png"
                     self._tdb.plot_score_functions(pltfile)
+
+                # Get the ensemble maximums and check for early exit conditions
+                early_exit, maxes = self.check_exit_splitting_loop(k)
 
                 # Get the nworker lower scored trajectories
                 # or more if equal score
@@ -354,12 +348,15 @@ class TAMS:
                 rest_idx = self.get_restart_at_random(min_idx_list)
                 n_branch = len(min_idx_list)
 
-                self._tdb.append_bias(n_branch)
-                self._tdb.append_weight(self._tdb.weights()[-1] * (1 - self._tdb.biases()[-1] / self._tdb.n_traj()))
-
-                self._tdb.append_splitting_data(
+                # Update the database with the data of the current
+                # iteration
+                self._tdb.append_splitting_iteration_data(
                     k, n_branch, min_idx_list, rest_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
                 )
+
+                # Exit the loop if needed
+                if early_exit:
+                    break
 
                 # Assemble a list of promises
                 for i in range(n_branch):
@@ -377,7 +374,6 @@ class TAMS:
                 except Exception:
                     err_msg = f"Failed to branch {n_branch} trajectories at iteration {k}"
                     _logger.exception(err_msg)
-                    self._tdb.save_splitting_data(min_idx_list)
                     raise
 
                 # Update the trajectory database
@@ -387,15 +383,15 @@ class TAMS:
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
-                    self._tdb.save_splitting_data(min_idx_list)
                     warn_msg = f"Ran out of time after {k} splitting iterations"
                     _logger.warning(warn_msg)
                     break
 
-                # Update the trajectory database, increment splitting index
+                # Wrap up the iteration by updating its status in the
+                # database and incrementing the iteration counter
+                self._tdb.mark_last_splitting_iteration_as_done()
                 k = k + n_branch
                 self._tdb.set_k_split(k)
-                self._tdb.save_splitting_data()
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.

@@ -4,6 +4,9 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import cast
+import numpy as np
+import numpy.typing as npt
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
@@ -46,11 +49,13 @@ class SplittingIterations(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     split_id: Mapped[int] = mapped_column(nullable=False)
-    rst_traj_count: Mapped[int] = mapped_column(nullable=False)
+    bias: Mapped[int] = mapped_column(nullable=False)
+    weight: Mapped[str] = mapped_column(nullable=False)
     rst_traj_ids: Mapped[str] = mapped_column(nullable=False)
     from_traj_ids: Mapped[str] = mapped_column(nullable=False)
     min_vals: Mapped[str] = mapped_column(nullable=False)
     min_max: Mapped[str] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(default="locked", nullable=False)
 
 
 valid_statuses = ["locked", "idle", "completed"]
@@ -78,9 +83,9 @@ class SQLFile:
             in_memory: a bool to trigger in-memory creation
             ro_mode: a bool to trigger read-only access to the database
         """
-        self._file_name = file_name
+        self._file_name = "" if in_memory else file_name
         if in_memory:
-            self._engine = create_engine(f"sqlite:///{file_name}?mode=memory&cache=shared&uri=true", echo=False)
+            self._engine = create_engine("sqlite:///:memory:", echo=False)
         else:
             self._engine = (
                 create_engine(f"sqlite:///{file_name}?mode=ro&uri=true", echo=False)
@@ -102,6 +107,14 @@ class SQLFile:
             err_msg = "Failed to initialize DB schema"
             _logger.exception(err_msg)
             raise RuntimeError(err_msg) from e
+
+    def name(self) -> str:
+        """Access the DB file name.
+
+        Returns:
+            the database name, empty string if in-memory
+        """
+        return self._file_name
 
     def add_trajectory(self, traj_file: str, metadata: str) -> None:
         """Add a new trajectory to the DB.
@@ -398,13 +411,21 @@ class SQLFile:
             session.close()
 
     def add_splitting_data(
-        self, k: int, n_rst: int, rst_ids: list[int], from_ids: list[int], min_vals: list[float], min_max: list[float]
+        self,
+        k: int,
+        bias: int,
+        weight: float,
+        rst_ids: list[int],
+        from_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
     ) -> None:
         """Add a new splitting data to the DB.
 
         Args:
             k : The splitting iteration index
-            n_rst : The number of restarted trajectories
+            bias : The number of restarted trajectories
+            weight : Weight of the ensemble at the current iteration
             rst_ids : The list of restarted trajectory ids
             from_ids : The list of trajectories used to restart
             min_vals : The list of minimum values
@@ -414,17 +435,121 @@ class SQLFile:
         try:
             new_split = SplittingIterations(
                 split_id=k,
-                rst_traj_count=n_rst,
-                rst_traj_ids=" ".join(str(x) for x in rst_ids),
-                from_traj_ids=" ".join(str(x) for x in from_ids),
-                min_vals=" ".join(str(x) for x in min_vals),
-                min_max=" ".join(str(x) for x in min_max),
+                bias=bias,
+                weight=str(weight),
+                rst_traj_ids=json.dumps(rst_ids),
+                from_traj_ids=json.dumps(from_ids),
+                min_vals=json.dumps(min_vals),
+                min_max=json.dumps(min_max),
             )
             session.add(new_split)
             session.commit()
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to add splitting data")
+            raise
+        finally:
+            session.close()
+
+    def mark_last_iteration_as_completed(self) -> None:
+        """Mark the last splitting iteration as complete.
+
+        By default, iteration data append to the SQL table with a state "locked"
+        to indicate an iteration being worked on. Upon completion, mark it as
+        "completed" otherwise the iteration is considered incomplete, i.e.
+        interrupted by some error or wall clock limit.
+        """
+        session = self._Session()
+        try:
+            iteration = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if iteration:
+                iteration.status = "completed"
+                session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to mark splitting iteration as completed")
+            raise
+        finally:
+            session.close()
+
+    def get_ongoing(self) -> list[int] | None:
+        """Get the list of ongoing trajectories if any.
+
+        Returns:
+            Either a list trajectories or None if nothing was left to do
+        """
+        session = self._Session()
+        try:
+            last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if last_split and last_split.status == "locked":
+                return cast("list[int]", json.loads(last_split.rst_traj_ids))
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to query the list of ongoing trajectories !")
+            raise
+        else:
+            return None
+        finally:
+            session.close()
+
+    def get_weights(self) -> npt.NDArray[np.number]:
+        """Read the weights from the database.
+
+        Returns:
+            the weight for each splitting iteration as a numpy array
+        """
+        session = self._Session()
+        try:
+            return np.array(
+                [r[0] for r in session.query(SplittingIterations).with_entities(SplittingIterations.weight).all()],
+                dtype="float32",
+            )
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to access the weights !")
+            raise
+        finally:
+            session.close()
+
+    def get_biases(self) -> npt.NDArray[np.number]:
+        """Read the biases from the database.
+
+        Returns:
+            the bias for each splitting iteration as a numpy array
+        """
+        session = self._Session()
+        try:
+            return np.array(
+                [r[0] for r in session.query(SplittingIterations).with_entities(SplittingIterations.bias).all()],
+                dtype="int",
+            )
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to access the biases !")
+            raise
+        finally:
+            session.close()
+
+    def get_minmax(self) -> npt.NDArray[np.number]:
+        """Read the min/max from the database.
+
+        Returns:
+            the 2D Numpy array with k_index, min, max
+        """
+        session = self._Session()
+        try:
+            return np.array(
+                [
+                    [r[0], json.loads(r[1])[0], json.loads(r[1])[1]]
+                    for r in session.query(SplittingIterations)
+                    .with_entities(SplittingIterations.split_id, SplittingIterations.min_max)
+                    .all()
+                ],
+                dtype="float32",
+            )
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to access the biases !")
             raise
         finally:
             session.close()
@@ -458,7 +583,8 @@ class SQLFile:
         session = self._Session()
         try:
             db_data["trajectories"] = {
-                traj.id - 1: {"file": traj.traj_file, "status": traj.status} for traj in session.query(Trajectory).all()
+                traj.id - 1: {"file": traj.traj_file, "status": traj.status, "metadata": traj.t_metadata}
+                for traj in session.query(Trajectory).all()
             }
             db_data["archived_trajectories"] = {
                 traj.id - 1: {"file": traj.traj_file} for traj in session.query(ArchivedTrajectory).all()
@@ -466,11 +592,13 @@ class SQLFile:
             db_data["splitting_data"] = {
                 split.id: {
                     "k": str(split.split_id),
-                    "min_max_start": split.min_max,
-                    "n_rst": str(split.rst_traj_count),
-                    "rst_ids": split.rst_traj_ids,
-                    "from_ids": split.from_traj_ids,
-                    "min_vals": split.min_vals,
+                    "bias": str(split.bias),
+                    "weight": split.weight,
+                    "min_max_start": json.loads(split.min_max),
+                    "rst_ids": json.loads(split.rst_traj_ids),
+                    "from_ids": json.loads(split.from_traj_ids),
+                    "min_vals": json.loads(split.min_vals),
+                    "status": split.status,
                 }
                 for split in session.query(SplittingIterations).all()
             }
