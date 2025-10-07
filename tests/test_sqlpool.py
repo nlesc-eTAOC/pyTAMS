@@ -1,5 +1,6 @@
 """Tests for the pytams.sqlpool class."""
 from pathlib import Path
+import numpy as np
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from pytams.sqldb import SQLFile
@@ -14,7 +15,7 @@ def test_createdb():
 def test_createdb_inmemory():
     """Initialize a SQLFile in memory."""
     poolfile = SQLFile("", in_memory=True)
-    assert poolfile.name() is ""
+    assert poolfile.name() == ""
 
 def test_createdb_fail():
     """Fail to initialize a SQLFile."""
@@ -26,6 +27,15 @@ def test_add_traj_to_db():
     poolfile = SQLFile("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
+    Path("./test.db").unlink(missing_ok=True)
+
+def test_add_traj_and_update_to_db():
+    """Add and update a trajectory to SQLFile."""
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    assert poolfile.fetch_trajectory(0) == "test.xml"
+    poolfile.update_trajectory_file(0, "UpdatedTest.xml")
+    assert poolfile.fetch_trajectory(0) == "UpdatedTest.xml"
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_to_db_inmemory():
@@ -114,6 +124,23 @@ def test_lock_and_release_trajectory():
     assert status
     Path("./test.db").unlink(missing_ok=True)
 
+def test_lock_and_complete_trajectory():
+    """Lock and mark complete a trajectory in the SQLFile."""
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    _ = poolfile.lock_trajectory(0)
+    poolfile.mark_trajectory_as_completed(0)
+    Path("./test.db").unlink(missing_ok=True)
+
+def test_lock_and_complete_unknown_trajectory():
+    """Lock and try to mark a trajectory in the SQLFile."""
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    _ = poolfile.lock_trajectory(0)
+    with pytest.raises(ValueError):
+        poolfile.mark_trajectory_as_completed(1)
+    Path("./test.db").unlink(missing_ok=True)
+
 def test_lock_and_release_multiple_trajectory():
     """Lock and release several trajectory in the SQLFile."""
     poolfile = SQLFile("test.db")
@@ -159,15 +186,24 @@ def test_splitting_data_add():
         poolfile.mark_last_iteration_as_completed()
     Path("./test.db").unlink(missing_ok=True)
 
-def test_splitting_data_add_and_query():
+def test_splitting_data_add_and_ongoing():
     """Adding splitting data to the database."""
     poolfile = SQLFile("", in_memory=True)
+    poolfile.mark_last_iteration_as_completed()
     for i in range(10):
         poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
     assert poolfile.get_ongoing() is None
     poolfile.add_splitting_data(10, 1, 0.1, [10-1,1,56], [0], [0.0], [0.0, 0.0])
     assert poolfile.get_ongoing() == [9,1,56]
+
+def test_splitting_data_add_and_query():
+    """Adding splitting data to the database."""
+    poolfile = SQLFile("", in_memory=True)
+    for i in range(1):
+        poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
+        poolfile.mark_last_iteration_as_completed()
+    assert poolfile.get_minmax().all() == np.array([2.0,0.0,0.0]).all()
 
 def test_dump_json():
     """Dump the content of the DB to a json file."""

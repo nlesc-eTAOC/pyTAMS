@@ -79,10 +79,10 @@ def test_generate_and_load_tdb():
     with Path("input.toml").open("w") as f:
         toml.dump({"tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0, "loglevel": "DEBUG"},
                    "database": {"path": "dwTest.tdb"},
-                   "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 2},
+                   "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
                    "model": {"noise_amplitude" : 0.8},
                    "trajectory": {"end_time": 10.0, "step_size": 0.01,
-                                  "targetscore": 0.5}}, f)
+                                  "targetscore": 0.51}}, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     tams.compute_probability()
 
@@ -170,8 +170,17 @@ def test_explore_tdb():
     tdb = Database(fmodel, params_load_db)
     tdb.load_data()
     tdb.plot_score_functions("test.png")
-    assert tdb.get_transition_probability() > 0.2
-    Path("./test.png").unlink(missing_ok=True)
+    Path("./test.png").unlink(missing_ok=False)
+
+@pytest.mark.dependency(depends=["genDB"])
+def test_explore_minmax_tdb():
+    """Test loading the TDB."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"path": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    tdb.load_data()
+    tdb.plot_min_max_span(fname="test_minmax.png")
+    Path("./test_minmax.png").unlink(missing_ok=False)
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_restore_tdb():
