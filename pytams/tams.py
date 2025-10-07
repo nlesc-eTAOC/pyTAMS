@@ -216,7 +216,7 @@ class TAMS:
         if self.out_of_time():
             warn_msg = f"Ran out of time after {k} splitting iterations"
             _logger.warning(warn_msg)
-            return True, np.empty(1)
+            return True, maxes
 
         # Gather max score from all trajectories
         # and check for early convergence
@@ -230,7 +230,7 @@ class TAMS:
         if all_converged:
             inf_msg = f"All trajectories converged after {k} splitting iterations"
             _logger.info(inf_msg)
-            return True, np.empty(1)
+            return True, maxes
 
         # Exit if splitting is stalled
         if (np.amax(maxes) - np.amin(maxes)) < STALL_TOL:
