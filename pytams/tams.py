@@ -212,12 +212,6 @@ class TAMS:
             bool to trigger splitting loop break
             array of maximas accros all trajectories
         """
-        # Check for walltime
-        if self.out_of_time():
-            warn_msg = f"Ran out of time after {k} splitting iterations"
-            _logger.warning(warn_msg)
-            return True, maxes
-
         # Gather max score from all trajectories
         # and check for early convergence
         all_converged = True
@@ -225,6 +219,12 @@ class TAMS:
         for i in range(self._tdb.traj_list_len()):
             maxes[i] = self._tdb.get_traj(i).score_max()
             all_converged = all_converged and self._tdb.get_traj(i).is_converged()
+
+        # Check for walltime
+        if self.out_of_time():
+            warn_msg = f"Ran out of time after {k} splitting iterations"
+            _logger.warning(warn_msg)
+            return True, maxes
 
         # Exit if our work is done
         if all_converged:
