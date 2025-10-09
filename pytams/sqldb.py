@@ -493,7 +493,6 @@ class SQLFile:
         finally:
             session.close()
 
-
     def get_ongoing(self) -> list[int] | None:
         """Get the list of ongoing trajectories if any.
 
