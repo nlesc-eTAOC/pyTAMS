@@ -50,7 +50,6 @@ class Database:
         _restart: a bool to override an existing database
         _parameters: the dictionary of parameters
         _trajs_db: the list of trajectories
-        _ksplit: the current splitting iteration
     """
 
     def __init__(
@@ -105,8 +104,8 @@ class Database:
         self._trajs_db: list[Trajectory] = []
         self._archived_trajs_db: list[Trajectory] = []
 
-        # Splitting data
-        self._ksplit: int = 0
+        # Algorithm data
+        self._init_pool_done = False
 
         # Initialize only metadata at this point
         # so that the object remains lightweight
@@ -226,6 +225,7 @@ class Database:
             mdata.append(new_element("model_t", self._fmodel_t.name()))
             mdata.append(new_element("ntraj", self._ntraj))
             mdata.append(new_element("nsplititer", self._nsplititer))
+            mdata.append(new_element("init_pool_done", self._init_pool_done))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(header_file)
@@ -244,6 +244,7 @@ class Database:
                 datafromxml = xml_to_dict(mdata)
                 self._ntraj = datafromxml["ntraj"]
                 self._nsplititer = datafromxml["nsplititer"]
+                self._init_pool_done = datafromxml["init_pool_done"]
                 self._version = datafromxml["pyTAMS_version"]
                 if self._version != version(__package__):
                     warn_msg = f"Database pyTAMS version {self._version} is different from {version(__package__)}"
@@ -634,7 +635,7 @@ class Database:
 
     def done_with_splitting(self) -> bool:
         """Check if we are done with splitting."""
-        return self._ksplit >= self._nsplititer
+        return self.k_split() >= self._nsplititer
 
     def get_ongoing(self) -> list[int] | None:
         """Return the list of trajectories undergoing branching or None.
@@ -650,11 +651,27 @@ class Database:
         Returns:
             Internal splitting iteration index
         """
-        return self._ksplit
+        return self._pool_db.get_k_split()
 
-    def set_k_split(self, ksplit: int) -> None:
-        """Set splitting iteration counter."""
-        self._ksplit = ksplit
+    def set_init_pool_flag(self, status: bool) -> None:
+        """Change the initial pool status flag.
+
+        Args:
+            status: the new status
+        """
+        self._init_pool_done = status
+
+        if self._save_to_disk:
+            # Update the metadata file
+            self._write_metadata()
+
+    def init_pool_done(self) -> bool:
+        """Change the initial pool status flag.
+
+        Returns:
+            the flag indicating that the initial pool is finished
+        """
+        return self._init_pool_done
 
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
@@ -716,7 +733,7 @@ class Database:
             # Requested # of splitting iter: {self._nsplititer:17} #
             # Number of 'Ended' trajectories: {self.count_ended_traj():16} #
             # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
-            # Current splitting iter counter: {self._ksplit:16} #
+            # Current splitting iter counter: {self.k_split():16} #
             # Current total number of steps: {self.count_computed_steps():17} #
             # Transition probability: {self.get_transition_probability():24} #
             {pretty_line}
@@ -760,10 +777,6 @@ class Database:
 
         self._trajs_db.clear()
         self._archived_trajs_db.clear()
-
-        # Reset splitting data in-memory and update disk data
-        self._ksplit = 0
-        self._ongoing = None
 
         # Reload the data
         self.load_data()
