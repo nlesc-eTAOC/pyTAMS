@@ -1,0 +1,30 @@
+[tams]
+ntrajectories = 5
+nsplititer = 10
+loglevel = "INFO"
+walltime = 40.0
+diagnostics = true
+
+[trajectory]
+end_time = 200.0
+step_size = 0.01
+targetscore = 0.96
+sparse_freq = 5
+
+[model]
+size_M = 40
+size_N = 80
+epsilon = 0.000
+K = 7
+score_method = "EdgeTracker"
+
+[runner]
+type = "dask"
+nworker_init=1
+nworker_iter=1
+
+[dask]
+backend = "local"
+
+[database]
+path = "2DBoussinesq_K7_dt0p01_eps0p005_Hyst_d0_1p0.tdb"
