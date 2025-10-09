@@ -1,51 +1,27 @@
-def dist(state1, state2):
-    return
+import logging
+from pathlib import Path
+import numpy as np
+import toml
+from TAMS_2DBoussinesq import Boussinesq2DModel
+from pytams.trajectory import Trajectory
+from edgetracking_algorithm import edgetracking
 
-def mapper(state):
-    return
+_logger = logging.getLogger(__name__)
 
+if __name__ == "__main__":
+    fmodel = Boussinesq2DModel
+    with open("input_edge.toml", "r") as f:
+        input_params = toml.load(f)
 
-def bisect_to_edge(state1, state2, abstol=1e-3):
-    mapper1 = mapper(state1)
-    mapper2 = mapper(state2)
-
-    if mapper1 == mapper2:
-        raise("Both initial states belong to the same basin of attraction.")
+    traj = Trajectory(0, fmodel, input_params)
     
-    d = dist(state1, state2)
-    while d > abstol:
-        state = (state1 + state2)/2
-        if mapper(state) == mapper(state1):
-            state1 = state
-        elif mapper(state) == mapper(state2):
-            state2 = state
-        else:
-            raise("Bisected state could not be mapped to any of the given attractors.")
-        d = dist(state1, state2)
+    on_state = ()   # ON state array
+    off_state = ()  # OFF state array
 
-    return state1, state2
+    upper, lower, edgetrack = edgetracking(on_state, off_state,
+        eps1 = 1e-3,
+        eps2 = 5e-3,
+        maxiter = 10
+    )
 
-
-def edgetracking(state1, state2, eps1=1e-3, eps2=5e-3, maxiter=100):
-
-    upper, lower, edgetrack = [], [], []
-
-    iter = 0
-    while iter <= maxiter:
-
-        state1, state2 = bisect_to_edge(state1, state2, abstol=eps1)
-
-        d = dist(state1, state2)
-        while d < eps2:
-            state1 = trajectory(state1)
-            state2 = trajectort(state2)
-
-            d = dist(state1, state2)
-
-        upper.append(state1)
-        lower.append(state2)
-        edgetrack.append((state1+state2)/2)
-
-        iter += 1
-    
-    return upper, lower, edgetrack
+    # Save upper, lower, edgetrack as xr.DataArrays
