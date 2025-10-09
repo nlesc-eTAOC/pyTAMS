@@ -214,9 +214,46 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
             return self._score_builder.get_score(self._state_arrays)
 
+        if self._score_method == "EdgeTracker":
+            # A score for the edge tracking algorithm
+            # Compute the score and return -1, 0 or 1:
+            # -1 : if the score get  below 0.1 (close to the ON state)
+            #  1 : if the score gets above 0.9 (close to the OFF state)
+            #  0 : otherwise
+            psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
+            score = (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+            if score > 0.9:
+                return 1.0
+
+            if score < 0.1:
+                return -1.0
+
+            return 0.0
+
+
         err_msg = f"Unknown score method {self._score_method} !"
         _logger.exception(err_msg)
         raise RuntimeError(err_msg)
+
+    def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
+        """Check if the model has converged.
+
+        This default implementation checks if the current score is
+        greater than or equal to the target score. The user can override
+        this method to implement a different convergence criterion.
+
+        Args:
+            step: the current step counter
+            time: the time of the simulation
+            current_score: the current score
+            target_score: the target score
+        """
+        _ = (step, time)
+        if self._score_method == "EdgeTracker":
+            # We converged if the score if no longer zero
+            return abs(current_score) > 0.5
+
+        return current_score >= target_score
 
     def make_noise(self) -> Any:
         """Return a random noise."""
