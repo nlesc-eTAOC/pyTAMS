@@ -472,6 +472,28 @@ class SQLFile:
         finally:
             session.close()
 
+    def get_k_split(self) -> int:
+        """Get the current splitting iteration counter.
+
+        Returns:
+            The ksplit from the last entry in the SplittingIterations table
+        """
+        session = self._Session()
+        try:
+            last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if last_split:
+                return last_split.split_id + last_split.bias
+            return 0
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to query k_split !")
+            raise
+        else:
+            return 0
+        finally:
+            session.close()
+
+
     def get_ongoing(self) -> list[int] | None:
         """Get the list of ongoing trajectories if any.
 
