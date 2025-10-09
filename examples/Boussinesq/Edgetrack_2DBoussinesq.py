@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # Create a temporary folder for the model
     Path("./.edge_tmp/").mkdir()
 
-    upper, lower, edgetrack = edgetracking(fmodel, input_params, on_state, off_state,
+    upper, lower, edgetrack = edgetracking(fmodel, input_params, 0.1, on_state, off_state,
         eps1 = 1e-3,
         eps2 = 5e-3,
         maxiter = 10
