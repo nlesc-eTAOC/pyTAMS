@@ -83,12 +83,15 @@ def bisect_to_edge(
         _logger.exception(err_msg)
         raise RuntimeError(err_msg)
 
+    mapper0 = None
+
     d = dist(state1, state2)
     while d > abstol:
         state = (state1 + state2) / 2
-        if mapper(fmodel, input_params, state, suffix="0") == mapper(fmodel, input_params, state1, suffix="1"):
+        mapper0 = mapper(fmodel, input_params, state, suffix="0")
+        if mapper0 == mapper1:
             state1 = state
-        elif mapper(fmodel, input_params, state, suffix="0") == mapper(fmodel, input_params, state2, suffix="2"):
+        elif mapper0 == mapper2:
             state2 = state
         else:
             err_msg = "Bisected state could not be mapped to any of the given attractors."
