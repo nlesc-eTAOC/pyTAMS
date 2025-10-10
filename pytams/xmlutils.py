@@ -59,6 +59,7 @@ POD_cast_dict: dict[str, Callable[..., Any]] = {
     "str": str,
     "str_": str,
     "dict": ast.literal_eval,
+    "tuple": ast.literal_eval,
     "bool": lambda elem_text: bool(elem_text == "True"),
     "bool_": lambda elem_text: bool(elem_text == "True"),
 }

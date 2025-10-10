@@ -5,6 +5,7 @@ from pathlib import Path
 import netCDF4
 import numpy as np
 import numpy.typing as npt
+from scipy.interpolate import make_splprep
 
 _logger = logging.getLogger(__name__)
 
@@ -31,7 +32,11 @@ def project_in_pod_space(
 
 
 def compute_score_function(
-    field_pod: npt.NDArray[np.number], ref_psi_pod: npt.NDArray[np.number], curv_abs: npt.NDArray[np.number], d0: float
+    field_pod: npt.NDArray[np.number],
+    ref_psi_pod: npt.NDArray[np.number],
+    curv_abs: npt.NDArray[np.number],
+    curvature: npt.NDArray[np.number],
+    d0: float | None = None,
 ) -> float:
     """Computes score function using curvilinear abs.
 
@@ -39,6 +44,7 @@ def compute_score_function(
         field_pod: POD coefficients of field snapshot [nmodes]
         ref_psi_pod: Reference trajectory POD coefficients [ntime, nmodes]
         curv_abs: The curvilinear abcissa along the reference traj [ntime]
+        curvature: The curvature of the reference trajectory
         d0: The exponential decay distance parameter
 
     Returns:
@@ -71,13 +77,19 @@ def compute_score_function(
         distance = np.sum((field_pod[:] - closest_point[:]) ** 2)
         distance = np.sqrt(distance)
         curv = curv_abs[it] + frac * (curv_abs[it_next] - curv_abs[it])
+        curvat = curvature[it] + frac * (curvature[it_next] - curvature[it])
 
     else:
         distance = dist[it]
         curv = curv_abs[it]
+        curvat = 1.0
 
     # Computes penalty coefficient
-    alpha = 1.0 * np.exp(-(distance**2) / d0**2)  # function of dist[it] in the future
+    if d0:
+        alpha = 1.0 * np.exp(-(distance**2) / d0**2)
+    else:
+        inv_curvature = max(0.02, 1.0 / curvat)
+        alpha = 1.0 * np.exp(-(distance**2) / inv_curvature**2)
 
     return curv * alpha
 
@@ -86,7 +98,13 @@ class PODScore:
     """A class to hold POD data required for evaluating the score function."""
 
     def __init__(
-        self, lat_in: int, depth_in: int, pod_data_file: str, score_space_dim: int = 8, score_d0: float = 1.0
+        self,
+        lat_in: int,
+        depth_in: int,
+        pod_data_file: str,
+        score_space_dim: int = 8,
+        score_d0: float | None = None,
+        nsample: int = 200,
     ) -> None:
         """Load the POD data and perform some checks.
 
@@ -96,10 +114,12 @@ class PODScore:
             pod_data_file: the data containing the results of the POD decomposition
             score_space_dim: the dimension of the low-dim space to get the score
             score_d0: the decay distance from the original data traj
+            nsample: the time dimension after resampling the reference trajectory
         """
         # User-defined parameters
         self._n_active_modes = score_space_dim
         self._d0 = score_d0
+        self._nsample = nsample
 
         # Read POD decomposition data
         if not Path(pod_data_file).exists():
@@ -137,18 +157,66 @@ class PODScore:
         self._scaling_stream = nc_pod_in["scaling_stream"][:]
         self._scaling_salt = nc_pod_in["scaling_salt"][:]
 
-        # Compute the abscissa
-        self.compute_curv_abs()
+        # Resample and smooth the reference trajectory
+        self.resample_psi_pod_spline(n_uniform=nsample)
 
-    def compute_curv_abs(self) -> None:
+        # Compute the abscissa
+        self.compute_curvilinear_abs()
+
+        # Compute the trajectory curvature
+        self.compute_curvature()
+
+    def resample_psi_pod_spline(self, n_uniform: int = 200, smoothing: float = 0.01) -> None:
+        """Resample the POD psi using Bsplines.
+
+        Args:
+            n_uniform: the number of points after resampling
+            smoothing: a smoothing factor to remove kinks from the trajectory
+        """
+        # Fit spline
+        tck, _ = make_splprep(self._psi_pod.T, s=smoothing)
+
+        # Uniform parameterization
+        t_new = np.linspace(0, 1, n_uniform)
+        self._psi_pod = tck(t_new).T
+
+    def compute_curvilinear_abs(self) -> None:
         """Compute the curvilinear abscissa for getting the score."""
-        self._curv_abs = np.zeros(self._ntimes)
-        for k in range(1, self._ntimes):
+        self._curv_abs = np.zeros(self._nsample)
+        for k in range(1, self._nsample):
             self._curv_abs[k] = self._curv_abs[k - 1] + np.sqrt(
                 np.sum((self._psi_pod[k, : self._n_active_modes] - self._psi_pod[k - 1, : self._n_active_modes]) ** 2)
             )
 
         self._curv_abs = self._curv_abs / self._curv_abs[-1]
+
+    def compute_curvature(self) -> None:
+        """Compute curvature."""
+        # First derivative wrt s
+        dr_ds = np.gradient(self._psi_pod, self._curv_abs, axis=0)
+
+        # Second derivative wrt s
+        d2r_ds2 = np.gradient(dr_ds, self._curv_abs, axis=0)
+
+        # Curvature: norm of second derivative
+        curvature = np.linalg.norm(d2r_ds2, axis=1)
+
+        # Handle beginning and end of the trajectory
+        lcurv = curvature.shape[0]
+        portion = 10
+        targ_c = 1.0
+
+        loc_c = curvature[int(lcurv / portion)]
+        curvature[: int(lcurv / portion)] = loc_c + (
+            1.0 - self._curv_abs[: int(lcurv / portion)] / self._curv_abs[int(lcurv / portion)]
+        ) * (targ_c - loc_c)
+
+        loc_c = curvature[-int(lcurv / portion)]
+        curvature[lcurv - int(lcurv / portion) : lcurv] = targ_c + (
+            1.0 - self._curv_abs[lcurv - int(lcurv / portion) : lcurv]
+        ) / (1.0 - self._curv_abs[-int(lcurv / portion)]) * (loc_c - targ_c)
+
+        self._curvature = curvature
 
     def get_score(self, model_state: npt.NDArray[np.number]) -> float:
         """Compute the score function of the given model state.
@@ -165,4 +233,6 @@ class PODScore:
 
         field_pod = project_in_pod_space(self._n_active_modes, field, self._phi_pod, self._weights)
 
-        return compute_score_function(field_pod, self._psi_pod[:, : self._n_active_modes], self._curv_abs, self._d0)
+        return compute_score_function(
+            field_pod, self._psi_pod[:, : self._n_active_modes], self._curv_abs, self._curvature, d0=self._d0
+        )

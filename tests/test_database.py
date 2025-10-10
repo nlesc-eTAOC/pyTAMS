@@ -145,6 +145,28 @@ def test_replace_traj_in_tdb():
     tdb.overwrite_traj(1,traj_zero)
     assert tdb.get_traj(1).idstr()[:10] == "traj000000"
 
+@pytest.mark.dependency(depends=["genDB"])
+def test_unknown_traj_access_in_tdb():
+    """Test accessing a trajectory out-of-range."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"path": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    tdb.load_data()
+
+    with pytest.raises(ValueError):
+        _ = tdb.get_traj(10000)
+
+@pytest.mark.dependency(depends=["genDB"])
+def test_unknown_traj_overwrite_in_tdb():
+    """Test overwriting a trajectory out-of-range."""
+    fmodel = DoubleWellModel
+    params_load_db = {"database": {"path": "dwTest.tdb"}}
+    tdb = Database(fmodel, params_load_db)
+    tdb.load_data()
+
+    traj_zero = tdb.get_traj(0)
+    with pytest.raises(ValueError):
+        _ = tdb.overwrite_traj(10000, traj_zero)
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_trajdata_in_tdb():
