@@ -5,7 +5,7 @@ import numpy as np
 import scipy as sp
 import netCDF4
 from Boussinesq_2DAMOC import Boussinesq
-from PODScore import PODScore
+from podscore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
 
