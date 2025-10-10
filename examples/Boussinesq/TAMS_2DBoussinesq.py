@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 import scipy as sp
 from Boussinesq_2DAMOC import Boussinesq
-from podscore import PODScore
+from PODScore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.tams import TAMS
 
