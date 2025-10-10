@@ -240,12 +240,6 @@ class TAMS:
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
-        # Exit if we exceed the max number of iterations
-        if k >= self._tdb.n_split_iter():
-            inf_msg = f"Exiting after {k} splitting iterations"
-            _logger.info(inf_msg)
-            return True, maxes
-
         return False, maxes
 
     def finish_ongoing_splitting(self) -> None:
