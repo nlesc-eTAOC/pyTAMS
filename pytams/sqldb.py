@@ -91,7 +91,7 @@ class SQLFile:
             self._engine = create_engine("sqlite:///:memory:", echo=False)
         else:
             self._engine = (
-                    create_engine(f"sqlite:///file:{file_path}?mode=ro&uri=true", echo=False)
+                create_engine(f"sqlite:///file:{file_path}?mode=ro&uri=true", echo=False)
                 if ro_mode
                 else create_engine(f"sqlite:///{file_path}", echo=False)
             )
