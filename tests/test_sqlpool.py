@@ -17,9 +17,14 @@ def test_createdb_inmemory():
     poolfile = SQLFile("", in_memory=True)
     assert poolfile.name() == ""
 
+def test_createdb_read_only():
+    """Initialize a read only SQLFile."""
+    with pytest.raises(SQLAlchemyError):
+        _ = SQLFile("testRO.db", ro_mode=True)
+
 def test_createdb_fail():
     """Fail to initialize a SQLFile."""
-    with pytest.raises(RuntimeError):
+    with pytest.raises(SQLAlchemyError):
         _ = SQLFile("/test.db")
 
 def test_add_traj_to_db():
@@ -29,6 +34,14 @@ def test_add_traj_to_db():
     assert poolfile.get_trajectory_count() == 1
     Path("./test.db").unlink(missing_ok=True)
 
+def test_add_traj_to_ro_db():
+    """Try add a trajectory to an RO SQLFile."""
+    poolfile = SQLFile("test.db") # First create the DB
+    poolfile = SQLFile("test.db", ro_mode=True) # Open in RO
+    with pytest.raises(SQLAlchemyError):
+        poolfile.add_trajectory("test.xml","")
+    Path("./test.db").unlink(missing_ok=True)
+
 def test_add_traj_and_update_to_db():
     """Add and update a trajectory to SQLFile."""
     poolfile = SQLFile("test.db")
@@ -36,6 +49,13 @@ def test_add_traj_and_update_to_db():
     assert poolfile.fetch_trajectory(0) == "test.xml"
     poolfile.update_trajectory_file(0, "UpdatedTest.xml")
     assert poolfile.fetch_trajectory(0) == "UpdatedTest.xml"
+    Path("./test.db").unlink(missing_ok=True)
+
+def test_try_update_traj_to_db():
+    """Try update missing trajectory to SQLFile."""
+    poolfile = SQLFile("test.db")
+    with pytest.raises(SQLAlchemyError):
+        poolfile.update_trajectory_file(0, "UpdatedTest.xml")
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_to_db_inmemory():
@@ -204,6 +224,18 @@ def test_splitting_data_add_and_query():
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
     assert poolfile.get_minmax().all() == np.array([2.0,0.0,0.0]).all()
+
+def test_splitting_data_query_fail():
+    """Adding splitting data to the database."""
+    poolfile = SQLFile("test.db")
+    for i in range(1):
+        poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
+    assert poolfile.get_k_split() == 1
+
+    poolfile = SQLFile("test.db", ro_mode=True)
+    with pytest.raises(SQLAlchemyError):
+        poolfile.mark_last_iteration_as_completed()
+    Path("./test.db").unlink(missing_ok=True)
 
 def test_dump_json():
     """Dump the content of the DB to a json file."""

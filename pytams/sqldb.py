@@ -84,13 +84,16 @@ class SQLFile:
             ro_mode: a bool to trigger read-only access to the database
         """
         self._file_name = "" if in_memory else file_name
+
+        # URI mode requires absolute path
+        file_path = Path(file_name).absolute().as_posix()
         if in_memory:
             self._engine = create_engine("sqlite:///:memory:", echo=False)
         else:
             self._engine = (
-                create_engine(f"sqlite:///{file_name}?mode=ro&uri=true", echo=False)
+                    create_engine(f"sqlite:///file:{file_path}?mode=ro&uri=true", echo=False)
                 if ro_mode
-                else create_engine(f"sqlite:///{file_name}", echo=False)
+                else create_engine(f"sqlite:///{file_path}", echo=False)
             )
         self._Session = sessionmaker(bind=self._engine)
         self._init_db()
@@ -103,10 +106,10 @@ class SQLFile:
         """
         try:
             Base.metadata.create_all(self._engine)
-        except SQLAlchemyError as e:
+        except SQLAlchemyError:
             err_msg = "Failed to initialize DB schema"
             _logger.exception(err_msg)
-            raise RuntimeError(err_msg) from e
+            raise
 
     def name(self) -> str:
         """Access the DB file name.
@@ -483,7 +486,6 @@ class SQLFile:
             last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
             if last_split:
                 return last_split.split_id + last_split.bias
-            return 0
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to query k_split !")
