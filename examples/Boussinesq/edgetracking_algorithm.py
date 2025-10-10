@@ -9,16 +9,18 @@ from pytams.trajectory import Trajectory
 
 _logger = logging.getLogger(__name__)
 
+def score(state: npt.NDArray[np.number]):
+    """Returns the score value for a given system state."""
+    return np.mean(state[3, 5:15, 32:48], axis=(0, 1))
 
 def dist(state1: npt.NDArray[np.number], state2: npt.NDArray[np.number]) -> float:
     """Computes the distance metric between two states.
 
     (Absolute value of the difference between mean of streamfunction in box)
     """
-    state1_pos = np.mean(state1[3, 5:15, 32:48], axis=(0, 1))
-    state2_pos = np.mean(state2[3, 5:15, 32:48], axis=(0, 1))
+    state1_pos = score(state1)
+    state2_pos = score(state2)
     return abs(state1_pos - state2_pos)
-
 
 def mapper(fmodel: Any, input_params: dict[Any, Any], state: npt.NDArray[np.number], suffix: str = "") -> int:
     """Maps a state to an attractor (ON=-1 or OFF=1)."""
@@ -138,13 +140,14 @@ def edgetracking(
     state1: npt.NDArray[np.number],
     state2: npt.NDArray[np.number],
     eps1: float = 1e-3,
-    eps2: float = 5e-3,
+    eps2: float = 1e-2,
     maxiter: int = 100,
+    accuracy: float = 1e-2,
 ) -> tuple[list[npt.NDArray[np.number]], list[npt.NDArray[np.number]], list[npt.NDArray[np.number]]]:
     """Edge tracking algorithm.
 
     Tracks along the basin boundary starting from initial states 'state1' and 'state2'.
-    Stops after 'maxiter' iterations.
+    Stops after 'maxiter' iterations or 'accuracy' is reached (whichever is sooner).
     Returns a triple of lists of states (upper, lower, edgetrack).
 
     Keyword Args:
@@ -152,11 +155,13 @@ def edgetracking(
     - eps1: bisection distance threshold
     - eps2: divergence distance threshold
     - maxiter: number of iterations until the algorithm stops
+    - accuracy: Convergence criterion for maximum change in edge state variables (between iterations)
     """
-    upper, lower, edgetrack = [], [], []
+    upper, lower, edgetrack = [state1], [state2], [(state1 + state2)/2]
 
     ite_counter = 0
-    while ite_counter <= maxiter:
+    max_change = np.inf
+    while (ite_counter < maxiter) & (max_change > accuracy):
         inf_msg = f" ## -> iteration : {ite_counter}"
         _logger.info(inf_msg)
 
@@ -178,6 +183,10 @@ def edgetracking(
         lower.append(state2)
         edgetrack.append((state1 + state2) / 2)
 
+        max_change = np.amax(np.abs(edgetrack[-2] - edgetrack[-1]))
         ite_counter += 1
 
+        inf_msg = f"Maximum abs. change in edge state from iteration {ite_counter - 1} to {ite_counter}: {max_change}"
+        _logger.info(inf_msg)
+        
     return upper, lower, edgetrack

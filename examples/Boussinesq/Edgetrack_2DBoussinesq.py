@@ -22,14 +22,15 @@ if __name__ == "__main__":
 
     try:
         upper, lower, edgetrack = edgetracking(
-            fmodel, input_params, 0.1, on_state, off_state, eps1=1e-3, eps2=5e-3, maxiter=10
+            fmodel, input_params, 0.1, on_state, off_state,
+            eps1=1e-3, eps2=3e-3, maxiter=100, accuracy=1e-2
         )
 
     except:
         shutil.rmtree("./.edge_tmp")
         raise
 
-    # Save upper, lower, edgetrack as xr.DataArrays
+    # Save edgetrack
     for k in range(len(edgetrack)):
         save_path = Path(f"edge_{k:04}.npy")
         np.save(save_path, edgetrack[k])
