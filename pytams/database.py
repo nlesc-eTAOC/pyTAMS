@@ -596,11 +596,24 @@ class Database:
             from_ids : The list of trajectories used to restart
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
+
+        Raises:
+            ValueError if the provided ksplit is incompatible with the db state
         """
         # Compute the weight of the ensemble at the current iteration
         # Insert 1.0 at the front of the weight array
         weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
         new_weight = weights[-1] * (1.0 - bias / self._ntraj)
+
+        # Check the splitting iteration index. If the incoming split is not
+        # equal to the one in the database, something is wrong.
+        if ksplit != self.k_split():
+            self._pool_db.dump_file_json()
+            err_msg = f"Attempting to add splitting iteration with splitting index {ksplit} \
+                    incompatible with the last entry of the database {self.k_split()} !"
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
+
         self._pool_db.add_splitting_data(ksplit, bias, new_weight, rst_ids, from_ids, min_vals, min_max)
 
     def mark_last_splitting_iteration_as_done(self) -> None:
@@ -646,7 +659,11 @@ class Database:
         return self._pool_db.get_ongoing()
 
     def k_split(self) -> int:
-        """Get the splitting iteration index.
+        """Get the current splitting iteration index.
+
+        The current splitting iteration index is equal to the
+        ksplit + bias (number of branching event in the last iteration)
+        entries of last entry in the SQL db table
 
         Returns:
             Internal splitting iteration index
