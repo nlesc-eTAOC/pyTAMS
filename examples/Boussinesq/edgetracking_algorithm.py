@@ -2,6 +2,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Any
+import netCDF4
 import numpy as np
 import numpy.typing as npt
 from pytams.trajectory import Trajectory
@@ -24,11 +25,16 @@ def mapper(fmodel: Any, input_params: dict[Any, Any], state: npt.NDArray[np.numb
     input_params["trajectory"]["sparse_freq"] = 1000
     traj = Trajectory(0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
 
-    # The model expect a state as a numpy file
-    state_file = "init_state.npy"
-    state_path = Path(traj._workdir / state_file)
-    np.save(state_path, state)
-    traj._fmodel.set_current_state(state_path)
+    # Trigger the model to initialize the netCDF file
+    traj._fmodel.init_storage()
+
+    # The model expect a state as a netCDF file + field name
+    # Add a field to the model storage file
+    dset = netCDF4.Dataset(traj._fmodel._netcdf_state_path, mode="r+")
+    state_data = dset.createVariable("state_init", np.float32, ("var", "lat", "depth"))
+    state_data[:, :, :] = state
+    dset.close()
+    traj._fmodel.set_current_state((traj._fmodel._netcdf_state_path, "state_init"))
 
     # Advance the model to the final time specified in toml file
     traj.advance()
@@ -45,17 +51,38 @@ def forward_finite_time(
     input_params["trajectory"]["sparse_freq"] = 1
     traj = Trajectory(0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
 
-    # The model expect a state as a numpy file
-    state_file = "init_state.npy"
-    state_path = Path(traj._workdir / state_file)
-    np.save(state_path, state)
-    traj._fmodel.set_current_state(state_path)
+    # Trigger the model to initialize the netCDF file
+    traj._fmodel.init_storage()
+
+    # The model expect a state as a netCDF file + field name
+    # Add a field to the model storage file
+    dset = netCDF4.Dataset(traj._fmodel._netcdf_state_path, mode="r+")
+    state_data = dset.createVariable("state_init", np.float32, ("var", "lat", "depth"))
+    state_data[:, :, :] = state
+    dset.close()
+    traj._fmodel.set_current_state((traj._fmodel._netcdf_state_path, "state_init"))
 
     # Advance the model to the final time specified in toml file
     traj.advance(tfinal)
 
     # Get the final state array
-    final_state = np.load(traj.get_last_state())
+    final_state_tuple = traj.get_last_state()
+    state_path = traj._fmodel._db_path.joinpath(final_state_tuple[0])
+
+    if not state_path.exists():
+        err_msg = f"Attempting to read data from {state_path} file: it is missing !"
+        _logger.error(err_msg)
+        raise FileNotFoundError
+
+    dset = netCDF4.Dataset(state_path, mode="r")
+    dset.set_auto_mask(False)
+    try:
+        final_state = dset[final_state_tuple[1]][:, :, :]
+    except:
+        err_msg = f"Unable to locate {final_state_tuple[1]} in netCFD file {final_state_tuple[0]}"
+        _logger.exception(err_msg)
+        raise
+    dset.close()
 
     # Delete temporary workdir
     shutil.rmtree(f"./.edge_tmp/tmp_wkdir{suffix}")
