@@ -199,6 +199,8 @@ class TAMS:
         t_list.sort(key=lambda t: t.id())
         self._tdb.update_traj_list(t_list)
 
+        self._tdb.set_init_pool_flag(True)
+
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
 
@@ -257,7 +259,6 @@ class TAMS:
             with get_runner_type(self._parameters)(
                 self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
             ) as runner:
-                n_branch = len(ongoing_list)
                 for i in ongoing_list:
                     t = self._tdb.get_traj(i)
                     task = [t, self._endDate, self._tdb.path()]
@@ -270,8 +271,6 @@ class TAMS:
                 # Wrap up the iteration by updating its status in the
                 # database and incrementing the iteration counter
                 self._tdb.mark_last_splitting_iteration_as_done()
-                k = self._tdb.k_split() + n_branch
-                self._tdb.set_k_split(k)
 
     def get_restart_at_random(self, min_idx_list: list[int]) -> list[int]:
         """Get a list of trajectory index to restart from at random.
@@ -335,6 +334,9 @@ class TAMS:
                 # Plot trajectory database scores
                 if self._plot_diags:
                     pltfile = f"Score_k{k:05}.png"
+                    if Path(pltfile).exists():
+                        wrn_msg = f"Attempting to overwrite the plot file {pltfile}"
+                        _logger.warning(wrn_msg)
                     self._tdb.plot_score_functions(pltfile)
 
                 # Get the ensemble maximums and check for early exit conditions
@@ -391,7 +393,6 @@ class TAMS:
                 # database and incrementing the iteration counter
                 self._tdb.mark_last_splitting_iteration_as_done()
                 k = k + n_branch
-                self._tdb.set_k_split(k)
 
     def compute_probability(self) -> float:
         """Compute the probability using TAMS.
@@ -402,12 +403,9 @@ class TAMS:
         inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using TAMS"
         _logger.info(inf_msg)
 
-        # Skip pool stage if splitting iterative
-        # process has started
-        skip_pool = self._tdb.k_split() > 0
-
         # Generate the initial trajectory pool
-        if not skip_pool:
+        init_pool_need_work = not self._tdb.init_pool_done()
+        if init_pool_need_work:
             self.generate_trajectory_pool()
 
         # Check for early convergence
@@ -417,7 +415,7 @@ class TAMS:
                 all_converged = False
                 break
 
-        if not skip_pool and all_converged:
+        if init_pool_need_work and all_converged:
             inf_msg = "All trajectories converged prior to splitting !"
             _logger.info(inf_msg)
             return 1.0

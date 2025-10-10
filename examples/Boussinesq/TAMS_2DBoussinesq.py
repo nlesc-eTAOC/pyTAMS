@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import scipy as sp
+import netCDF4
 from Boussinesq_2DAMOC import Boussinesq
 from podscore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
@@ -38,8 +39,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         subparms = params.get("model", {})
         self._M = subparms.get("size_M", 40)  # Horizontals
         self._N = subparms.get("size_N", 80)  # Verticals
-        self._eps = subparms.get("epsilon", 0.05)  # Noise level
-        self._K = subparms.get("K", 4)  # Number of forcing modes = 2*K
+        self._eps = subparms.get("epsilon", 0.01)  # Noise level
+        self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
 
         # Hosing parameters
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
@@ -51,7 +52,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._score_method = subparms.get("score_method", "default")
         if self._score_method == "PODdecomp":
             self._pod_data_file = subparms.get("pod_data_file", None)
-            self._score_pod_d0 = subparms.get("pod_d0", 1.0)
+            self._score_pod_d0 = subparms.get("pod_d0", None)
             self._score_pod_ndim = subparms.get("pod_ndim", 8)
 
         # Initialize random number generator
@@ -83,27 +84,55 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         if not self._workdir.exists():
             self._workdir.mkdir(parents=True)
 
-        # History
-        self._history = []
+        # Define (conceptually) the initial state
+        # the file or data are not created yet
+        self._state = (Path(self._workdir / "states.nc").relative_to(self._db_path).as_posix(), f"state_{0:06}")
 
         # Keep the last state data in-memory
         self._state_arrays = None
 
-        # The state is a path to a npy file on disk
-        self._state = self.init_condition()
+        # Keep around a flag to data init
+        self._need_init_data = True
 
     @classmethod
     def name(cls) -> str:
         """Return the model name."""
         return "2DBoussinesqModel"
 
-    def init_condition(self) -> str:
+    def init_condition(self) -> (str,str):
         """Return the initial conditions."""
-        state_file = "init_state.npy"
-        state_path = Path(self._workdir / state_file)
-        np.save(state_path, self._on)
+        # Set the initial state to the ON state
         self._state_arrays = self._on
-        return state_path.relative_to(self._db_path).as_posix()
+
+        if not self._netcdf_state_path.exists():
+            err_msg = f"Attempting to add data to {self._netcdf_state_path} file: it is missing !"
+            _logger.error(err_msg)
+            raise RuntimeError
+
+        dset = netCDF4.Dataset(self._netcdf_state_path, mode="r+")
+        state_data = dset.createVariable(f"state_{0:06}",np.float32,("var","lat","depth"))
+        state_data[:,:,:] = self._state_arrays
+        dset.close()
+
+        return (self._netcdf_state_path.relative_to(self._db_path).as_posix(), f"state_{0:06}")
+
+    def init_storage(self) -> str:
+        """Initialize a netCDF file to store state data in."""
+        # Set Path and checks
+        state_file = "states.nc"
+        self._netcdf_state_path = Path(self._workdir / state_file)
+
+        if self._netcdf_state_path.exists():
+            #wrn_msg = f"Attempting to create {self._netcdf_state_path} file: already present !"
+            #_logger.warning(wrn_msg)
+            return
+
+        dset = netCDF4.Dataset(self._netcdf_state_path, mode="w",format="NETCDF4_CLASSIC")
+        _ = dset.createDimension("var", 4)
+        _ = dset.createDimension("lat", self._M+1)
+        _ = dset.createDimension("depth", self._N+1)
+        dset.close()
+
 
     def get_current_state(self) -> Any:
         """Access the model state."""
@@ -118,8 +147,29 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             state: the new state
         """
         self._state = state
-        state_path = self._db_path.joinpath(self._state)
-        self._state_arrays = np.load(state_path)
+        state_path = self._db_path.joinpath(state[0])
+
+        if not state_path.exists():
+            err_msg = f"Attempting to read data from {state_path} file: it is missing !"
+            _logger.error(err_msg)
+            raise RuntimeError
+
+        dset = netCDF4.Dataset(state_path, mode="r")
+        dset.set_auto_mask(False)
+        try:
+            self._state_arrays = dset[state[1]][:,:,:]
+        except:
+            err_msg = f"Unable to locate {state[1]} in netCFD file {state_path}"
+            _logger.exception(err_msg)
+            raise
+        dset.close()
+
+        # If the model data were not initialized yet, create the container
+        if self._need_init_data:
+            # Initialize netCDF data container
+            self.init_storage()
+
+            self._need_init_data = False
 
     def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
         """Advance the model.
@@ -136,6 +186,16 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         Return:
             Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
         """
+        if self._need_init_data:
+            # Initialize netCDF data container
+            self.init_storage()
+
+            # The state is a path to a netCDF file on disk
+            # plus a variable name (a tuple)
+            self._state = self.init_condition()
+
+            self._need_init_data = False
+
         # Construct the full 2D stoch. noise from
         # mode amplitude
         full_noise = self._B.Snoise(noise)
@@ -176,10 +236,23 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         # Update the state
         self._state_arrays = np.array([w_new, sal_new, temp_new, psi_new])
         if need_end_state:
-            state_file = f"state_{step + 1:06}.npy"
-            state_path = Path(self._workdir / state_file)
-            np.save(state_path, self._state_arrays)
-            self._state = state_path.relative_to(self._db_path).as_posix()
+            if not self._netcdf_state_path.exists():
+                err_msg = f"Attempting to add data to {self._netcdf_state_path} file: it is missing !"
+                _logger.error(err_msg)
+                raise RuntimeError
+
+            dset = netCDF4.Dataset(self._netcdf_state_path, mode="r+")
+
+            try:
+                state_data = dset.createVariable(f"state_{step + 1:06}",np.float32,("var","lat","depth"))
+            except:
+                err_msg = f"Attempting to overwrite state_{step + 1:06} in netCFD file {self._netcdf_state_path}"
+                _logger.exception(err_msg)
+                raise
+
+            state_data[:,:,:] = self._state_arrays
+            dset.close()
+            self._state = (self._netcdf_state_path.relative_to(self._db_path).as_posix(), f"state_{step + 1:06}")
 
         return dt
 
@@ -196,8 +269,14 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         Return:
             the score
         """
+        # If the model has not been initialized yet
+        # simply return 0.0
+        if self._need_init_data:
+            return 0.0
+
+        # Now if the model is None, something went wrong
         if self._state_arrays is None:
-            err_msg = "Model state is not initialized while calling score"
+            err_msg = "Model state is empty while calling score"
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
