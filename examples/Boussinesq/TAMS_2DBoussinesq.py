@@ -47,6 +47,13 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._hosing_start = subparms.get("hosing_start", 0.0)
         self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
 
+        # Load the ON and OFF conditions
+        # The 140th is with Beta = 0.1
+        n_select = 140
+        self._beta_span = np.load("beta.npy", allow_pickle=True)[n_select]
+        self._on = np.load("stateON_beta_0p1.npy", allow_pickle=True)
+        self._off = np.load("stateOFF_beta_0p1.npy", allow_pickle=True)
+
         # Score function parameters
         self._score_builder = None
         self._score_method = subparms.get("score_method", "default")
@@ -54,6 +61,10 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             self._pod_data_file = subparms.get("pod_data_file", None)
             self._score_pod_d0 = subparms.get("pod_d0", None)
             self._score_pod_ndim = subparms.get("pod_ndim", 8)
+        elif self._score_method == "BaarsJCP":
+            self._edge_state_file = subparms.get("edge_state_file", None)
+
+        self._initialize_score_function()
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
@@ -61,15 +72,6 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             self._rng = np.random.default_rng(int(ioprefix[4:10]))
         else:
             self._rng = np.random.default_rng()
-
-        # Load the ON and OFF conditions
-        # The 140th is with Beta = 0.1
-        n_select = 140
-        self._beta_span = np.load("beta.npy", allow_pickle=True)[n_select]
-        self._on = np.load("stateON_beta_0p1.npy", allow_pickle=True)
-        self._off = np.load("stateOFF_beta_0p1.npy", allow_pickle=True)
-        self._psi_south_on = np.mean(self._on[3, 5:15, 32:48], axis=(0, 1))
-        self._psi_south_off = np.mean(self._off[3, 5:15, 32:48], axis=(0, 1))
 
         # Initialize the Boussinesq model
         dt = params.get("trajectory", {}).get("step_size", 0.001)
@@ -256,6 +258,17 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         return dt
 
+    def _initialize_score_function(self) -> None:
+        """Initialize the data for the score function."""
+        if self._score_method == "default":
+            self._psi_south_on = np.mean(self._on[3, 5:15, 32:48], axis=(0, 1))
+            self._psi_south_off = np.mean(self._off[3, 5:15, 32:48], axis=(0, 1))
+        elif self._score_method == "BaarsJCP":
+            edge_state = np.load(self._edge_state_file, allow_pickle=True)
+            self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3,:,:] - self._off[1:3,:,:])**2))
+            self._score_eta = np.sqrt(np.sum((edge_state[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
+
+
     def score(self) -> float:
         """Compute the score function.
 
@@ -292,6 +305,12 @@ class Boussinesq2DModel(ForwardModelBaseClass):
                 )
 
             return self._score_builder.get_score(self._state_arrays)
+
+        if self._score_method == "BaarsJCP":
+            da = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
+            db = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._off[1:3,:,:])**2)) / self._on_to_off_l2norm
+
+            return self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2)
 
         err_msg = f"Unknown score method {self._score_method} !"
         _logger.exception(err_msg)

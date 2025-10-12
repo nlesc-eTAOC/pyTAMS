@@ -1,0 +1,31 @@
+[tams]
+ntrajectories = 50
+nsplititer = 1000
+loglevel = "INFO"
+walltime = 40000.0
+diagnostics = true
+
+[trajectory]
+end_time = 20.0
+step_size = 0.01
+targetscore = 0.96
+sparse_freq = 5
+
+[model]
+size_M = 40
+size_N = 80
+epsilon = 0.005
+K = 7
+score_method = "BaarsJCP"
+edge_state_file = "stateEDGE_beta_0p1.npy"
+
+[runner]
+type = "dask"
+nworker_init=5
+nworker_iter=2
+
+[dask]
+backend = "local"
+
+[database]
+path = "2DBoussinesq_K7_Baars.tdb"
