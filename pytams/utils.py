@@ -110,14 +110,10 @@ def get_module_local_import(module_name: str) -> list[str]:
         raise ValueError(err_msg)
 
     # Check access to the module file
-    if not sys.modules[module_name].__file__:
-        err_msg = f"Attempting to locate sub import file from {module_name}, but file is missing"
-        _logger.exception(err_msg)
-        raise ValueError(err_msg)
-
-    mfile = Path(str(sys.modules[module_name].__file__))
-    if not mfile.exists():
-        err_msg = f"Module {module_name} is present but its file is missing ! Odd ..."
+    if hasattr(sys.modules[module_name], "__file__") and Path(str(sys.modules[module_name].__file__)).exists():
+        mfile = Path(str(sys.modules[module_name].__file__))
+    else:
+        err_msg = f"Attempting to locate sub import file from {module_name}, but file is missing or undefined"
         _logger.exception(err_msg)
         raise FileNotFoundError(err_msg)
 
