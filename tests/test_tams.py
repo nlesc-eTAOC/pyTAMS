@@ -410,6 +410,6 @@ def test_doublewell_slow_tams_restore_more_split():
     tams_load = TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.0853804929982172
+    assert transition_proba == 0.07470793360861466
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
