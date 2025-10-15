@@ -1,9 +1,14 @@
 """A set of utility functions for TAMS."""
 
+import ast
 import logging
+import sys
+from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
+
+_logger = logging.getLogger(__name__)
 
 
 def setup_logger(params: dict[Any, Any]) -> None:
@@ -83,3 +88,55 @@ def moving_avg(arr_in: npt.NDArray[Any], window_l: int) -> npt.NDArray[Any]:
             lbnd = len(arr_in) - window_l - 1
         arr_out[i] = np.mean(arr_in[lbnd:hbnd])
     return arr_out
+
+
+def get_module_local_import(module_name: str) -> list[str]:
+    """Helper function getting local imported mods list.
+
+    When pickling the forward model code, the model itself can import from
+    several other local files. We also want to pickle those by value so let's get
+    the list.
+
+    Args:
+        module_name: a module name we want the locally imported modules
+
+    Returns:
+        A list of local modules names imported within the provide module
+    """
+    # Check that module exists
+    if module_name not in sys.modules:
+        err_msg = f"Attempting to extract sub import from {module_name} missing from currently loaded modules"
+        _logger.exception(err_msg)
+        raise ValueError(err_msg)
+
+    # Check access to the module file
+    if not sys.modules[module_name].__file__:
+        err_msg = f"Attempting to locate sub import file from {module_name}, but file is missing"
+        _logger.exception(err_msg)
+        raise ValueError(err_msg)
+
+    mfile = Path(str(sys.modules[module_name].__file__))
+    if not mfile.exists():
+        err_msg = f"Module {module_name} is present but its file is missing ! Odd ..."
+        _logger.exception(err_msg)
+        raise FileNotFoundError(err_msg)
+
+    # Parse the module file
+    # for imports
+    with mfile.open("r") as f:
+        file_raw = f.read()
+
+    file_ast = ast.parse(file_raw)
+    all_modules = []
+
+    for node in ast.walk(file_ast):
+        # Append "import X" type
+        if isinstance(node, ast.Import):
+            all_modules.extend([x.name for x in node.names])
+        # Append "from X import Y" type
+        if isinstance(node, ast.ImportFrom) and node.module:
+            all_modules.append(node.module)
+
+    # Return only those whose file is in the current folder
+    return [m for m in all_modules if (sys.modules[m].__file__ and
+                                       Path(str(sys.modules[m].__file__)).parent == Path().absolute())]
