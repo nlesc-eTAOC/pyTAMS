@@ -34,11 +34,11 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
     """
 
     @final
-    def __init__(self, params: dict[Any, Any], ioprefix: str | None = None, workdir: Path | None = None):
+    def __init__(self, a_id: int, params: dict[Any, Any], workdir: Path | None = None):
         """Base class __init__ method.
 
         The ABC init method calls the concrete class init method
-        while performing some common initializations. Additionally,
+        while performing some common initializations. Additionally
         this method create/append to a model dictionary to the
         parameter dictionary to ensure the 'deterministic' parameter
         is always available in the model dictionary.
@@ -47,11 +47,12 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         is made to ensure the proper type is generated.
 
         Args:
+            a_id: an int providing a unique id to the model instance
             params: a dict containing parameters
-            ioprefix: an optional string defining run folder
             workdir: an optional path to the working directory
         """
         # Initialize common tooling
+        self._id = a_id
         self._noise: Any = None
         self._step: int = 0
         self._time: float = 0.0
@@ -65,7 +66,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
             params["model"] = {"deterministic": params.get("tams", {}).get("deterministic", False)}
 
         # Call the concrete class init method
-        self._init_model(params, ioprefix)
+        self._init_model(a_id, params)
 
         # Generate the first noise increment
         # to at least get the proper type.
@@ -125,12 +126,12 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._workdir = workdir
 
     @abstractmethod
-    def _init_model(self, params: dict[Any, Any] | None = None, ioprefix: str | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any] | None = None) -> None:
         """Concrete class specific initialization.
 
         Args:
+            m_id: the model instance unique identifier
             params: an optional dict containing parameters
-            ioprefix: an optional string defining run folder
         """
 
     @abstractmethod
