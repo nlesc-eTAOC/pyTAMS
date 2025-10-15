@@ -186,7 +186,7 @@ class Trajectory:
         if frozen or fmodel_t is None:
             self._fmodel = None
         else:
-            self._fmodel = fmodel_t(parameters, self.idstr(), self._workdir)
+            self._fmodel = fmodel_t(self._tid * 10000 + self.get_nbranching(), parameters, self._workdir)
 
     def set_checkfile(self, path: Path) -> None:
         """Setter of the trajectory checkFile.

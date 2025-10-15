@@ -33,7 +33,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         _B: Boussinesq model
     """
 
-    def _init_model(self, params: dict | None = None, ioprefix: str | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict | None = None) -> None:
         """Initialize the model."""
         # Parse parameters
         subparms = params.get("model", {})
@@ -59,7 +59,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
         if subparms["deterministic"]:
-            self._rng = np.random.default_rng(int(ioprefix[4:10]))
+            self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 

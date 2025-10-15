@@ -68,7 +68,7 @@ def pool_worker(traj: Trajectory, end_date: datetime.date, db_path: str | None =
         if db_path:
             db = Database.load(Path(db_path))
             # Try to lock the trajectory in the DB
-            get_to_work = db.lock_trajectory(traj.id())
+            get_to_work = db.lock_trajectory(traj.id(), allow_completed_lock=True)
             if not get_to_work:
                 return traj
 
