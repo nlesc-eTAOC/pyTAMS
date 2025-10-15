@@ -263,7 +263,15 @@ class TAMS:
                     t = self._tdb.get_traj(i)
                     task = [t, self._endDate, self._tdb.path()]
                     runner.make_promise(task)
-                finished_traj = runner.execute_promises()
+
+                try:
+                    finished_traj = runner.execute_promises()
+                except Exception:
+                    err_msg = f"Failed to finish branching {len(ongoing_list)} trajectories"
+                    _logger.exception(err_msg)
+                    raise
+
+                _logger.info("Done with unfinished")
 
                 for t in finished_traj:
                     self._tdb.overwrite_traj(t.id(), t)
