@@ -33,7 +33,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         _B: Boussinesq model
     """
 
-    def _init_model(self, params: dict | None = None, ioprefix: str | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict | None = None) -> None:
         """Initialize the model."""
         # Parse parameters
         subparms = params.get("model", {})
@@ -41,6 +41,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._N = subparms.get("size_N", 80)  # Verticals
         self._eps = subparms.get("epsilon", 0.01)  # Noise level
         self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
+        self._delta_stoch = subparms.get("delta_stoch", 0.05) # Noise depth
 
         # Hosing parameters
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
@@ -58,7 +59,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
         if subparms["deterministic"]:
-            self._rng = np.random.default_rng(int(ioprefix[4:10]))
+            self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 
@@ -74,8 +75,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         # Initialize the Boussinesq model
         dt = params.get("trajectory", {}).get("step_size", 0.001)
         self._B = Boussinesq(self._M, self._N, dt)
-        self._B.make_FS(self._beta_span)
-        self._B.init_Snoise(self._B.zz, self._K, self._eps)
+        self._B.make_salinity_forcing(self._beta_span)
+        self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
         self._B.init_hosing(self._hosing_start, self._hosing_start_val, self._hosing_rate)
 
         # Initial conditions from ON state
@@ -198,7 +199,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         # Construct the full 2D stoch. noise from
         # mode amplitude
-        full_noise = self._B.Snoise(noise)
+        full_noise = self._B.salt_stoch_noise(noise)
 
         # Load individual component from the state
         if self._state_arrays is None:
@@ -225,7 +226,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         sal_new *= sal_0 / np.mean(sal_new)
 
         # Vorticity update
-        src_w = self._B.Pr * self._B.Ra * self._B.Dx @ (temp_new - sal_new) @ self._B.S_corr
+        src_w = self._B._pr * self._B._ra * self._B.Dx @ (temp_new - sal_new) @ self._B.S_corr
         adv_w = fx_psi * (w_old @ self._B.FzT) - psi_fz * (self._B.Fx @ w_old)
         rhs_w = w_old + dt * (adv_w + src_w)
         w_new = sp.linalg.solve_sylvester(self._B.Aw, self._B.Bw, rhs_w)

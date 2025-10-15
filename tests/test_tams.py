@@ -219,7 +219,7 @@ def test_doublewell_deterministic_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.4519515692885939
+    assert transition_proba == 0.5471567691116268
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -269,7 +269,7 @@ def test_doublewell_2_workers_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.6127097197058989
+    assert transition_proba == 0.692533980184018
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -279,7 +279,7 @@ def test_doublewell_2_workers_load_db():
     tdb = Database.load(Path("dwTest.tdb"))
     tdb.load_data(True)
     assert tdb.traj_list_len() == 50
-    assert tdb.archived_traj_list_len() == 22
+    assert tdb.archived_traj_list_len() == 16
 
 
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
@@ -406,10 +406,10 @@ def test_doublewell_slow_tams_restore_more_split():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.03544177711743238
+    assert transition_proba == 0.08937321391676148
     tams_load = TAMS(fmodel_t=fmodel, a_args=[])
     tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.04244059819921117
+    assert transition_proba == 0.07470793360861466
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
