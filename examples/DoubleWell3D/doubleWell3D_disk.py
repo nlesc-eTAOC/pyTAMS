@@ -29,13 +29,13 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
     """
 
     def _init_model(self,
-                    params: dict,
-                    ioprefix: str = None):
+                    m_id: int,
+                    params: dict) -> None:
         """Initialize the Double Well Model Disk.
 
         Args:
+            m_id: an int acting as a unique identifier for the model instance
             params: a dict containing parameters
-            ioprefix: an optional string defining run folder
         """
         if not params.get("database",{}).get("path"):
             raise RuntimeError("Database path needed for disk-based model.")
@@ -49,8 +49,7 @@ class DoubleWellModel3DDisk(ForwardModelBaseClass):
         self._slow_factor = params.get("model",{}).get("slow_factor",0.00000001)
         self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
         if params["model"]["deterministic"]:
-            seed = int(ioprefix[4:10])
-            self._rng = np.random.default_rng(seed)
+            self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 
