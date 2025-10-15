@@ -138,5 +138,8 @@ def get_module_local_import(module_name: str) -> list[str]:
             all_modules.append(node.module)
 
     # Return only those whose file is in the current folder
-    return [m for m in all_modules if (sys.modules[m].__file__ and
-                                       Path(str(sys.modules[m].__file__)).parent == Path().absolute())]
+    return [
+        m
+        for m in all_modules
+        if (hasattr(sys.modules[m], "__file__") and Path(str(sys.modules[m].__file__)).parent == Path().absolute())
+    ]
