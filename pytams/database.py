@@ -19,6 +19,7 @@ import toml
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
 from pytams.trajectory import form_trajectory_id
+from pytams.utils import get_module_local_import
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -206,8 +207,14 @@ class Database:
             self._write_metadata()
 
             # Serialize the model
+            # We need to pickle by value the local modules
+            # which might not be available if we move the database
+            # Note: only one import depth is handled at this point, we might
+            #       want to make this recursive in the future
             model_file = Path(self._abs_path / "fmodel.pkl")
             cloudpickle.register_pickle_by_value(sys.modules[self._fmodel_t.__module__])
+            for mods in get_module_local_import(self._fmodel_t.__module__):
+                cloudpickle.register_pickle_by_value(sys.modules[mods])
             with model_file.open("wb") as f:
                 cloudpickle.dump(self._fmodel_t, f)
 
