@@ -1,0 +1,19 @@
+[tams]
+ntrajectories = 5
+nsplititer = 10
+loglevel = "INFO"
+walltime = 4000.0
+diagnostics = true
+
+[trajectory]
+end_time = 200.0
+step_size = 0.01
+targetscore = 0.96
+sparse_freq = 5
+
+[model]
+size_M = 40
+size_N = 80
+epsilon = 0.000
+K = 7
+score_method = "EdgeTracker"
