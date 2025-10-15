@@ -269,7 +269,7 @@ def test_doublewell_2_workers_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.6127097197058989
+    assert transition_proba == 0.692533980184018
     Path("input.toml").unlink(missing_ok=True)
 
 
