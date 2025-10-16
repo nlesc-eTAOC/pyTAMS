@@ -66,7 +66,7 @@ def pool_worker(traj: Trajectory, end_date: datetime.date, db_path: str | None =
     if wall_time > 0.0 and not traj.has_ended():
         db = None
         if db_path:
-            db = Database.load(Path(db_path))
+            db = Database.load(Path(db_path), read_only=False)
             # Try to lock the trajectory in the DB
             get_to_work = db.lock_trajectory(traj.id(), allow_completed_lock=True)
             if not get_to_work:
@@ -107,7 +107,7 @@ def ms_worker(
         if db_path:
             # Fetch a handle to the trajectory we are branching in the database pool
             # Try to lock the trajectory in the DB
-            db = Database.load(Path(db_path))
+            db = Database.load(Path(db_path), read_only=False)
             get_to_work = db.lock_trajectory(rst_traj.id(), True)
             if not get_to_work:
                 err_msg = f"Unable to lock trajectory {rst_traj.id()} for branching"

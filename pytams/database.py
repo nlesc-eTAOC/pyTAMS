@@ -59,6 +59,7 @@ class Database:
         params: dict[Any, Any],
         ntraj: int = -1,
         nsplititer: int = -1,
+        read_only: bool = True,
     ) -> None:
         """Initialize a TAMS database.
 
@@ -74,7 +75,11 @@ class Database:
             params: a dictionary of parameters
             ntraj: [OPT] number of traj to hold
             nsplititer: [OPT] number of splitting iteration to hold
+            read_only: [OPT] boolean setting database access mode
         """
+        # Access mode
+        self._read_only = read_only
+
         # For posterity
         self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
         self._version = version(__package__)
@@ -115,11 +120,12 @@ class Database:
         self._init_metadata()
 
     @classmethod
-    def load(cls, a_path: Path) -> Database:
+    def load(cls, a_path: Path, read_only: bool = True) -> Database:
         """Instanciate a TAMS database from disk.
 
         Args:
             a_path: the path to the database
+            read_only: the database access mode
 
         Return:
             a TAMS database object
@@ -140,11 +146,13 @@ class Database:
             warn_msg = f"Database {db_params['database']['path']} has been moved to {a_path} !"
             _logger.warning(warn_msg)
             db_params["database"]["path"] = str(a_path)
+
+        # Load picked forward model
         model_file = Path(a_path / "fmodel.pkl")
         with model_file.open("rb") as f:
             model = cloudpickle.load(f)
 
-        return cls(model, db_params)
+        return cls(model, db_params, read_only=read_only)
 
     def _init_metadata(self) -> None:
         """Initialize the database.
@@ -158,7 +166,9 @@ class Database:
             db_exists = self._abs_path.exists()
 
             # If no previous db or we force restart
+            # Overwritte the default read-only mode
             if not db_exists or self._restart:
+                self._read_only = False
                 self._setup_tree()
 
             # Load the database
@@ -171,10 +181,15 @@ class Database:
                 self._parameters.update(read_in_params)
 
             # Initialize the SQL pool file
-            self._pool_db = SQLFile(self.pool_file())
+            if self._read_only:
+                self._pool_db = SQLFile(self.pool_file(), ro_mode=True)
+            else:
+                self._pool_db = SQLFile(self.pool_file())
 
         # Initialize in-memory database metadata
+        # Overwritte default read-only mode
         else:
+            self._read_only = False
             self._pool_db = SQLFile("", in_memory=True)
 
         # Check minimal parameters
@@ -310,6 +325,8 @@ class Database:
         # Counter for number of trajectory loaded
         n_traj_restored = 0
 
+        load_frozen = self._read_only
+
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
             traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
@@ -322,6 +339,7 @@ class Database:
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
+                        frozen=load_frozen,
                     ),
                     False,
                 )
@@ -334,8 +352,9 @@ class Database:
                 )
                 self.append_traj(t, False)
 
-        inf_msg = f"{n_traj_restored} active trajectories loaded"
-        _logger.info(inf_msg)
+        if n_traj_restored > 0:
+            inf_msg = f"{n_traj_restored} active trajectories loaded"
+            _logger.info(inf_msg)
 
         # Load the archived trajectories if requested.
         # Those are loaded as 'frozen', i.e. the internal model

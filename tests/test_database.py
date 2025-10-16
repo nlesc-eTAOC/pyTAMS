@@ -209,7 +209,7 @@ def test_restore_tdb():
     """Test loading and restoring the TDB."""
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
-    tdb = Database(fmodel, params_load_db)
+    tdb = Database(fmodel, params_load_db, read_only=False)
     tdb.load_data()
     tdb.reset_pool_stage()
     assert tdb.k_split() == 0
