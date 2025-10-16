@@ -31,7 +31,7 @@ function is reached near the end of the time horizon $`T_a`$ and the remaining t
 allow the model to complete its transition.
 To account for this, set `score_time_dep = true` in the input TOML file and provide a typical
 time scale $`\tau_t`$ of the system using `score_time_scale = <some_value>`. The static score function
-desctibed above is then multiplied by a time factor $`t_f`$:
+described above is then multiplied by a time factor $`t_f`$:
 
 ```math
 t_f = 1.0 - \exp(t - T_a) / \tau_t)
@@ -45,4 +45,4 @@ The hosing parameters are as follows:
  - `hosing_start` : the time $`t_0`$ when the rate of change starts to apply
  - `hosing_start_val` : the value of the hosing parameter at $`t_0`$ or below
 
- Note that the hosing parameter value remains at its `hosing_start_val` value at model time below 0.0.
+ Note that the hosing parameter value remains at its `hosing_start_val` value at model time below $`t_0`$.
