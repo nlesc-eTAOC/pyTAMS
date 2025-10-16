@@ -15,19 +15,6 @@ sparse_freq = 10
 size_M = 40
 size_N = 80
 epsilon = 0.0
-K = 4
 hosing_rate = 0.01
 #hosing_start_val = 0.3995
 hosing_start = 1.0
-
-[runner]
-type = "dask"
-nworker_init=5
-nworker_iter=2
-
-[dask]
-backend = "local"
-
-[database]
-path = "2DBoussinesq.tdb"
-archive_discarded = true
