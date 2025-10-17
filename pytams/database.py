@@ -136,13 +136,11 @@ class Database:
             raise FileNotFoundError(err_msg)
 
         # Load necessary elements to call the constructor
-        # Ensure that the database is not restarted at this step
         db_params = toml.load(a_path / "input_params.toml")
-        db_params["database"].update({"restart": False})
 
         # If the a_path differs from the one stored in the
         # database (the DB has been moved), update the path
-        if str(a_path) != db_params["database"]["path"]:
+        if a_path.absolute().as_posix() != Path(db_params["database"]["path"]).absolute().as_posix():
             warn_msg = f"Database {db_params['database']['path']} has been moved to {a_path} !"
             _logger.warning(warn_msg)
             db_params["database"]["path"] = str(a_path)
@@ -168,17 +166,24 @@ class Database:
             # If no previous db or we force restart
             # Overwritte the default read-only mode
             if not db_exists or self._restart:
+                # The 'restart' is no longer useful, drop it
+                self._parameters["database"].pop("restart", None)
+                self._restart = False
                 self._read_only = False
                 self._setup_tree()
 
             # Load the database
             else:
                 self._load_metadata()
+
                 # Parameters stored in the DB override
                 # newly provided parameters.
                 with Path(self._abs_path / "input_params.toml").open("r") as f:
-                    read_in_params = toml.load(f)
-                self._parameters.update(read_in_params)
+                    stored_params = toml.load(f)
+
+                # Update input parameters that can be updated
+                if self._parameters != stored_params:
+                    self._update_run_params(stored_params)
 
             # Initialize the SQL pool file
             if self._read_only:
@@ -197,6 +202,52 @@ class Database:
             err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
+
+    def _update_run_params(self, old_params: dict[Any, Any]) -> None:
+        """Update database params and metadata.
+
+        Upon loading a database from disk, compare the dictionary of
+        parameters stored in the database against the newly inputed one
+        and update the database metadata when possible.
+        Note that only the [tams] sub-dictionary can be updated updated at this point
+        and the database params overwrite the other subdicts.
+
+        Args:
+            old_params: a dictionary of input parameter loaded from disk
+        """
+        # For testing purposes the params might be lacking
+        # a "tams" subdir
+        if "tams" not in old_params or "tams" not in self._parameters:
+            # Simply overwrite the provided input params
+            self._parameters.update(old_params)
+            return
+
+        # Update the number of splitting iteration
+        self._nsplititer = self._parameters.get("tams", {}).get("nsplititer")
+        old_params["tams"].update({"nsplititer": self._nsplititer})
+
+        # If the initial pool of trajectory is not done
+        # or we stopped after the pool stage
+        if not self._init_pool_done or (self._init_pool_done and old_params["tams"].get("pool_only", False)):
+            self._ntraj = self._parameters.get("tams", {}).get("ntrajectories")
+            old_params["tams"].update({"ntrajectories": self._ntraj})
+            self._init_pool_done = False
+
+        # Update other parameters in the [tams] subdir,
+        # even if they do not change the database behavior
+        for key, value in self._parameters["tams"].items():
+            if key not in ["nsplititer", "ntrajectories"]:
+                old_params["tams"][key] = value
+
+        # Updated disk parameters overwrite the input params
+        self._parameters.update(old_params)
+
+        # Update the content of the database
+        # if permitted
+        if not self._read_only:
+            self._write_metadata()
+            with Path(self._abs_path / "input_params.toml").open("w") as f:
+                toml.dump(self._parameters, f)
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
