@@ -335,7 +335,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             da = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
             db = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._off[1:3,:,:])**2)) / self._on_to_off_l2norm
 
-            return self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2) * time_factor
+            return (self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2)) * time_factor
 
         err_msg = f"Unknown score method {self._score_method} !"
         _logger.exception(err_msg)
