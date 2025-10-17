@@ -101,7 +101,7 @@ class TAMS:
         self._init_pool_only = tams_subdict.get("pool_only", False)
 
         # Database
-        self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter)
+        self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
         self._tdb.load_data()
 
         # Time management uses UTC date
@@ -263,7 +263,15 @@ class TAMS:
                     t = self._tdb.get_traj(i)
                     task = [t, self._endDate, self._tdb.path()]
                     runner.make_promise(task)
-                finished_traj = runner.execute_promises()
+
+                try:
+                    finished_traj = runner.execute_promises()
+                except Exception:
+                    err_msg = f"Failed to finish branching {len(ongoing_list)} trajectories"
+                    _logger.exception(err_msg)
+                    raise
+
+                _logger.info("Done with unfinished")
 
                 for t in finished_traj:
                     self._tdb.overwrite_traj(t.id(), t)

@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 from typing import Any
+import netCDF4
 import numpy as np
 import scipy as sp
-import netCDF4
 from Boussinesq_2DAMOC import Boussinesq
 from podscore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
@@ -33,7 +33,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         _B: Boussinesq model
     """
 
-    def _init_model(self, params: dict | None = None, ioprefix: str | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict | None = None) -> None:
         """Initialize the model."""
         # Parse parameters
         subparms = params.get("model", {})
@@ -41,6 +41,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._N = subparms.get("size_N", 80)  # Verticals
         self._eps = subparms.get("epsilon", 0.01)  # Noise level
         self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
+        self._delta_stoch = subparms.get("delta_stoch", 0.05)  # Noise depth
 
         # Hosing parameters
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
@@ -57,6 +58,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         # Score function parameters
         self._score_builder = None
         self._score_method = subparms.get("score_method", "default")
+        self._time_dep_score = subparms.get("score_time_dep", False)
         if self._score_method == "PODdecomp":
             self._pod_data_file = subparms.get("pod_data_file", None)
             self._score_pod_d0 = subparms.get("pod_d0", None)
@@ -64,20 +66,24 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         elif self._score_method == "BaarsJCP":
             self._edge_state_file = subparms.get("edge_state_file", None)
 
+        if self._time_dep_score:
+            self._score_tfinal = params.get("trajectory", {}).get("end_time", 0.001)
+            self._score_tscale = subparms.get("score_time_scale", 1.0)
+
         self._initialize_score_function()
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
         if subparms["deterministic"]:
-            self._rng = np.random.default_rng(int(ioprefix[4:10]))
+            self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 
         # Initialize the Boussinesq model
         dt = params.get("trajectory", {}).get("step_size", 0.001)
         self._B = Boussinesq(self._M, self._N, dt)
-        self._B.make_FS(self._beta_span)
-        self._B.init_Snoise(self._B.zz, self._K, self._eps)
+        self._B.make_salinity_forcing(self._beta_span)
+        self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
         self._B.init_hosing(self._hosing_start, self._hosing_start_val, self._hosing_rate)
 
         # Initial conditions from ON state
@@ -101,7 +107,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         """Return the model name."""
         return "2DBoussinesqModel"
 
-    def init_condition(self) -> (str,str):
+    def init_condition(self) -> (str, str):
         """Return the initial conditions."""
         # Set the initial state to the ON state
         self._state_arrays = self._on
@@ -112,8 +118,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             raise RuntimeError
 
         dset = netCDF4.Dataset(self._netcdf_state_path, mode="r+")
-        state_data = dset.createVariable(f"state_{0:06}",np.float32,("var","lat","depth"))
-        state_data[:,:,:] = self._state_arrays
+        state_data = dset.createVariable(f"state_{0:06}", np.float32, ("var", "lat", "depth"))
+        state_data[:, :, :] = self._state_arrays
         dset.close()
 
         return (self._netcdf_state_path.relative_to(self._db_path).as_posix(), f"state_{0:06}")
@@ -125,16 +131,13 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._netcdf_state_path = Path(self._workdir / state_file)
 
         if self._netcdf_state_path.exists():
-            #wrn_msg = f"Attempting to create {self._netcdf_state_path} file: already present !"
-            #_logger.warning(wrn_msg)
             return
 
-        dset = netCDF4.Dataset(self._netcdf_state_path, mode="w",format="NETCDF4_CLASSIC")
+        dset = netCDF4.Dataset(self._netcdf_state_path, mode="w", format="NETCDF4_CLASSIC")
         _ = dset.createDimension("var", 4)
-        _ = dset.createDimension("lat", self._M+1)
-        _ = dset.createDimension("depth", self._N+1)
+        _ = dset.createDimension("lat", self._M + 1)
+        _ = dset.createDimension("depth", self._N + 1)
         dset.close()
-
 
     def get_current_state(self) -> Any:
         """Access the model state."""
@@ -159,7 +162,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         dset = netCDF4.Dataset(state_path, mode="r")
         dset.set_auto_mask(False)
         try:
-            self._state_arrays = dset[state[1]][:,:,:]
+            self._state_arrays = dset[state[1]][:, :, :]
         except:
             err_msg = f"Unable to locate {state[1]} in netCFD file {state_path}"
             _logger.exception(err_msg)
@@ -200,7 +203,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         # Construct the full 2D stoch. noise from
         # mode amplitude
-        full_noise = self._B.Snoise(noise)
+        full_noise = self._B.salt_stoch_noise(noise)
 
         # Load individual component from the state
         if self._state_arrays is None:
@@ -227,7 +230,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         sal_new *= sal_0 / np.mean(sal_new)
 
         # Vorticity update
-        src_w = self._B.Pr * self._B.Ra * self._B.Dx @ (temp_new - sal_new) @ self._B.S_corr
+        src_w = self._B._pr * self._B._ra * self._B.Dx @ (temp_new - sal_new) @ self._B.S_corr
         adv_w = fx_psi * (w_old @ self._B.FzT) - psi_fz * (self._B.Fx @ w_old)
         rhs_w = w_old + dt * (adv_w + src_w)
         w_new = sp.linalg.solve_sylvester(self._B.Aw, self._B.Bw, rhs_w)
@@ -246,13 +249,13 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             dset = netCDF4.Dataset(self._netcdf_state_path, mode="r+")
 
             try:
-                state_data = dset.createVariable(f"state_{step + 1:06}",np.float32,("var","lat","depth"))
+                state_data = dset.createVariable(f"state_{step + 1:06}", np.float32, ("var", "lat", "depth"))
             except:
                 err_msg = f"Attempting to overwrite state_{step + 1:06} in netCFD file {self._netcdf_state_path}"
                 _logger.exception(err_msg)
                 raise
 
-            state_data[:,:,:] = self._state_arrays
+            state_data[:, :, :] = self._state_arrays
             dset.close()
             self._state = (self._netcdf_state_path.relative_to(self._db_path).as_posix(), f"state_{step + 1:06}")
 
@@ -293,10 +296,16 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
+        # Compute an exponential decay near the time horizon of the
+        # simulation final time
+        time_factor = 1.0
+        if self._time_dep_score:
+            time_factor = 1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale)
+
         if self._score_method == "default":
             psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
 
-            return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+            return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on) * time_factor
 
         if self._score_method == "PODdecomp":
             if self._score_builder is None:
@@ -304,17 +313,53 @@ class Boussinesq2DModel(ForwardModelBaseClass):
                     self._M + 1, self._N + 1, self._pod_data_file, self._score_pod_ndim, self._score_pod_d0
                 )
 
-            return self._score_builder.get_score(self._state_arrays)
+            return self._score_builder.get_score(self._state_arrays) * time_factor
+
+        if self._score_method == "EdgeTracker":
+            # A score for the edge tracking algorithm
+            # Compute the score and return -1, 0 or 1:
+            # -1 : if the score get  below 0.1 (close to the ON state)
+            #  1 : if the score gets above 0.9 (close to the OFF state)
+            #  0 : otherwise
+            psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
+            score = (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+            if score > 0.9:
+                return 1.0
+
+            if score < 0.1:
+                return -1.0
+
+            return 0.0
 
         if self._score_method == "BaarsJCP":
             da = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
             db = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._off[1:3,:,:])**2)) / self._on_to_off_l2norm
 
-            return self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2)
+            return self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2) * time_factor
 
         err_msg = f"Unknown score method {self._score_method} !"
         _logger.exception(err_msg)
         raise RuntimeError(err_msg)
+
+    def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
+        """Check if the model has converged.
+
+        This is almost the default implementation, but if we are
+        running the edge tracking algorithm exit when either
+        ON or OFF state is reached.
+
+        Args:
+            step: the current step counter
+            time: the time of the simulation
+            current_score: the current score
+            target_score: the target score
+        """
+        _ = (step, time)
+        if self._score_method == "EdgeTracker":
+            # We converged if the score if no longer zero
+            return abs(current_score) > 0.5
+
+        return current_score >= target_score
 
     def make_noise(self) -> Any:
         """Return a random noise."""

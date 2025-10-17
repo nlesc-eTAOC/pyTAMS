@@ -9,7 +9,7 @@ diagnostics = true
 end_time = 20.0
 step_size = 0.01
 targetscore = 0.96
-sparse_freq = 50
+sparse_freq = 10
 
 [model]
 size_M = 40
@@ -17,16 +17,15 @@ size_N = 80
 epsilon = 0.01
 K = 7
 score_method = "PODdecomp"
-pod_data_file = "/Users/lucas/Documents/Work/UU/Boussinesq/Instanton/POD_Decomp/POD_decomp_InstModes.nc"
-pod_d0 = 100.0
+pod_data_file = "./POD_decomp_InstModes.nc"
+pod_d0 = 1.0
+score_time_dep = true
+score_time_scale = 0.5
 
 [runner]
-type = "dask"
+type = "asyncio"
 nworker_init=5
 nworker_iter=2
 
-[dask]
-backend = "local"
-
 [database]
-path = "2DBoussinesq_K7_dt0p01_eps0p02_Inst.tdb"
+path = "2DBoussinesq_POD.tdb"

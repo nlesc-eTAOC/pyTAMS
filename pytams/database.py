@@ -19,6 +19,7 @@ import toml
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
 from pytams.trajectory import form_trajectory_id
+from pytams.utils import get_module_local_import
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
@@ -58,6 +59,7 @@ class Database:
         params: dict[Any, Any],
         ntraj: int = -1,
         nsplititer: int = -1,
+        read_only: bool = True,
     ) -> None:
         """Initialize a TAMS database.
 
@@ -73,7 +75,11 @@ class Database:
             params: a dictionary of parameters
             ntraj: [OPT] number of traj to hold
             nsplititer: [OPT] number of splitting iteration to hold
+            read_only: [OPT] boolean setting database access mode
         """
+        # Access mode
+        self._read_only = read_only
+
         # For posterity
         self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
         self._version = version(__package__)
@@ -114,11 +120,12 @@ class Database:
         self._init_metadata()
 
     @classmethod
-    def load(cls, a_path: Path) -> Database:
+    def load(cls, a_path: Path, read_only: bool = True) -> Database:
         """Instanciate a TAMS database from disk.
 
         Args:
             a_path: the path to the database
+            read_only: the database access mode
 
         Return:
             a TAMS database object
@@ -129,21 +136,21 @@ class Database:
             raise FileNotFoundError(err_msg)
 
         # Load necessary elements to call the constructor
-        # Ensure that the database is not restarted at this step
         db_params = toml.load(a_path / "input_params.toml")
-        db_params["database"].update({"restart": False})
 
         # If the a_path differs from the one stored in the
         # database (the DB has been moved), update the path
-        if str(a_path) != db_params["database"]["path"]:
+        if a_path.absolute().as_posix() != Path(db_params["database"]["path"]).absolute().as_posix():
             warn_msg = f"Database {db_params['database']['path']} has been moved to {a_path} !"
             _logger.warning(warn_msg)
             db_params["database"]["path"] = str(a_path)
+
+        # Load picked forward model
         model_file = Path(a_path / "fmodel.pkl")
         with model_file.open("rb") as f:
             model = cloudpickle.load(f)
 
-        return cls(model, db_params)
+        return cls(model, db_params, read_only=read_only)
 
     def _init_metadata(self) -> None:
         """Initialize the database.
@@ -157,23 +164,37 @@ class Database:
             db_exists = self._abs_path.exists()
 
             # If no previous db or we force restart
+            # Overwritte the default read-only mode
             if not db_exists or self._restart:
+                # The 'restart' is no longer useful, drop it
+                self._parameters["database"].pop("restart", None)
+                self._restart = False
+                self._read_only = False
                 self._setup_tree()
 
             # Load the database
             else:
                 self._load_metadata()
+
                 # Parameters stored in the DB override
                 # newly provided parameters.
                 with Path(self._abs_path / "input_params.toml").open("r") as f:
-                    read_in_params = toml.load(f)
-                self._parameters.update(read_in_params)
+                    stored_params = toml.load(f)
+
+                # Update input parameters that can be updated
+                if self._parameters != stored_params:
+                    self._update_run_params(stored_params)
 
             # Initialize the SQL pool file
-            self._pool_db = SQLFile(self.pool_file())
+            if self._read_only:
+                self._pool_db = SQLFile(self.pool_file(), ro_mode=True)
+            else:
+                self._pool_db = SQLFile(self.pool_file())
 
         # Initialize in-memory database metadata
+        # Overwritte default read-only mode
         else:
+            self._read_only = False
             self._pool_db = SQLFile("", in_memory=True)
 
         # Check minimal parameters
@@ -181,6 +202,52 @@ class Database:
             err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
+
+    def _update_run_params(self, old_params: dict[Any, Any]) -> None:
+        """Update database params and metadata.
+
+        Upon loading a database from disk, compare the dictionary of
+        parameters stored in the database against the newly inputed one
+        and update the database metadata when possible.
+        Note that only the [tams] sub-dictionary can be updated updated at this point
+        and the database params overwrite the other subdicts.
+
+        Args:
+            old_params: a dictionary of input parameter loaded from disk
+        """
+        # For testing purposes the params might be lacking
+        # a "tams" subdir
+        if "tams" not in old_params or "tams" not in self._parameters:
+            # Simply overwrite the provided input params
+            self._parameters.update(old_params)
+            return
+
+        # Update the number of splitting iteration
+        self._nsplititer = self._parameters.get("tams", {}).get("nsplititer")
+        old_params["tams"].update({"nsplititer": self._nsplititer})
+
+        # If the initial pool of trajectory is not done
+        # or we stopped after the pool stage
+        if not self._init_pool_done or (self._init_pool_done and old_params["tams"].get("pool_only", False)):
+            self._ntraj = self._parameters.get("tams", {}).get("ntrajectories")
+            old_params["tams"].update({"ntrajectories": self._ntraj})
+            self._init_pool_done = False
+
+        # Update other parameters in the [tams] subdir,
+        # even if they do not change the database behavior
+        for key, value in self._parameters["tams"].items():
+            if key not in ["nsplititer", "ntrajectories"]:
+                old_params["tams"][key] = value
+
+        # Updated disk parameters overwrite the input params
+        self._parameters.update(old_params)
+
+        # Update the content of the database
+        # if permitted
+        if not self._read_only:
+            self._write_metadata()
+            with Path(self._abs_path / "input_params.toml").open("w") as f:
+                toml.dump(self._parameters, f)
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -206,8 +273,14 @@ class Database:
             self._write_metadata()
 
             # Serialize the model
+            # We need to pickle by value the local modules
+            # which might not be available if we move the database
+            # Note: only one import depth is handled at this point, we might
+            #       want to make this recursive in the future
             model_file = Path(self._abs_path / "fmodel.pkl")
             cloudpickle.register_pickle_by_value(sys.modules[self._fmodel_t.__module__])
+            for mods in get_module_local_import(self._fmodel_t.__module__):
+                cloudpickle.register_pickle_by_value(sys.modules[mods])
             with model_file.open("wb") as f:
                 cloudpickle.dump(self._fmodel_t, f)
 
@@ -303,6 +376,8 @@ class Database:
         # Counter for number of trajectory loaded
         n_traj_restored = 0
 
+        load_frozen = self._read_only
+
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
             traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
@@ -315,6 +390,7 @@ class Database:
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
+                        frozen=load_frozen,
                     ),
                     False,
                 )
@@ -327,8 +403,9 @@ class Database:
                 )
                 self.append_traj(t, False)
 
-        inf_msg = f"{n_traj_restored} active trajectories loaded"
-        _logger.info(inf_msg)
+        if n_traj_restored > 0:
+            inf_msg = f"{n_traj_restored} active trajectories loaded"
+            _logger.info(inf_msg)
 
         # Load the archived trajectories if requested.
         # Those are loaded as 'frozen', i.e. the internal model

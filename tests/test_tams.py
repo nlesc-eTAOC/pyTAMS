@@ -77,6 +77,32 @@ def test_simple_model_pool_stage_tams(caplog: pytest.LogCaptureFixture):
     Path("input.toml").unlink(missing_ok=True)
 
 
+def test_simple_model_pool_stage_and_continue_tams():
+    """Test TAMS with simple model."""
+    fmodel = SimpleFModel
+    params_dict = {
+        "tams": {"ntrajectories": 10, "nsplititer": 200, "loglevel": "WARNING", "pool_only": True},
+        "runner": {"type": "asyncio"},
+        "database": {"path": "simpleModelTest.tdb"},
+        "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
+    }
+    with Path("input.toml").open("w") as f:
+        toml.dump(params_dict, f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    _ = tams.compute_probability()
+    tdb = Database.load(Path("simpleModelTest.tdb"))
+    assert tdb.n_traj() == 10
+    params_dict["tams"]["ntrajectories"] = 20
+    with Path("input.toml").open("w") as f:
+        toml.dump(params_dict, f)
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    _ = tams.compute_probability()
+    tdb = Database.load(Path("simpleModelTest.tdb"))
+    assert tdb.n_traj() == 20
+    Path("input.toml").unlink(missing_ok=True)
+    shutil.rmtree("simpleModelTest.tdb")
+
+
 def test_simple_model_tams_with_db():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
@@ -219,7 +245,7 @@ def test_doublewell_deterministic_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.4519515692885939
+    assert transition_proba == 0.5471567691116268
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -269,7 +295,7 @@ def test_doublewell_2_workers_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.6127097197058989
+    assert transition_proba == 0.692533980184018
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -279,7 +305,7 @@ def test_doublewell_2_workers_load_db():
     tdb = Database.load(Path("dwTest.tdb"))
     tdb.load_data(True)
     assert tdb.traj_list_len() == 50
-    assert tdb.archived_traj_list_len() == 22
+    assert tdb.archived_traj_list_len() == 16
 
 
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
@@ -393,23 +419,23 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
 def test_doublewell_slow_tams_restore_more_split():
     """Test restart TAMS more splitting iterations."""
     fmodel = DoubleWellModel
+    params_dict = {
+        "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 10.0, "deterministic": True},
+        "database": {"path": "dwTest.tdb"},
+        "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
+        "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
+        "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
+    }
     with Path("input.toml").open("w") as f:
-        toml.dump(
-            {
-                "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 10.0, "deterministic": True},
-                "database": {"path": "dwTest.tdb"},
-                "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
-                "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
-                "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
-            },
-            f,
-        )
+        toml.dump(params_dict, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.03544177711743238
+    assert transition_proba == 0.08937321391676148
+    params_dict["tams"]["nsplititer"] = 30
+    with Path("input.toml").open("w") as f:
+        toml.dump(params_dict, f)
     tams_load = TAMS(fmodel_t=fmodel, a_args=[])
-    tams_load._tdb._nsplititer = 30
     transition_proba = tams_load.compute_probability()
-    assert transition_proba == 0.04244059819921117
+    assert transition_proba == 0.07470793360861466
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
