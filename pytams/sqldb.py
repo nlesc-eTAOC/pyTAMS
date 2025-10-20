@@ -495,7 +495,7 @@ class SQLFile:
         finally:
             session.close()
 
-    def get_ongoing(self) -> list[int] | None:
+    def get_ongoing(self) -> tuple[list[int], list[int], list[float]] | tuple[None,None,None]:
         """Get the list of ongoing trajectories if any.
 
         Returns:
@@ -505,13 +505,16 @@ class SQLFile:
         try:
             last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
             if last_split and last_split.status == "locked":
-                return cast("list[int]", json.loads(last_split.rst_traj_ids))
+                return cast("list[int]", json.loads(last_split.rst_traj_ids)), cast(
+                    "list[int]", json.loads(last_split.from_traj_ids)), cast(
+                    "list[float]", json.loads(last_split.min_vals)
+                )
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to query the list of ongoing trajectories !")
             raise
         else:
-            return None
+            return None, None, None
         finally:
             session.close()
 

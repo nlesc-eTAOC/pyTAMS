@@ -727,7 +727,7 @@ class Database:
         """Check if we are done with splitting."""
         return self.k_split() >= self._nsplititer
 
-    def get_ongoing(self) -> list[int] | None:
+    def get_ongoing(self) -> tuple[list[int], list[int], list[float]] | tuple[None,None,None]:
         """Return the list of trajectories undergoing branching or None.
 
         Ongoing trajectories are extracted from the last splitting
