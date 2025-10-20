@@ -82,6 +82,46 @@ class Snapshot:
         """
         return self.state is not None
 
+def scan_ancestor(ancestor_snaps: list[Snapshot], threshold: float, early_branching_delay: float) -> tuple[int, int]:
+    """Scan the ancestor trajectory to find the branching point.
+
+    Args:
+        ancestor_snaps: the list of snapshots of the ancestor trajectory
+        threshold: a threshold score value
+        early_branching_delay: an early branching delay value
+
+    Returns:
+        A tuple with the branching index and the last available snapshot index
+    """
+    # To ensure that TAMS converges, branching occurs on
+    # the first snapshot with a score *strictly* above the threshold
+    # Traverse the trajectory until a snapshot with a score >
+    # the threshold is encountered
+    high_score_idx = 0
+    last_snap_with_state = 0
+    while ancestor_snaps[high_score_idx].score <= threshold:
+        high_score_idx += 1
+        if ancestor_snaps[high_score_idx].has_state():
+            last_snap_with_state = high_score_idx
+
+    # If we have an early restart delay, backtrack by the delay
+    if early_branching_delay > 0.0:
+        backtrack = True
+        target_time = max(0.0, ancestor_snaps[high_score_idx].time - early_branching_delay)
+        while backtrack:
+            if ancestor_snaps[high_score_idx].time > target_time:
+                high_score_idx -= 1
+
+            backtrack = ancestor_snaps[high_score_idx].time > target_time
+
+            if not backtrack:
+                has_last_state = ancestor_snaps[high_score_idx].has_state()
+                last_snap_with_state = high_score_idx
+                while not has_last_state:
+                    last_snap_with_state -= 1
+                    has_last_state = ancestor_snaps[last_snap_with_state].has_state()
+
+    return high_score_idx, last_snap_with_state
 
 class Trajectory:
     """A class defining a stochastic trajectory.
@@ -446,21 +486,27 @@ class Trajectory:
         cls,
         ancestor_traj: Trajectory,
         discarded_traj: Trajectory,
-        score: float,
+        threshold: float,
+        early_branching_delay: float = -1.0,
     ) -> Trajectory:
         """Create a new child trajectory from an ancestor.
 
-        Loading the beginning of a provided trajectory
-        for all entries with score below a given score threshold.
-        This effectively branches the trajectory.
+        Loading the beginning of an ancestor trajectory for all entries with score
+        below a given score threshold. If the early_branching_delay parameter is
+        above zero, the child only loads up to the threshold target clearing time
+        minus the early_branching_delay.
 
         Although the discarded_traj is provided as an argument, it is
-        only used to get metadata of the branched trajectory.
+        only used to get metadata of the discarded trajectory for the child one.
 
         Args:
-            ancestor_traj: an already existing trajectory to restart from
-            discarded_traj: the trajectory being restarted
-            score: a threshold score
+            ancestor_traj: an already existing trajectory to branch from
+            discarded_traj: the trajectory being discarded
+            threshold: a threshold score
+            early_branching_delay: a time delay to branch earlier than when the target threshold is cleared
+
+        Returns:
+            A child trajectory, with history filled up to the threshold value
         """
         # Check for empty trajectory
         if len(ancestor_traj._snaps) == 0:
@@ -476,18 +522,11 @@ class Trajectory:
             child_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{child_traj.idstr()}.xml"))
             return child_traj
 
-        # To ensure that TAMS converges, branching occurs on
-        # the first snapshot with a score *strictly* above the target
-        # Traverse the trajectory until a snapshot with a score >
-        # the target is encountered
-        high_score_idx = 0
-        last_snap_with_state = 0
-        while ancestor_traj._snaps[high_score_idx].score <= score:
-            high_score_idx += 1
-            if ancestor_traj._snaps[high_score_idx].has_state():
-                last_snap_with_state = high_score_idx
+        high_score_idx, last_snap_with_state = scan_ancestor(
+            ancestor_traj.get_snapshots(), threshold, early_branching_delay
+        )
 
-        # Init empty trajectory
+        # Init empty child trajectory
         tid, nb = get_index_from_id(discarded_traj.idstr())
         new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
         fmodel_t = type(ancestor_traj._fmodel) if ancestor_traj._fmodel else None
@@ -615,6 +654,10 @@ class Trajectory:
         for k in range(len(self._snaps)):
             times[k] = self._snaps[k].time
         return times
+
+    def get_snapshots(self) -> list[Snapshot]:
+        """Return the trajectory snapshots."""
+        return self._snaps
 
     def get_score_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory scores."""
