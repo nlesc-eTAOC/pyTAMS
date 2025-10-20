@@ -133,7 +133,6 @@ def test_store_and_restore_frozen_simple_traj():
         rst_test._one_step()
     chkfile.unlink(missing_ok=True)
 
-
 def test_restart_simple_traj():
     """Test trajectory restart."""
     fmodel = SimpleFModel
@@ -144,6 +143,17 @@ def test_restart_simple_traj():
     rst_test = Trajectory.branch_from_trajectory(from_traj, rst_traj, 0.05)
     assert rst_test.current_time() == 0.006
 
+def test_early_restart_simple_traj():
+    """Test trajectory early restart."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory" : {"end_time": 0.04,
+                                  "step_size": 0.001,
+                                  "targetscore": 0.25}}
+    from_traj = Trajectory(1, fmodel, parameters)
+    from_traj.advance(0.01)
+    rst_traj = Trajectory(2, fmodel, parameters)
+    rst_test = Trajectory.branch_from_trajectory(from_traj, rst_traj, 0.05, 0.0011)
+    assert rst_test.current_time() == 0.004
 
 def test_access_data_simple_traj():
     """Test trajectory data access."""
