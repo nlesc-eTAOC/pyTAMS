@@ -379,7 +379,7 @@ class Trajectory:
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
 
-        rest_traj = Trajectory(
+        restored_traj = Trajectory(
             traj_id=t_id,
             fmodel_t=fmodel_t,
             parameters=parameters,
@@ -387,59 +387,59 @@ class Trajectory:
             frozen=frozen,
         )
 
-        rest_traj._t_end = metadata["t_end"]
-        rest_traj._t_cur = metadata["t_cur"]
-        rest_traj._dt = metadata["dt"]
-        rest_traj._score_max = metadata["score_max"]
-        rest_traj._has_ended = metadata["ended"]
-        rest_traj._has_converged = metadata["converged"]
-        rest_traj._branching_history = metadata["branching_history"].tolist()
-        rest_traj._computed_steps = metadata.get("c_step", 0)
+        restored_traj._t_end = metadata["t_end"]
+        restored_traj._t_cur = metadata["t_cur"]
+        restored_traj._dt = metadata["dt"]
+        restored_traj._score_max = metadata["score_max"]
+        restored_traj._has_ended = metadata["ended"]
+        restored_traj._has_converged = metadata["converged"]
+        restored_traj._branching_history = metadata["branching_history"].tolist()
+        restored_traj._computed_steps = metadata.get("c_step", 0)
 
         snapshots = root.find("snapshots")
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
-                rest_traj._snaps.append(Snapshot(time, score, noise, state))
+                restored_traj._snaps.append(Snapshot(time, score, noise, state))
 
         # Current step with python indexing, so remove 1
-        rest_traj._step = len(rest_traj._snaps) - 1
+        restored_traj._step = len(restored_traj._snaps) - 1
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
-        if rest_traj._fmodel:
+        if restored_traj._fmodel:
             # Remove snapshots from the list until a state is available
             need_update = False
-            for k in range(len(rest_traj._snaps) - 1, -1, -1):
-                if not rest_traj._snaps[k].has_state():
+            for k in range(len(restored_traj._snaps) - 1, -1, -1):
+                if not restored_traj._snaps[k].has_state():
                     # Append the noise history to the backlog
-                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
-                    rest_traj._snaps.pop()
+                    restored_traj._noise_backlog.append(restored_traj._snaps[k].noise)
+                    restored_traj._snaps.pop()
                     need_update = True
                 else:
                     # Because the noise in the snapshot is the noise
                     # used to reach the next state, append the last to the backlog too
-                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
+                    restored_traj._noise_backlog.append(restored_traj._snaps[k].noise)
                     break
 
-            rest_traj._t_cur = rest_traj._snaps[-1].time
+            restored_traj._t_cur = restored_traj._snaps[-1].time
 
             # Current step with python indexing, so remove 1
-            rest_traj._step = len(rest_traj._snaps) - 1
+            restored_traj._step = len(restored_traj._snaps) - 1
 
             # Ensure everything is set to start the time stepping loop
-            rest_traj._setup_noise()
-            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
+            restored_traj._setup_noise()
+            restored_traj._fmodel.set_current_state(restored_traj._snaps[-1].state)
 
             # Reset score_max, ended and converged
             if need_update:
-                rest_traj.update_metadata()
+                restored_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restore
-            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
+            restored_traj._fmodel.post_trajectory_restore_hook(len(restored_traj._snaps) - 1, restored_traj._t_cur)
 
-        return rest_traj
+        return restored_traj
 
     @classmethod
     def branch_from_trajectory(
