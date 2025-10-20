@@ -466,9 +466,6 @@ class Trajectory:
 
             restored_traj._t_cur = restored_traj._snaps[-1].time
 
-            # Current step with python indexing, so remove 1
-            restored_traj._step = len(restored_traj._snaps) - 1
-
             # Ensure everything is set to start the time stepping loop
             restored_traj._setup_noise()
             restored_traj._fmodel.set_current_state(restored_traj._snaps[-1].state)
@@ -488,7 +485,7 @@ class Trajectory:
         cls,
         ancestor_traj: Trajectory,
         discarded_traj: Trajectory,
-        threshold: float,
+        threshold: float | None = None,
         early_branching_delay: float = -1.0,
     ) -> Trajectory:
         """Create a new child trajectory from an ancestor.
@@ -510,24 +507,6 @@ class Trajectory:
         Returns:
             A child trajectory, with history filled up to the threshold value
         """
-        # Check for empty trajectory
-        if len(ancestor_traj._snaps) == 0:
-            tid, nb = get_index_from_id(discarded_traj.idstr())
-            new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-            fmodel_t = type(ancestor_traj._fmodel) if ancestor_traj._fmodel else None
-            child_traj = Trajectory(
-                traj_id=discarded_traj.id(),
-                fmodel_t=fmodel_t,
-                parameters=ancestor_traj._parameters_full,
-                workdir=new_workdir,
-            )
-            child_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{child_traj.idstr()}.xml"))
-            return child_traj
-
-        high_score_idx, last_snap_with_state = scan_ancestor(
-            ancestor_traj.get_snapshots(), threshold, early_branching_delay
-        )
-
         # Init empty child trajectory
         tid, nb = get_index_from_id(discarded_traj.idstr())
         new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
@@ -541,6 +520,21 @@ class Trajectory:
         child_traj._branching_history = discarded_traj._branching_history
         child_traj._branching_history.append(ancestor_traj.id())
         child_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{child_traj.idstr()}.xml"))
+
+        # If the ancestor is empty, simply return there
+        if len(ancestor_traj._snaps) == 0:
+            return child_traj
+
+        if not threshold:
+            # If no threshold was provided, just clone the entire ancestor
+            high_score_idx = ancestor_traj.get_length()
+            last_snap_with_state = ancestor_traj.get_last_state_index()
+            if not last_snap_with_state:
+                last_snap_with_state = high_score_idx
+        else:
+            high_score_idx, last_snap_with_state = scan_ancestor(
+                ancestor_traj.get_snapshots(), threshold, early_branching_delay
+            )
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
@@ -569,6 +563,54 @@ class Trajectory:
             child_traj._fmodel.post_trajectory_branching_hook(len(child_traj._snaps) - 1, child_traj._t_cur)
 
         return child_traj
+
+    @classmethod
+    def clone_trajectory(
+        cls,
+        ancestor_traj: Trajectory,
+        discarded_traj: Trajectory,
+    ) -> Trajectory:
+        """Clone a trajectory transfering in-memory data.
+
+        Args:
+            ancestor_traj: the trajectory being cloned
+            discarded_traj: an optional discarded traj to get metadata from
+        """
+        # Init empty cloned trajectory
+        tid, nb = get_index_from_id(discarded_traj.idstr())
+        new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+        fmodel_t = type(ancestor_traj._fmodel) if ancestor_traj._fmodel else None
+        cloned_traj = Trajectory(
+            traj_id=tid,
+            fmodel_t=fmodel_t,
+            parameters=ancestor_traj._parameters_full,
+            workdir=new_workdir,
+        )
+        cloned_traj._branching_history = discarded_traj._branching_history
+        cloned_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{cloned_traj.idstr()}.xml"))
+
+        # Copy the trajectory history
+        for k in range(ancestor_traj.get_length()):
+            cloned_traj._snaps.append(ancestor_traj._snaps[k])
+
+        # If the ancestor has some noise backlog, copy it too
+        for k in range(len(ancestor_traj._noise_backlog)):
+            cloned_traj._noise_backlog.append(ancestor_traj._noise_backlog[k])
+
+        # Init metadata
+        cloned_traj._t_cur = cloned_traj._snaps[-1].time
+        cloned_traj._step = len(cloned_traj._snaps) - 1
+        if cloned_traj._fmodel:
+            cloned_traj._setup_noise()
+            if cloned_traj._snaps[-1].has_state():
+                cloned_traj._fmodel.set_current_state(cloned_traj._snaps[-1].state)
+            cloned_traj.update_metadata()
+
+            # Enable the model to perform tweaks
+            # after a trajectory clone
+            cloned_traj._fmodel.post_trajectory_restore_hook(len(cloned_traj._snaps) - 1, cloned_traj._t_cur)
+
+        return cloned_traj
 
     def store(self, traj_file: Path | None = None) -> None:
         """Store the trajectory to an XML chkfile."""
@@ -692,6 +734,14 @@ class Trajectory:
         for snap in reversed(self._snaps):
             if snap.has_state():
                 return snap.state
+
+        return None
+
+    def get_last_state_index(self) -> int | None:
+        """Return the index of the last state in the trajectory."""
+        for s in reversed(range(len(self._snaps))):
+            if self._snaps[s].has_state():
+                return s
 
         return None
 
