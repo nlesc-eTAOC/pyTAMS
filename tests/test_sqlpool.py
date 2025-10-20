@@ -213,9 +213,9 @@ def test_splitting_data_add_and_ongoing():
     for i in range(10):
         poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
-    assert poolfile.get_ongoing() is None
-    poolfile.add_splitting_data(10, 1, 0.1, [10-1,1,56], [0], [0.0], [0.0, 0.0])
-    assert poolfile.get_ongoing() == [9,1,56]
+    assert poolfile.get_ongoing() == (None, None, None)
+    poolfile.add_splitting_data(10, 1, 0.1, [10-1,1,56], [0,1,2], [0.0,0.0,0.01], [0.0, 0.0])
+    assert poolfile.get_ongoing() == ([9,1,56], [0,1,2], [0.0,0.0,0.01])
 
 def test_splitting_data_add_and_query():
     """Adding splitting data to the database."""
