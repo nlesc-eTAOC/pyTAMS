@@ -82,6 +82,7 @@ class Snapshot:
         """
         return self.state is not None
 
+
 def scan_ancestor(ancestor_snaps: list[Snapshot], threshold: float, early_branching_delay: float) -> tuple[int, int]:
     """Scan the ancestor trajectory to find the branching point.
 
@@ -122,6 +123,7 @@ def scan_ancestor(ancestor_snaps: list[Snapshot], threshold: float, early_branch
                     has_last_state = ancestor_snaps[last_snap_with_state].has_state()
 
     return high_score_idx, last_snap_with_state
+
 
 class Trajectory:
     """A class defining a stochastic trajectory.

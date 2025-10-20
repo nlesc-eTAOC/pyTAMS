@@ -85,6 +85,7 @@ def ms_worker(
     rst_traj: Trajectory,
     min_val: float,
     end_date: datetime.date,
+    early_branching_delay: float = -1.0,
     db_path: str | None = None,
 ) -> Trajectory:
     """A worker to restart trajectories.
@@ -94,6 +95,7 @@ def ms_worker(
         rst_traj: the trajectory being restarted
         min_val: the value of the score function to restart from
         end_date: the time limit to advance the trajectory
+        early_branching_delay: a time delay to trigger early branching
         db_path: a database path or None
     """
     # Get wall time
@@ -120,7 +122,7 @@ def ms_worker(
         inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_branching_delay)
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
@@ -129,7 +131,7 @@ def ms_worker(
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, early_branching_delay)
 
 
 async def worker_async(

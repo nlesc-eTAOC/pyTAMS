@@ -99,6 +99,8 @@ class TAMS:
         self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
         self._plot_diags = tams_subdict.get("diagnostics", False)
         self._init_pool_only = tams_subdict.get("pool_only", False)
+        self._trying_early: bool = tams_subdict.get("use_trying_early", False)
+        self._trying_early_delay: float = tams_subdict.get("trying_early_delay", -1.0)
 
         # Database
         self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
@@ -375,6 +377,7 @@ class TAMS:
                         self._tdb.get_traj(min_idx_list[i]),
                         min_vals[i],
                         self._endDate,
+                        self._trying_early_delay if self._trying_early else -1.0,
                         self._tdb.path(),
                     ]
                     runner.make_promise(task)
