@@ -444,37 +444,37 @@ class Trajectory:
     @classmethod
     def branch_from_trajectory(
         cls,
-        from_traj: Trajectory,
-        rst_traj: Trajectory,
+        ancestor_traj: Trajectory,
+        discarded_traj: Trajectory,
         score: float,
     ) -> Trajectory:
-        """Create a new trajectory.
+        """Create a new child trajectory from an ancestor.
 
         Loading the beginning of a provided trajectory
-        for all entries with score below a given score.
+        for all entries with score below a given score threshold.
         This effectively branches the trajectory.
 
-        Although the rst_traj is provided as an argument, it is
-        only used to set metadata of the branched trajectory.
+        Although the discarded_traj is provided as an argument, it is
+        only used to get metadata of the branched trajectory.
 
         Args:
-            from_traj: an already existing trajectory to restart from
-            rst_traj: the trajectory being restarted
+            ancestor_traj: an already existing trajectory to restart from
+            discarded_traj: the trajectory being restarted
             score: a threshold score
         """
         # Check for empty trajectory
-        if len(from_traj._snaps) == 0:
-            tid, nb = get_index_from_id(rst_traj.idstr())
-            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-            fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-            rest_traj = Trajectory(
-                traj_id=rst_traj.id(),
+        if len(ancestor_traj._snaps) == 0:
+            tid, nb = get_index_from_id(discarded_traj.idstr())
+            new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+            fmodel_t = type(ancestor_traj._fmodel) if ancestor_traj._fmodel else None
+            child_traj = Trajectory(
+                traj_id=discarded_traj.id(),
                 fmodel_t=fmodel_t,
-                parameters=from_traj._parameters_full,
+                parameters=ancestor_traj._parameters_full,
                 workdir=new_workdir,
             )
-            rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
-            return rest_traj
+            child_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{child_traj.idstr()}.xml"))
+            return child_traj
 
         # To ensure that TAMS converges, branching occurs on
         # the first snapshot with a score *strictly* above the target
@@ -482,52 +482,52 @@ class Trajectory:
         # the target is encountered
         high_score_idx = 0
         last_snap_with_state = 0
-        while from_traj._snaps[high_score_idx].score <= score:
+        while ancestor_traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
-            if from_traj._snaps[high_score_idx].has_state():
+            if ancestor_traj._snaps[high_score_idx].has_state():
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
-        tid, nb = get_index_from_id(rst_traj.idstr())
-        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-        fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-        rest_traj = Trajectory(
-            traj_id=rst_traj.id(),
+        tid, nb = get_index_from_id(discarded_traj.idstr())
+        new_workdir = Path(discarded_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+        fmodel_t = type(ancestor_traj._fmodel) if ancestor_traj._fmodel else None
+        child_traj = Trajectory(
+            traj_id=discarded_traj.id(),
             fmodel_t=fmodel_t,
-            parameters=from_traj._parameters_full,
+            parameters=ancestor_traj._parameters_full,
             workdir=new_workdir,
         )
-        rest_traj._branching_history = rst_traj._branching_history
-        rest_traj._branching_history.append(from_traj.id())
-        rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
+        child_traj._branching_history = discarded_traj._branching_history
+        child_traj._branching_history.append(ancestor_traj.id())
+        child_traj.set_checkfile(Path(discarded_traj.get_checkfile().parents[0] / f"{child_traj.idstr()}.xml"))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
             if k < last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
+                child_traj._snaps.append(ancestor_traj._snaps[k])
             elif k == last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                child_traj._snaps.append(ancestor_traj._snaps[k])
+                child_traj._noise_backlog.append(ancestor_traj._snaps[k].noise)
             else:
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                child_traj._noise_backlog.append(ancestor_traj._snaps[k].noise)
 
         # Reverse the backlog to ensure correct order
-        rest_traj._noise_backlog.reverse()
+        child_traj._noise_backlog.reverse()
 
         # Update trajectory metadata
-        rest_traj._t_cur = rest_traj._snaps[-1].time
-        rest_traj._step = len(rest_traj._snaps) - 1
-        if rest_traj._fmodel:
-            rest_traj._setup_noise()
-            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
-            rest_traj.update_metadata()
+        child_traj._t_cur = child_traj._snaps[-1].time
+        child_traj._step = len(child_traj._snaps) - 1
+        if child_traj._fmodel:
+            child_traj._setup_noise()
+            child_traj._fmodel.set_current_state(child_traj._snaps[-1].state)
+            child_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restart
-            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
+            child_traj._fmodel.post_trajectory_branching_hook(len(child_traj._snaps) - 1, child_traj._t_cur)
 
-        return rest_traj
+        return child_traj
 
     def store(self, traj_file: Path | None = None) -> None:
         """Store the trajectory to an XML chkfile."""
