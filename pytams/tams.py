@@ -202,7 +202,8 @@ class TAMS:
         t_list.sort(key=lambda t: t.id())
         self._tdb.update_traj_list(t_list)
 
-        self._tdb.set_init_pool_flag(True)
+        if self._tdb.count_ended_traj() == self._tdb.n_traj():
+            self._tdb.set_init_pool_flag(True)
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -360,13 +361,13 @@ class TAMS:
                 min_idx_list, min_vals = get_min_scored(maxes, runner.n_workers())
 
                 # Randomly select trajectory to branch from
-                rest_idx = self.get_restart_at_random(min_idx_list)
+                ancestor_idx = self.get_restart_at_random(min_idx_list)
                 n_branch = len(min_idx_list)
 
                 # Update the database with the data of the current
                 # iteration
                 self._tdb.append_splitting_iteration_data(
-                    k, n_branch, min_idx_list, rest_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
+                    k, n_branch, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
                 )
 
                 # Exit the loop if needed
@@ -376,7 +377,7 @@ class TAMS:
                 # Assemble a list of promises
                 for i in range(n_branch):
                     task = [
-                        self._tdb.get_traj(rest_idx[i]),
+                        self._tdb.get_traj(ancestor_idx[i]),
                         self._tdb.get_traj(min_idx_list[i]),
                         min_vals[i],
                         self._endDate,
