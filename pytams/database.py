@@ -659,8 +659,8 @@ class Database:
         self,
         ksplit: int,
         bias: int,
-        rst_ids: list[int],
-        from_ids: list[int],
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
         min_vals: list[float],
         min_max: list[float],
     ) -> None:
@@ -669,8 +669,8 @@ class Database:
         Args:
             ksplit : The splitting iteration index
             bias : The number of restarted trajectories, also ref. to as bias
-            rst_ids : The list of restarted trajectory ids
-            from_ids : The list of trajectories used to restart
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart (ancestors)
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
 
@@ -691,7 +691,7 @@ class Database:
             _logger.exception(err_msg)
             raise ValueError(err_msg)
 
-        self._pool_db.add_splitting_data(ksplit, bias, new_weight, rst_ids, from_ids, min_vals, min_max)
+        self._pool_db.add_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
 
     def mark_last_splitting_iteration_as_done(self) -> None:
         """Flag the last splitting iteration as done."""
