@@ -12,6 +12,7 @@ from pytams.database import Database
 from pytams.taskrunner import get_runner_type
 from pytams.utils import get_min_scored
 from pytams.utils import setup_logger
+from pytams.worker import ms_finish_worker
 from pytams.worker import ms_worker
 from pytams.worker import pool_worker
 
@@ -254,20 +255,22 @@ class TAMS:
         # Check the database for unfinished splitting iteration when restarting.
         # At this point, branching has been done, but advancing to final
         # time is still ongoing.
-        ongoing_list = self._tdb.get_ongoing()
-        if ongoing_list:
-            inf_msg = f"Unfinished splitting iteration detected, traj {self._tdb.get_ongoing()} need(s) finishing"
+        ongoing_list, ancestor_list, min_val_list = self._tdb.get_ongoing()
+        if (ongoing_list and ancestor_list and min_val_list):
+            inf_msg = f"Unfinished splitting iteration detected, traj {ongoing_list} need(s) finishing"
             _logger.info(inf_msg)
             with get_runner_type(self._parameters)(
-                self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
+                self._parameters, ms_finish_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
             ) as runner:
-                for i in ongoing_list:
-                    t = self._tdb.get_traj(i)
-                    task = [t, self._endDate, self._tdb.path()]
+                for i in range(len(ongoing_list)):
+                    child_traj = self._tdb.get_traj(ongoing_list[i])
+                    ancestor_traj = self._tdb.get_traj(ancestor_list[i])
+                    threshold = min_val_list[i]
+                    task = [child_traj, ancestor_traj, threshold, self._endDate, self._tdb.path()]
                     runner.make_promise(task)
 
                 try:
-                    finished_traj = runner.execute_promises()
+                    finished_child_traj = runner.execute_promises()
                 except Exception:
                     err_msg = f"Failed to finish branching {len(ongoing_list)} trajectories"
                     _logger.exception(err_msg)
@@ -275,7 +278,7 @@ class TAMS:
 
                 _logger.info("Done with unfinished")
 
-                for t in finished_traj:
+                for t in finished_child_traj:
                     self._tdb.overwrite_traj(t.id(), t)
 
                 # Wrap up the iteration by updating its status in the
