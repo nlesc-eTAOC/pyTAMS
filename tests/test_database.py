@@ -106,8 +106,8 @@ def test_generate_and_load_tdb():
 
 
 @pytest.mark.dependency(depends=["genDB"])
-def test_access_pool_length():
-    """Test accessing database trajectory pool length."""
+def test_access_ensemble_length():
+    """Test accessing database trajectory ensemble size."""
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
@@ -231,6 +231,6 @@ def test_restore_tdb():
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db, read_only=False)
     tdb.load_data()
-    tdb.reset_pool_stage()
+    tdb.reset_initial_ensemble_stage()
     assert tdb.k_split() == 0
     shutil.rmtree("dwTest.tdb")

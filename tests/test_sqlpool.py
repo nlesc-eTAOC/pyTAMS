@@ -220,10 +220,18 @@ def test_splitting_data_add_and_ongoing():
 def test_splitting_data_add_and_query():
     """Adding splitting data to the database."""
     poolfile = SQLFile("", in_memory=True)
-    for i in range(1):
+    for i in range(1,2):
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
-    assert poolfile.get_minmax().all() == np.array([2.0,0.0,0.0]).all()
+    assert np.all(poolfile.get_minmax()[0] == np.array([2.0,0.0,0.0], dtype="float32"))
+
+def test_splitting_data_add_update_and_query():
+    """Adding splitting data to the database."""
+    poolfile = SQLFile("", in_memory=True)
+    poolfile.add_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.0])
+    poolfile.update_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.3])
+    poolfile.mark_last_iteration_as_completed()
+    assert np.all(poolfile.get_minmax()[0] == np.array([2.0,0.0,0.3], dtype="float32"))
 
 def test_splitting_data_query_fail():
     """Adding splitting data to the database."""

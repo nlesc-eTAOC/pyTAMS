@@ -105,13 +105,14 @@ class Database:
 
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
-        # Trajectory pools
+        # Trajectory ensembles: one for active trajectories and one for
+        # archived (discarded) members.
         # In-memory container
         self._trajs_db: list[Trajectory] = []
         self._archived_trajs_db: list[Trajectory] = []
 
         # Algorithm data
-        self._init_pool_done = False
+        self._init_ensemble_done = False
 
         # Initialize only metadata at this point
         # so that the object remains lightweight
@@ -226,12 +227,14 @@ class Database:
         self._nsplititer = self._parameters.get("tams", {}).get("nsplititer")
         old_params["tams"].update({"nsplititer": self._nsplititer})
 
-        # If the initial pool of trajectory is not done
-        # or we stopped after the pool stage
-        if not self._init_pool_done or (self._init_pool_done and old_params["tams"].get("pool_only", False)):
+        # If the initial ensemble of trajectory is not done
+        # or we stopped after the initial ensemble stage
+        if not self._init_ensemble_done or (
+            self._init_ensemble_done and old_params["tams"].get("init_ensemble_only", False)
+        ):
             self._ntraj = self._parameters.get("tams", {}).get("ntrajectories")
             old_params["tams"].update({"ntrajectories": self._ntraj})
-            self._init_pool_done = False
+            self._init_ensemble_done = False
 
         # Update other parameters in the [tams] subdir,
         # even if they do not change the database behavior
@@ -298,7 +301,7 @@ class Database:
             mdata.append(new_element("model_t", self._fmodel_t.name()))
             mdata.append(new_element("ntraj", self._ntraj))
             mdata.append(new_element("nsplititer", self._nsplititer))
-            mdata.append(new_element("init_pool_done", self._init_pool_done))
+            mdata.append(new_element("init_ensemble_done", self._init_ensemble_done))
             tree = ET.ElementTree(root)
             ET.indent(tree, space="\t", level=0)
             tree.write(header_file)
@@ -317,7 +320,7 @@ class Database:
                 datafromxml = xml_to_dict(mdata)
                 self._ntraj = datafromxml["ntraj"]
                 self._nsplititer = datafromxml["nsplititer"]
-                self._init_pool_done = datafromxml["init_pool_done"]
+                self._init_ensemble_done = datafromxml["init_ensemble_done"]
                 self._version = datafromxml["pyTAMS_version"]
                 if self._version != version(__package__):
                     warn_msg = f"Database pyTAMS version {self._version} is different from {version(__package__)}"
@@ -333,7 +336,7 @@ class Database:
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
 
-    def init_pool(self) -> None:
+    def init_active_ensemble(self) -> None:
         """Initialize the requested number of trajectories."""
         for n in range(self._ntraj):
             workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
@@ -659,8 +662,8 @@ class Database:
         self,
         ksplit: int,
         bias: int,
-        rst_ids: list[int],
-        from_ids: list[int],
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
         min_vals: list[float],
         min_max: list[float],
     ) -> None:
@@ -669,8 +672,8 @@ class Database:
         Args:
             ksplit : The splitting iteration index
             bias : The number of restarted trajectories, also ref. to as bias
-            rst_ids : The list of restarted trajectory ids
-            from_ids : The list of trajectories used to restart
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart (ancestors)
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
 
@@ -691,7 +694,45 @@ class Database:
             _logger.exception(err_msg)
             raise ValueError(err_msg)
 
-        self._pool_db.add_splitting_data(ksplit, bias, new_weight, rst_ids, from_ids, min_vals, min_max)
+        self._pool_db.add_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
+
+    def update_splitting_iteration_data(
+        self,
+        ksplit: int,
+        bias: int,
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
+    ) -> None:
+        """Update the last set of splitting data to internal list.
+
+        Args:
+            ksplit : The splitting iteration index
+            bias : The number of restarted trajectories, also ref. to as bias
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart (ancestors)
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+
+        Raises:
+            ValueError if the provided ksplit is incompatible with the db state
+        """
+        # Compute the weight of the ensemble at the current iteration
+        # Insert 1.0 at the front of the weight array
+        weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
+        new_weight = weights[-1] * (1.0 - bias / self._ntraj)
+
+        # Check the splitting iteration index. If the incoming split is not
+        # equal to the one in the database, something is wrong.
+        if (ksplit + bias) != self.k_split():
+            self._pool_db.dump_file_json()
+            err_msg = f"Attempting to update splitting iteration with splitting index {ksplit + bias} \
+                    incompatible with the last entry of the database {self.k_split()} !"
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
+
+        self._pool_db.update_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
 
     def mark_last_splitting_iteration_as_done(self) -> None:
         """Flag the last splitting iteration as done."""
@@ -747,25 +788,25 @@ class Database:
         """
         return self._pool_db.get_k_split()
 
-    def set_init_pool_flag(self, status: bool) -> None:
-        """Change the initial pool status flag.
+    def set_init_ensemble_flag(self, status: bool) -> None:
+        """Change the initial ensemble status flag.
 
         Args:
             status: the new status
         """
-        self._init_pool_done = status
+        self._init_ensemble_done = status
 
         if self._save_to_disk:
             # Update the metadata file
             self._write_metadata()
 
-    def init_pool_done(self) -> bool:
-        """Change the initial pool status flag.
+    def init_ensemble_done(self) -> bool:
+        """Get the initial ensemble status flag.
 
         Returns:
-            the flag indicating that the initial pool is finished
+            the flag indicating that the initial ensemble is finished
         """
-        return self._init_pool_done
+        return self._init_ensemble_done
 
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
@@ -834,8 +875,8 @@ class Database:
         """
         _logger.info(inf_tbl)
 
-    def reset_pool_stage(self) -> None:
-        """Reset the database content to the final pool stage.
+    def reset_initial_ensemble_stage(self) -> None:
+        """Reset the database content to the initial ensemble stage.
 
         In particular, the splitting iteration data is cleared, the
         list of active trajectories restored and any branched trajectory

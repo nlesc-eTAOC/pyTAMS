@@ -51,8 +51,8 @@ class SplittingIterations(Base):
     split_id: Mapped[int] = mapped_column(nullable=False)
     bias: Mapped[int] = mapped_column(nullable=False)
     weight: Mapped[str] = mapped_column(nullable=False)
-    rst_traj_ids: Mapped[str] = mapped_column(nullable=False)
-    from_traj_ids: Mapped[str] = mapped_column(nullable=False)
+    discarded_traj_ids: Mapped[str] = mapped_column(nullable=False)
+    ancestor_traj_ids: Mapped[str] = mapped_column(nullable=False)
     min_vals: Mapped[str] = mapped_column(nullable=False)
     min_max: Mapped[str] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(default="locked", nullable=False)
@@ -418,8 +418,8 @@ class SQLFile:
         k: int,
         bias: int,
         weight: float,
-        rst_ids: list[int],
-        from_ids: list[int],
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
         min_vals: list[float],
         min_max: list[float],
     ) -> None:
@@ -429,8 +429,8 @@ class SQLFile:
             k : The splitting iteration index
             bias : The number of restarted trajectories
             weight : Weight of the ensemble at the current iteration
-            rst_ids : The list of restarted trajectory ids
-            from_ids : The list of trajectories used to restart
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
         """
@@ -440,8 +440,8 @@ class SQLFile:
                 split_id=k,
                 bias=bias,
                 weight=str(weight),
-                rst_traj_ids=json.dumps(rst_ids),
-                from_traj_ids=json.dumps(from_ids),
+                discarded_traj_ids=json.dumps(discarded_ids),
+                ancestor_traj_ids=json.dumps(ancestor_ids),
                 min_vals=json.dumps(min_vals),
                 min_max=json.dumps(min_max),
             )
@@ -450,6 +450,46 @@ class SQLFile:
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to add splitting data")
+            raise
+        finally:
+            session.close()
+
+    def update_splitting_data(
+        self,
+        k: int,
+        bias: int,
+        weight: float,
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
+    ) -> None:
+        """Update the last splitting data row to the DB.
+
+        Args:
+            k : The splitting iteration index
+            bias : The number of restarted trajectories
+            weight : Weight of the ensemble at the current iteration
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+        """
+        session = self._Session()
+        try:
+            dset = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if dset:
+                dset.split_id = k
+                dset.bias = bias
+                dset.weight = str(weight)
+                dset.discarded_traj_ids = json.dumps(discarded_ids)
+                dset.ancestor_traj_ids = json.dumps(ancestor_ids)
+                dset.min_vals = json.dumps(min_vals)
+                dset.min_max = json.dumps(min_max)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to update the last splitting data")
             raise
         finally:
             session.close()
@@ -505,7 +545,7 @@ class SQLFile:
         try:
             last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
             if last_split and last_split.status == "locked":
-                return cast("list[int]", json.loads(last_split.rst_traj_ids))
+                return cast("list[int]", json.loads(last_split.discarded_traj_ids))
         except SQLAlchemyError:
             session.rollback()
             _logger.exception("Failed to query the list of ongoing trajectories !")
@@ -618,8 +658,8 @@ class SQLFile:
                     "bias": str(split.bias),
                     "weight": split.weight,
                     "min_max_start": json.loads(split.min_max),
-                    "rst_ids": json.loads(split.rst_traj_ids),
-                    "from_ids": json.loads(split.from_traj_ids),
+                    "discarded_ids": json.loads(split.discarded_traj_ids),
+                    "ancestor_ids": json.loads(split.ancestor_traj_ids),
                     "min_vals": json.loads(split.min_vals),
                     "status": split.status,
                 }
