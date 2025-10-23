@@ -454,6 +454,46 @@ class SQLFile:
         finally:
             session.close()
 
+    def update_splitting_data(
+        self,
+        k: int,
+        bias: int,
+        weight: float,
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
+    ) -> None:
+        """Update the last splitting data row to the DB.
+
+        Args:
+            k : The splitting iteration index
+            bias : The number of restarted trajectories
+            weight : Weight of the ensemble at the current iteration
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+        """
+        session = self._Session()
+        try:
+            dset = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if dset:
+                dset.split_id = k
+                dset.bias = bias
+                dset.weight = str(weight)
+                dset.discarded_traj_ids = json.dumps(discarded_ids)
+                dset.ancestor_traj_ids = json.dumps(ancestor_ids)
+                dset.min_vals = json.dumps(min_vals)
+                dset.min_max = json.dumps(min_max)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to update the last splitting data")
+            raise
+        finally:
+            session.close()
+
     def mark_last_iteration_as_completed(self) -> None:
         """Mark the last splitting iteration as complete.
 
