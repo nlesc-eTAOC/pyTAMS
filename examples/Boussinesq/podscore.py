@@ -6,6 +6,7 @@ import netCDF4
 import numpy as np
 import numpy.typing as npt
 from scipy.interpolate import make_splprep
+from scipy.spatial.distance import cdist
 
 _logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def project_in_pod_space(
             POd coefficients of snapshot field [nmodes]
     """
     field_pod = np.zeros(nmodes)
-    field_pod[:] = np.sum(field[None, :, :, :] * phi_pod[:nmodes, :, :, :] * weights[None, None, :, :], axis=(1, 2, 3))
+    field_pod[:] = np.sum(field[:, None, :, :] * phi_pod[:, :nmodes, :, :] * weights[None, None, :, :], axis=(0, 2, 3))
 
     return field_pod
 
@@ -130,6 +131,7 @@ class PODScore:
         # Open data file and metadata
         nc_pod_in = netCDF4.Dataset(pod_data_file, mode="r")
         self._ntimes = nc_pod_in.dimensions["time"].size
+        self._nfield = nc_pod_in.dimensions["field"].size
         self._lat = nc_pod_in.dimensions["lat"].size
         self._depth = nc_pod_in.dimensions["depth"].size
         self._nmodes = nc_pod_in.dimensions["mode"].size
@@ -149,13 +151,14 @@ class PODScore:
         self._psi_pod = nc_pod_in["psi"][:, :]
         self._sigma_pod = nc_pod_in["sigma"][:]
         self._psi_pod[:, :] *= np.sqrt(self._sigma_pod[None, :])
-        self._phi_pod = np.zeros((self._nmodes, 2, self._lat, self._depth))
-        self._phi_pod[:, 0, :, :] = nc_pod_in["stream_phi"][:, :, :]
-        self._phi_pod[:, 1, :, :] = nc_pod_in["salt_phi"][:, :, :]
-        self._phi_pod[:, :, :, :] /= np.sqrt(self._sigma_pod[:, None, None, None])
+        self._phi_pod = np.zeros((self._nfield, self._nmodes, self._lat, self._depth))
+        self._phi_pod[:, :, :, :] = nc_pod_in["field_phi"][:, :, :, :]
+        self._phi_pod[:, :, :, :] /= np.sqrt(self._sigma_pod[None, :, None, None])
         self._weights = nc_pod_in["spatial_weights"][:, :]
-        self._scaling_stream = nc_pod_in["scaling_stream"][:]
-        self._scaling_salt = nc_pod_in["scaling_salt"][:]
+        self._scaling_field = nc_pod_in["scaling_field"][:]
+
+        # Use self-distance to remove loops
+        self.self_distance_crop()
 
         # Resample and smooth the reference trajectory
         self.resample_psi_pod_spline(n_uniform=nsample)
@@ -165,6 +168,25 @@ class PODScore:
 
         # Compute the trajectory curvature
         self.compute_curvature()
+
+    def self_distance_crop(self) -> None:
+        """Compute self-distance and crop loops."""
+        # Self distance
+        d_ij = cdist(self._psi_pod, self._psi_pod)
+
+        eps = 0.05
+        tau = 10
+        loops = []
+        for i in range(self._psi_pod.shape[0]):
+            close_js = np.where(d_ij[i, i + tau :] < eps)[0] + i + tau
+            for j in close_js:
+                loops.append((i, j))
+
+        keep_mask = np.ones(self._psi_pod.shape[0], dtype=bool)
+        for i, j in loops:
+            keep_mask[i + 1 : j] = False
+
+        self._psi_pod = self._psi_pod[keep_mask]
 
     def resample_psi_pod_spline(self, n_uniform: int = 200, smoothing: float = 0.01) -> None:
         """Resample the POD psi using Bsplines.
@@ -227,9 +249,10 @@ class PODScore:
         Returns:
             The score function associated with the input state
         """
-        field = np.zeros((2, self._lat, self._depth))
-        field[0, :, :] = model_state[3, :, :] / self._scaling_stream
-        field[1, :, :] = model_state[1, :, :] / self._scaling_salt
+        # Map Boussinesq model field order to POD database order
+        field_map = np.array([3, 1, 2])
+        field = np.zeros((self._nfield, self._lat, self._depth))
+        field[:, :, :] = model_state[field_map[: self._nfield], :, :] / self._scaling_field[:, None, None]
 
         field_pod = project_in_pod_space(self._n_active_modes, field, self._phi_pod, self._weights)
 
