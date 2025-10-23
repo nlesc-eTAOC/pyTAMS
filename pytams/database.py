@@ -696,6 +696,44 @@ class Database:
 
         self._pool_db.add_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
 
+    def update_splitting_iteration_data(
+        self,
+        ksplit: int,
+        bias: int,
+        discarded_ids: list[int],
+        ancestor_ids: list[int],
+        min_vals: list[float],
+        min_max: list[float],
+    ) -> None:
+        """Update the last set of splitting data to internal list.
+
+        Args:
+            ksplit : The splitting iteration index
+            bias : The number of restarted trajectories, also ref. to as bias
+            discarded_ids : The list of discarded trajectory ids
+            ancestor_ids : The list of trajectories used to restart (ancestors)
+            min_vals : The list of minimum values
+            min_max : The score minimum and maximum values
+
+        Raises:
+            ValueError if the provided ksplit is incompatible with the db state
+        """
+        # Compute the weight of the ensemble at the current iteration
+        # Insert 1.0 at the front of the weight array
+        weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
+        new_weight = weights[-1] * (1.0 - bias / self._ntraj)
+
+        # Check the splitting iteration index. If the incoming split is not
+        # equal to the one in the database, something is wrong.
+        if (ksplit + bias) != self.k_split():
+            self._pool_db.dump_file_json()
+            err_msg = f"Attempting to update splitting iteration with splitting index {ksplit + bias} \
+                    incompatible with the last entry of the database {self.k_split()} !"
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
+
+        self._pool_db.update_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
+
     def mark_last_splitting_iteration_as_done(self) -> None:
         """Flag the last splitting iteration as done."""
         self._pool_db.mark_last_iteration_as_completed()
