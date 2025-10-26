@@ -58,14 +58,14 @@ def test_simple_model_tams():
     Path("input.toml").unlink(missing_ok=True)
 
 
-def test_simple_model_pool_stage_tams(caplog: pytest.LogCaptureFixture):
+def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture):
     """Test TAMS with simple model."""
     caplog.set_level(logging.WARNING)
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "pool_only": True},
+                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "init_ensemble_only": True},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
             },
@@ -73,15 +73,15 @@ def test_simple_model_pool_stage_tams(caplog: pytest.LogCaptureFixture):
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     _ = tams.compute_probability()
-    assert "Stopping after the pool stage !" in caplog.text
+    assert "Stopping after the initial ensemble stage !" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
 
 
-def test_simple_model_pool_stage_and_continue_tams():
+def test_simple_model_init_ensemble_stage_and_continue_tams():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
     params_dict = {
-        "tams": {"ntrajectories": 10, "nsplititer": 200, "loglevel": "WARNING", "pool_only": True},
+        "tams": {"ntrajectories": 10, "nsplititer": 200, "loglevel": "WARNING", "init_ensemble_only": True},
         "runner": {"type": "asyncio"},
         "database": {"path": "simpleModelTest.tdb"},
         "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
@@ -358,10 +358,10 @@ def test_doublewell_slow_tams_stop():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,
@@ -373,16 +373,16 @@ def test_doublewell_slow_tams_stop():
 
 
 @pytest.mark.dependency(depends=["test_doublewell_slow_tams_stop"])
-def test_doublewell_slow_tams_restore_during_pool():
+def test_doublewell_slow_tams_restore_during_initial_ensemble():
     """Test TAMS restarting a slow doublewell."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 5.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,
@@ -393,7 +393,7 @@ def test_doublewell_slow_tams_restore_during_pool():
     Path("input.toml").unlink(missing_ok=True)
 
 
-@pytest.mark.dependency(depends=["test_doublewell_slow_tams_restore_during_pool"])
+@pytest.mark.dependency(depends=["test_doublewell_slow_tams_restore_during_initial_ensemble"])
 def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCaptureFixture):
     """Test TAMS restarting a slow doublewell."""
     caplog.set_level(logging.INFO)
@@ -401,10 +401,10 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,

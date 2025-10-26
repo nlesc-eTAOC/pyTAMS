@@ -55,7 +55,7 @@ The process is illustrated on a small ensemble in the following figure:
    Branching trajectory :math:`1` from :math:`3`, starting after :math:`\xi(t, X_3(t)) > \mathcal{Q}^*`.
 
 For each branching or cloning event, a trajectory :math:`\mathcal{T}_{rep}` to branch from is selected
-at random in the :math:`N-l_j` remaining trajectories of the pool (where :math:`N` is the total number of trajectories in the initial pool).
+at random in the :math:`N-l_j` remaining trajectories in the ensemble (where :math:`N` is the total number of trajectories in the initial ensemble).
 The branching time :math:`t_b` along :math:`\mathcal{T}_{rep}` is selected to ensure that the branched
 trajectory has a score function strictly higher that the discarded one:
 
@@ -151,7 +151,7 @@ from a TAMS run in order to explore the database contents.
 Workers & parallelism
 ---------------------
 
-The TAMS algorithm exposes parallellism in two places: during the generation of the initial pool
+The TAMS algorithm exposes parallellism in two places: during the generation of the initial ensemble
 of trajectories (line 1 in the highlighted algorithm above), and at each splitting iterations where
 more than one trajectory can be branched (the loop on line 6 in the highlighted algorithm).
 

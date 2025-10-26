@@ -55,7 +55,7 @@ The TOML input file contains dictionaries associated with the various part of th
     walltime = 200.0          # [OPT, DEF = 86400] Total walltime in seconds
     diagnostics = false       # [OPT, DEF = false] Trigger diagnostics during the splitting iterations
     deterministic = false     # [OPT, DEF = false] Fix the various random seeds for reproducibility
-    pool_only = false         # [OPT, DEF = false] Stop after the initial pool generation
+    init_ensemble_only = false# [OPT, DEF = false] Stop after the initial ensemble generation
 
  - Trajectory parameters:
   .. code-block:: python
@@ -73,7 +73,7 @@ The TOML input file contains dictionaries associated with the various part of th
 
     [runner]
     type = "asyncio"         # [REQ] Runner type
-    nworker_init = 2         # [OPT, DEF = 1] Number of workers for initial pool generation
+    nworker_init = 2         # [OPT, DEF = 1] Number of workers for initial ensemble generation
     nworker_iter = 2         # [OPT, DEF = 1] Number of workers for splitting iterations
 
  - Database parameters:
