@@ -42,7 +42,7 @@ class TAMS:
     an optional list of options.
 
     The algorithm is roughly divided in two steps:
-    1. Initialization of the trajectory pool
+    1. Initialization of the trajectory ensemble
     2. Splitting iterations
 
     Separate control of the parallelism is provided for
@@ -59,7 +59,7 @@ class TAMS:
         _wallTime: the walltime limit
         _startDate: the date the algorithm started
         _plot_diags: whether or not to plot diagnostics during splitting iterations
-        _init_pool_only: whether or not to stop after initializing the trajectory pool
+        _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
         _tdb: the trajectory database (containing all trajectories)
     """
 
@@ -98,7 +98,7 @@ class TAMS:
         n_split_iter: int = tams_subdict.get("nsplititer")
         self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
         self._plot_diags = tams_subdict.get("diagnostics", False)
-        self._init_pool_only = tams_subdict.get("pool_only", False)
+        self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
 
         # Database
         self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
@@ -109,15 +109,15 @@ class TAMS:
         self._startDate: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
         self._endDate: datetime.datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
 
-        # Initialize trajectory pool
+        # Initialize an empty trajectory ensemble
         if self._tdb.is_empty():
-            self._tdb.init_pool()
+            self._tdb.init_active_ensemble()
 
     def n_traj(self) -> int:
         """Return the number of trajectory used for TAMS.
 
         Note that this is the requested number of trajectory, not
-        the current length of the trajectory pool.
+        the current length of the trajectory ensemble.
 
         Return:
             number of trajectory
@@ -164,8 +164,8 @@ class TAMS:
         """
         return self.remaining_walltime() < 0.05 * self._wallTime
 
-    def generate_trajectory_pool(self) -> None:
-        """Schedule the generation of a pool of stochastic trajectories.
+    def generate_trajectory_ensemble(self) -> None:
+        """Schedule the generation of an ensemble of stochastic trajectories.
 
         Loop over all the trajectories in the database and schedule
         advancing them to either end time or convergence with the
@@ -177,7 +177,7 @@ class TAMS:
         Raises:
             Error if the runner fails
         """
-        inf_msg = f"Creating the initial pool of {self._tdb.n_traj()} trajectories"
+        inf_msg = f"Creating the initial ensemble of {self._tdb.n_traj()} trajectories"
         _logger.info(inf_msg)
 
         with get_runner_type(self._parameters)(
@@ -190,7 +190,7 @@ class TAMS:
             try:
                 t_list = runner.execute_promises()
             except:
-                err_msg = f"Failed to generate the initial pool of {self._tdb.n_traj()} trajectories"
+                err_msg = f"Failed to generate the initial ensemble of {self._tdb.n_traj()} trajectories"
                 _logger.exception(err_msg)
                 raise
 
@@ -199,7 +199,8 @@ class TAMS:
         t_list.sort(key=lambda t: t.id())
         self._tdb.update_traj_list(t_list)
 
-        self._tdb.set_init_pool_flag(True)
+        if self._tdb.count_ended_traj() == self._tdb.n_traj():
+            self._tdb.set_init_ensemble_flag(True)
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -254,7 +255,7 @@ class TAMS:
         # time is still ongoing.
         ongoing_list = self._tdb.get_ongoing()
         if ongoing_list:
-            inf_msg = f"Unfinished splitting iteration detected, traj {self._tdb.get_ongoing()} need(s) finishing"
+            inf_msg = f"Unfinished splitting iteration detected, traj {ongoing_list} need(s) finishing"
             _logger.info(inf_msg)
             with get_runner_type(self._parameters)(
                 self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
@@ -306,7 +307,7 @@ class TAMS:
         return rest_idx
 
     def do_multilevel_splitting(self) -> None:
-        """Schedule splitting of the initial pool of stochastic trajectories.
+        """Schedule splitting of the initial ensemble of stochastic trajectories.
 
         Perform the multi-level splitting iterations, possibly restarting multiple
         trajectories at each iterations. All the trajectories in an iterations are
@@ -355,13 +356,13 @@ class TAMS:
                 min_idx_list, min_vals = get_min_scored(maxes, runner.n_workers())
 
                 # Randomly select trajectory to branch from
-                rest_idx = self.get_restart_at_random(min_idx_list)
+                ancestor_idx = self.get_restart_at_random(min_idx_list)
                 n_branch = len(min_idx_list)
 
                 # Update the database with the data of the current
                 # iteration
                 self._tdb.append_splitting_iteration_data(
-                    k, n_branch, min_idx_list, rest_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
+                    k, n_branch, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
                 )
 
                 # Exit the loop if needed
@@ -371,7 +372,7 @@ class TAMS:
                 # Assemble a list of promises
                 for i in range(n_branch):
                     task = [
-                        self._tdb.get_traj(rest_idx[i]),
+                        self._tdb.get_traj(ancestor_idx[i]),
                         self._tdb.get_traj(min_idx_list[i]),
                         min_vals[i],
                         self._endDate,
@@ -411,10 +412,10 @@ class TAMS:
         inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using TAMS"
         _logger.info(inf_msg)
 
-        # Generate the initial trajectory pool
-        init_pool_need_work = not self._tdb.init_pool_done()
-        if init_pool_need_work:
-            self.generate_trajectory_pool()
+        # Generate the initial trajectory ensemble
+        init_ensemble_need_work = not self._tdb.init_ensemble_done()
+        if init_ensemble_need_work:
+            self.generate_trajectory_ensemble()
 
         # Check for early convergence
         all_converged = True
@@ -423,8 +424,8 @@ class TAMS:
                 all_converged = False
                 break
 
-        if init_pool_need_work and all_converged:
-            inf_msg = "All trajectories converged prior to splitting !"
+        if init_ensemble_need_work and all_converged:
+            inf_msg = "All trajectories in the ensemble converged prior to splitting !"
             _logger.info(inf_msg)
             return 1.0
 
@@ -433,8 +434,8 @@ class TAMS:
             _logger.warning(warn_msg)
             return -1.0
 
-        if self._init_pool_only:
-            warn_msg = "Stopping after the pool stage !"
+        if self._init_ensemble_only:
+            warn_msg = "Stopping after the initial ensemble stage !"
             _logger.warning(warn_msg)
             return -1.0
 
