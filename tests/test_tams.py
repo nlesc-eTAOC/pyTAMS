@@ -358,10 +358,10 @@ def test_doublewell_slow_tams_stop():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,
@@ -379,10 +379,10 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 4.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 5.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,
@@ -401,10 +401,10 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
             },
             f,
