@@ -33,7 +33,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         _B: Boussinesq model
     """
 
-    def _init_model(self, m_id: int, params: dict[Any,Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Initialize the model."""
         # Parse parameters
         subparms = params.get("model", {})
@@ -107,7 +107,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         """Return the model name."""
         return "2DBoussinesqModel"
 
-    def init_condition(self) -> (str, str):
+    def init_condition(self) -> tuple[str, str]:
         """Return the initial conditions."""
         # Set the initial state to the ON state
         self._state_arrays = self._on
@@ -124,7 +124,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         return (self._netcdf_state_path.relative_to(self._db_path).as_posix(), f"state_{0:06}")
 
-    def init_storage(self) -> str:
+    def init_storage(self) -> None:
         """Initialize a netCDF file to store state data in."""
         # Set Path and checks
         state_file = "states.nc"
@@ -268,9 +268,10 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             self._psi_south_off = np.mean(self._off[3, 5:15, 32:48], axis=(0, 1))
         elif self._score_method == "BaarsJCP":
             edge_state = np.load(self._edge_state_file, allow_pickle=True)
-            self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3,:,:] - self._off[1:3,:,:])**2))
-            self._score_eta = np.sqrt(np.sum((edge_state[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
-
+            self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3, :, :] - self._off[1:3, :, :]) ** 2))
+            self._score_eta = (
+                np.sqrt(np.sum((edge_state[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+            )
 
     def score(self) -> float:
         """Compute the score function.
@@ -332,10 +333,14 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             return 0.0
 
         if self._score_method == "BaarsJCP":
-            da = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._on[1:3,:,:])**2)) / self._on_to_off_l2norm
-            db = np.sqrt(np.sum((self._state_arrays[1:3,:,:] - self._off[1:3,:,:])**2)) / self._on_to_off_l2norm
+            da = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+            db = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._off[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
 
-            return (self._score_eta - self._score_eta * np.exp(-8.0*da**2) + (1.0 - self._score_eta) * np.exp(-8.0*db**2)) * time_factor
+            return (
+                self._score_eta
+                - self._score_eta * np.exp(-8.0 * da**2)
+                + (1.0 - self._score_eta) * np.exp(-8.0 * db**2)
+            ) * time_factor
 
         err_msg = f"Unknown score method {self._score_method} !"
         _logger.exception(err_msg)
