@@ -33,7 +33,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         _B: Boussinesq model
     """
 
-    def _init_model(self, m_id: int, params: dict | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any,Any]) -> None:
         """Initialize the model."""
         # Parse parameters
         subparms = params.get("model", {})
