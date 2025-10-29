@@ -297,16 +297,12 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
 
-        # Compute an exponential decay near the time horizon of the
-        # simulation final time
-        time_factor = 1.0
-        if self._time_dep_score:
-            time_factor = 1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale)
+        xi_zero = None
 
         if self._score_method == "default":
             psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
 
-            return (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on) * time_factor
+            xi_zero = (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
 
         if self._score_method == "PODdecomp":
             if self._score_builder is None:
@@ -314,10 +310,20 @@ class Boussinesq2DModel(ForwardModelBaseClass):
                     self._M + 1, self._N + 1, self._pod_data_file, self._score_pod_ndim, self._score_pod_d0
                 )
 
-            return self._score_builder.get_score(self._state_arrays) * time_factor
+            xi_zero = self._score_builder.get_score(self._state_arrays)
 
+        if self._score_method == "BaarsJCP":
+            da = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+            db = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._off[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+
+            xi_zero = (
+                self._score_eta
+                - self._score_eta * np.exp(-8.0 * da**2)
+                + (1.0 - self._score_eta) * np.exp(-8.0 * db**2)
+            )
+
+        # A score for the edge tracking algorithm
         if self._score_method == "EdgeTracker":
-            # A score for the edge tracking algorithm
             # Compute the score and return -1, 0 or 1:
             # -1 : if the score get  below 0.1 (close to the ON state)
             #  1 : if the score gets above 0.9 (close to the OFF state)
@@ -332,19 +338,17 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
             return 0.0
 
-        if self._score_method == "BaarsJCP":
-            da = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
-            db = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._off[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+        if xi_zero is None:
+            err_msg = f"Unknown score method {self._score_method} !"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
 
-            return (
-                self._score_eta
-                - self._score_eta * np.exp(-8.0 * da**2)
-                + (1.0 - self._score_eta) * np.exp(-8.0 * db**2)
-            ) * time_factor
+        # Compute an exponential decay near the time horizon of the
+        # simulation final time if requested
+        if self._time_dep_score:
+            return xi_zero * (1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale) * (1.0 - xi_zero))
 
-        err_msg = f"Unknown score method {self._score_method} !"
-        _logger.exception(err_msg)
-        raise RuntimeError(err_msg)
+        return xi_zero
 
     def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.
