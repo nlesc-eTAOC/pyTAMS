@@ -126,7 +126,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         self._workdir = workdir
 
     @abstractmethod
-    def _init_model(self, m_id: int, params: dict[Any, Any] | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Concrete class specific initialization.
 
         Args:

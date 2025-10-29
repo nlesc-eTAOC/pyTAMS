@@ -21,9 +21,10 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
     coupling TAMS to existing external software.
     """
 
-    def _init_model(self, params: dict | None = None, ioprefix: str | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any,Any]) -> None:
         """Initialize the model."""
-        self._ioprefix = ioprefix
+        # Keep the model id around
+        self._m_id = m_id
 
         # Parse parameters
         subparms = params.get("model", {})
@@ -42,12 +43,12 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
         # A handle to the C++ subprocess and the twoway pipe
         self._proc = None
         self._pipe = None
-        #self._pipe = TwoWayPipe(self._ioprefix)
+        #self._pipe = TwoWayPipe(self._m_id)
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
         if subparms["deterministic"]:
-            self._rng = np.random.default_rng(int(ioprefix[4:10]))
+            self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 
@@ -114,7 +115,7 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
             # Initialize the C++ process and the twoway pipe
             self._proc = subprocess.Popen(self._exec_cmd)
 
-            self._pipe = TwoWayPipe(self._ioprefix)
+            self._pipe = TwoWayPipe(self._m_id)
             self._pipe.open()
 
             # Send the workdir

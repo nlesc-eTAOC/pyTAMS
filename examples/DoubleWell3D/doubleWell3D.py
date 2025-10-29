@@ -21,7 +21,7 @@ class DoubleWellModel3D(ForwardModelBaseClass):
 
     def _init_model(self,
                     m_id: int,
-                    params: dict) -> None:
+                    params: dict[Any,Any]) -> None:
         """Initialize the Double Well Model.
 
         Args:

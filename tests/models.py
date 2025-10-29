@@ -11,7 +11,7 @@ class SimpleFModel(ForwardModelBaseClass):
     10 times the state, ceiled to 1.0
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any] | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Initialize model state."""
         _, _ = m_id, params
         self._state: float = 0.0
@@ -51,7 +51,7 @@ class FailingFModel(ForwardModelBaseClass):
     The model thow an exception if the score exceed 0.5
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any] | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Initialize model state."""
         _, _ = m_id, params
         self._state: float = 0.0
@@ -99,7 +99,7 @@ class DoubleWellModel(ForwardModelBaseClass):
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any] | None = None) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Override the template."""
         self._state = self.init_condition()
         self._slow_factor = params.get("model", {}).get("slow_factor", 0.00000001)
