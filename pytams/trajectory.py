@@ -498,7 +498,7 @@ class Trajectory:
         # If ancestor already have a backlog,
         # prepend it if the state id matches
         if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj._noise_backlog) > 0:
-            rest_traj._noise_backlog = rest_traj._noise_backlog + reversed(from_traj._noise_backlog)
+            rest_traj._noise_backlog = rest_traj._noise_backlog + list(reversed(from_traj._noise_backlog))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
