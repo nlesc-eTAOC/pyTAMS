@@ -651,8 +651,8 @@ class Trajectory:
 
     def get_last_state_id(self) -> int | None:
         """Return the id of the last state in the trajectory."""
-        for s in reversed(len(self._snaps)):
-            if self.snaps[s].has_state():
+        for s in reversed(range(len(self._snaps))):
+            if self._snaps[s].has_state():
                 return s
 
         return None
