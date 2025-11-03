@@ -409,13 +409,11 @@ class Trajectory:
         # handle sparse state, noise backlog and necessary fmodel initialization
         if rest_traj._fmodel:
             # Remove snapshots from the list until a state is available
-            need_update = False
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
                     # Append the noise history to the backlog
                     rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
-                    need_update = True
                 else:
                     # Because the noise in the snapshot is the noise
                     # used to reach the next state, append the last to the backlog too
@@ -430,10 +428,6 @@ class Trajectory:
             # Ensure everything is set to start the time stepping loop
             rest_traj._setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
-
-            # Reset score_max, ended and converged
-            if need_update:
-                rest_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restore
