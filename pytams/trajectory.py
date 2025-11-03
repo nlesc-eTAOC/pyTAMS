@@ -409,13 +409,11 @@ class Trajectory:
         # handle sparse state, noise backlog and necessary fmodel initialization
         if rest_traj._fmodel:
             # Remove snapshots from the list until a state is available
-            need_update = False
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
                     # Append the noise history to the backlog
                     rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
-                    need_update = True
                 else:
                     # Because the noise in the snapshot is the noise
                     # used to reach the next state, append the last to the backlog too
@@ -430,10 +428,6 @@ class Trajectory:
             # Ensure everything is set to start the time stepping loop
             rest_traj._setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
-
-            # Reset score_max, ended and converged
-            if need_update:
-                rest_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restore
@@ -500,6 +494,11 @@ class Trajectory:
         rest_traj._branching_history = rst_traj._branching_history
         rest_traj._branching_history.append(from_traj.id())
         rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
+
+        # If ancestor already have a backlog,
+        # prepend it if the state id matches
+        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj._noise_backlog) > 0:
+            rest_traj._noise_backlog = rest_traj._noise_backlog + list(reversed(from_traj._noise_backlog))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
@@ -647,6 +646,14 @@ class Trajectory:
         for snap in reversed(self._snaps):
             if snap.has_state():
                 return snap.state
+
+        return None
+
+    def get_last_state_id(self) -> int | None:
+        """Return the id of the last state in the trajectory."""
+        for s in reversed(range(len(self._snaps))):
+            if self._snaps[s].has_state():
+                return s
 
         return None
 
