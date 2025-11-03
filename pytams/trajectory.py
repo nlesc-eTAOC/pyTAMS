@@ -495,6 +495,11 @@ class Trajectory:
         rest_traj._branching_history.append(from_traj.id())
         rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
 
+        # If ancestor already have a backlog,
+        # prepend it if the state id matches
+        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj._noise_backlog) > 0:
+            rest_traj._noise_backlog = rest_traj._noise_backlog + reversed(from_traj._noise_backlog)
+
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
@@ -641,6 +646,14 @@ class Trajectory:
         for snap in reversed(self._snaps):
             if snap.has_state():
                 return snap.state
+
+        return None
+
+    def get_last_state_id(self) -> int | None:
+        """Return the id of the last state in the trajectory."""
+        for s in reversed(len(self._snaps)):
+            if self.snaps[s].has_state():
+                return s
 
         return None
 
