@@ -957,3 +957,84 @@ class Database:
         plt.savefig(pltfile, dpi=300)
         plt.clf()
         plt.close()
+
+    def _get_location_and_indices_at_k(self, k_in: int) -> list[tuple[str, int]]:
+        """Return the location and indices of active trajectory at k_in.
+
+        Location here can be either 'active' or "archive" depending on
+        whether the trajectory we are interested in is still in the current
+        active list or in the archived list.
+
+        Args:
+            k_in : the index of the splitting iteration
+
+        Returns:
+            A list of tuple with the location and index of each trajectory
+            active at iteration k
+        """
+        # Initialize active @k list with current active list
+        # For now handle tuple with (active/archived, index)
+        # The actual trajectory list will be filled later
+        active_list_index = [("active", i) for i in range(self._ntraj)]
+
+        # Traverse in reverse the splitting iteration table
+        idx_in_archive = self.archived_traj_list_len() - 1
+        for k in range(self._pool_db.get_iteration_count() - 1, k_in - 1, -1):
+            splitting_data = self._pool_db.fetch_splitting_data(k)
+            if splitting_data:
+                _, nbranch, _, discarded, _, _, _, status = splitting_data
+                if status == "locked":
+                    continue
+                for discarded_idx in discarded:
+                    for i in range(idx_in_archive, idx_in_archive - nbranch, -1):
+                        if self._archived_trajs_db[i].id() == discarded_idx:
+                            active_list_index[discarded_idx] = ("archive", i)
+            idx_in_archive = idx_in_archive - nbranch
+
+        return active_list_index
+
+    def get_trajectory_active_at_k(self, k_in: int) -> list[Trajectory]:
+        """Return the list of trajectory active at a given splitting iteration.
+
+        To explore the ensemble evolution during splitting iterations, it is
+        useful to reconstruct the list of active trajectories at the beginning
+        of any given splitting iteration.
+
+        Note that k here is not the splitting index, but the iteration index.
+        Since more than one child can be spawned at each splitting iteration,
+        the two might differ.
+
+        Args:
+            k_in : the index of the splitting iteration
+
+        Returns:
+            The list of trajectories active at the beginning of iteration k
+        """
+        # Check that the requested index is available in the database
+        if k_in >= self._pool_db.get_iteration_count():
+            err_msg = (
+                f"Attempting to read splitting iteration {k_in} data"
+                f"larger than stored data {self._pool_db.get_iteration_count()}"
+            )
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
+
+        # Check that archived trajectories are stored
+        if self.archived_traj_list_len() == 0:
+            err_msg = "Cannot reconstruct active set without stored archives !"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
+
+        # First get the location and indices of the trajectories
+        # active at iteration k
+        active_list_index = self._get_location_and_indices_at_k(k_in)
+
+        # Retrive the trajectories from the active/archived lists
+        active_list_at_k = []
+        for location, idx in active_list_index:
+            if location == "active":
+                active_list_at_k.append(self._trajs_db[idx])
+            elif location == "archive":
+                active_list_at_k.append(self._archived_trajs_db[idx])
+
+        return active_list_at_k

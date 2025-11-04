@@ -225,6 +225,16 @@ def test_explore_minmax_tdb():
 
 
 @pytest.mark.dependency(depends=["genDB"])
+def test_explore_active_at_k():
+    """Test getting the initial active set."""
+    tdb = Database.load(Path("dwTest.tdb"))
+    tdb.load_data(load_archived_trajectories=True)
+    act_trajs = tdb.get_trajectory_active_at_k(0)
+    assert len(act_trajs) == 50
+    assert act_trajs[42].idstr() == "traj000042_0000"
+
+
+@pytest.mark.dependency(depends=["genDB"])
 def test_restore_tdb():
     """Test loading and restoring the TDB."""
     fmodel = DoubleWellModel

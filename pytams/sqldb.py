@@ -535,6 +535,63 @@ class SQLFile:
         finally:
             session.close()
 
+    def get_iteration_count(self) -> int:
+        """Get the number of splitting iteration stored.
+
+        Returns:
+            The length of the SplittingIterations table
+        """
+        session = self._Session()
+        try:
+            return session.query(SplittingIterations).count()
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to count the number of splitting iteration stored")
+            raise
+        finally:
+            session.close()
+
+    def fetch_splitting_data(
+        self, k_id: int
+    ) -> tuple[int, int, float, list[int], list[int], list[float], list[float], str] | None:
+        """Get the splitting iteration data for a given iteration.
+
+        Args:
+            k_id : The iteration id
+
+        Return:
+            The splitting iteration data
+
+        Raises:
+            ValueError if the splitting iteration with the given id does not exist
+        """
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = k_id + 1
+            split = session.query(SplittingIterations).filter(SplittingIterations.id == db_id).one_or_none()
+            if split:
+                return (
+                    int(split.split_id),
+                    int(split.bias),
+                    float(split.weight),
+                    cast("list[int]", json.loads(split.discarded_traj_ids)),
+                    cast("list[int]", json.loads(split.ancestor_traj_ids)),
+                    cast("list[float]", json.loads(split.min_vals)),
+                    cast("list[float]", json.loads(split.min_max)),
+                    split.status,
+                )
+
+            err_msg = f"Splitting iteration {k_id} does not exist"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to fetch splitting iteration data")
+            raise
+        finally:
+            session.close()
+
     def get_ongoing(self) -> list[int] | None:
         """Get the list of ongoing trajectories if any.
 
