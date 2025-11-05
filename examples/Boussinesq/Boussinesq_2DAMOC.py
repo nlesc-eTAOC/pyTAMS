@@ -1,9 +1,12 @@
 # %% Stable Equilibria of the Stochastic Model
 
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import scipy as sp
+
+_logger = logging.getLogger(__name__)
 
 
 class Boussinesq:
@@ -53,9 +56,11 @@ class Boussinesq:
         self.dtsq = np.sqrt(self._dt)
 
         # Hosing parameters
+        self.hosing_shape = "tanh"
         self.hosing_t0 = 0.0  # Start of rate increase
-        self.hosing_sval = 0.0  # Initial hosing value at t0
-        self.hosing_rate = 0.0  # Rate of change of hosing
+        self.hosing_tf = 0.0  # End of rate increase
+        self.hosing_start_val = 0.0  # Initial hosing value at t0
+        self.hosing_rate = 0.0  # Rate of change of hosing rate
 
         self.make_x_derivatives()
         self.make_z_derivatives()
@@ -101,7 +106,7 @@ class Boussinesq:
     def hosing(self, x: npt.NDArray[np.number], ampl: float) -> npt.NDArray[np.number]:
         """Define hosing spatial profile.
 
-        We use a tanh function in latitute, adding freshwater to
+        We use a tanh or a Gaussian function in latitute, adding freshwater to
         the northern part if the amplitude is positive (while
         removing freshwater in the southern part to conserve salinity).
 
@@ -112,19 +117,42 @@ class Boussinesq:
         Returns:
             The local hosing value
         """
-        return -ampl * np.tanh(20.0 * (x / self._a - 1 / 2))
+        if self.hosing_shape == "tanh":
+            return -ampl * np.tanh(20.0 * (x / self._a - 1 / 2))
 
-    def init_hosing(self, t0: float, h0: float, rate: float) -> None:
+        if self.hosing_shape == "gaussian":
+            sigma = self._a / 30.0
+            north_gauss = (
+                -ampl
+                * np.exp(-((x / self._a - 3.0 / 4.0) ** 2) / (2.0 * (sigma / self._a) ** 2))
+                / (sigma * np.sqrt(2.0 * np.pi))
+            )
+            north_gauss_int = np.sum(north_gauss) * self.dx
+            return north_gauss - np.where(
+                ((x / self._a) - 0.5) <= 0.0, 2.0 * north_gauss_int / (self._a + 2.0 * self.dx), 0.0
+            )
+
+        return np.zeros(x.shape)
+
+    def init_hosing(self, shape: str, t0: float, tf: float, h0: float, rate: float) -> None:
         """Initialize hosing parameters.
 
         Args:
-            t0 : hosing start time
+            shape: hosing shape
+            t0 : change hosing rate start time
+            tf : change hosing rate end time
             h0 : initial hosing value amplitude (at t0)
             rate : rate of change of hosing amplitude
         """
+        self.hosing_shape = shape
         self.hosing_t0 = t0
-        self.hosing_sval = h0
+        self.hosing_tf = tf
+        self.hosing_start_val = h0
         self.hosing_rate = rate
+        if self.hosing_shape not in ["tanh", "gaussian"]:
+            err_msg = f"Hosing shape {shape} is not available"
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
 
     def init_salt_stoch_noise(self, z: npt.NDArray[np.number], nk: int, eps: float, delta_stoch: float) -> None:
         """Initialize stochastic salinity noise.
@@ -249,7 +277,8 @@ class Boussinesq:
         Returns:
             A numpy array with the hosing degenerated
         """
-        ampl = self.hosing_sval + max(0, (time - self.hosing_t0)) * self.hosing_rate
+        limited_time = min(time, self.hosing_tf)
+        ampl = self.hosing_start_val + max(0, (limited_time - self.hosing_t0)) * self.hosing_rate
         return (
             self.h(self.z_j(np.arange(self._n + 1)))[np.newaxis]
             * self.hosing(self.xx, ampl)[:, np.newaxis]

@@ -44,8 +44,10 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._delta_stoch = subparms.get("delta_stoch", 0.05)  # Noise depth
 
         # Hosing parameters
+        self._hosing_shape = subparms.get("hosing_shape", "tanh")
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
         self._hosing_start = subparms.get("hosing_start", 0.0)
+        self._hosing_end = subparms.get("hosing_end", -1.0)
         self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
 
         # Load the ON and OFF conditions
@@ -84,7 +86,9 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._B = Boussinesq(self._M, self._N, dt)
         self._B.make_salinity_forcing(self._beta_span)
         self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
-        self._B.init_hosing(self._hosing_start, self._hosing_start_val, self._hosing_rate)
+        self._B.init_hosing(
+            self._hosing_shape, self._hosing_start, self._hosing_end, self._hosing_start_val, self._hosing_rate
+        )
 
         # Initial conditions from ON state
         # Create the workdir if it doesn't exist
