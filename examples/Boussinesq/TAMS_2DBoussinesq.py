@@ -42,6 +42,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._eps = subparms.get("epsilon", 0.01)  # Noise level
         self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
         self._delta_stoch = subparms.get("delta_stoch", 0.05)  # Noise depth
+        self._stop_noise_time = subparms.get("stop_noise", -1.0)
 
         # Hosing parameters
         self._hosing_shape = subparms.get("hosing_shape", "tanh")
@@ -375,7 +376,15 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         return current_score >= target_score
 
     def make_noise(self) -> Any:
-        """Return a random noise."""
+        """Return a random noise.
+
+        The model parameter stop_noise allows
+        to return zero noise past a given time.
+        """
+        if (self._stop_noise_time > 0.0 and
+           self._time > self._stop_noise_time):
+            return np.zeros(2 * self._K)
+
         return self._rng.normal(0, 1, size=(2 * self._K))
 
 
