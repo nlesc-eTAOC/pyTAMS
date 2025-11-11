@@ -42,10 +42,13 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._eps = subparms.get("epsilon", 0.01)  # Noise level
         self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
         self._delta_stoch = subparms.get("delta_stoch", 0.05)  # Noise depth
+        self._stop_noise_time = subparms.get("stop_noise", -1.0)
 
         # Hosing parameters
+        self._hosing_shape = subparms.get("hosing_shape", "tanh")
         self._hosing_rate = subparms.get("hosing_rate", 0.0)
         self._hosing_start = subparms.get("hosing_start", 0.0)
+        self._hosing_end = subparms.get("hosing_end", -1.0)
         self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
 
         # Load the ON and OFF conditions
@@ -84,7 +87,9 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._B = Boussinesq(self._M, self._N, dt)
         self._B.make_salinity_forcing(self._beta_span)
         self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
-        self._B.init_hosing(self._hosing_start, self._hosing_start_val, self._hosing_rate)
+        self._B.init_hosing(
+            self._hosing_shape, self._hosing_start, self._hosing_end, self._hosing_start_val, self._hosing_rate
+        )
 
         # Initial conditions from ON state
         # Create the workdir if it doesn't exist
@@ -371,7 +376,15 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         return current_score >= target_score
 
     def make_noise(self) -> Any:
-        """Return a random noise."""
+        """Return a random noise.
+
+        The model parameter stop_noise allows
+        to return zero noise past a given time.
+        """
+        if (self._stop_noise_time > 0.0 and
+           self._time > self._stop_noise_time):
+            return np.zeros(2 * self._K)
+
         return self._rng.normal(0, 1, size=(2 * self._K))
 
 

@@ -170,6 +170,15 @@ def test_sparse_simple_traj():
     assert isclose(t_test.get_last_state(), 0.024, abs_tol=1e-9)
 
 
+def test_sparse_simple_traj_access_states():
+    """Test a sparse trajectory with simple model."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.0002, "targetscore": 0.25, "sparse_freq": 5}}
+    t_test = Trajectory(1, fmodel, parameters)
+    t_test.advance()
+    assert len(t_test.get_state_list()) == 26
+
+
 def test_store_and_restart_sparse_simple_traj():
     """Test a sparse trajectory with simple model."""
     fmodel = SimpleFModel
