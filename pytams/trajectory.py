@@ -629,6 +629,14 @@ class Trajectory:
             noises[k] = self._snaps[k].noise
         return noises
 
+    def get_state_list(self) -> list[tuple[int, Any]]:
+        """Return a list of states and associated indices.
+
+        Returns:
+            A list of tuples with index and states
+        """
+        return [(k, self._snaps[k].state) for k in range(len(self._snaps)) if self._snaps[k].has_state()]
+
     def get_length(self) -> int:
         """Return the trajectory length."""
         return len(self._snaps)
