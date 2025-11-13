@@ -259,3 +259,19 @@ class PODScore:
         return compute_score_function(
             field_pod, self._psi_pod[:, : self._n_active_modes], self._curv_abs, self._curvature, d0=self._d0
         )
+
+    def project_in_podspace(self, model_state: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
+        """Compute projection of the model state in the POD space
+
+        Args:
+            model_state: The model state as a numpy array (fix typing)
+
+        Returns:
+            A numpy array with the projection of the state in the POD space
+        """
+        # Map Boussinesq model field order to POD database order
+        field_map = np.array([3, 1, 2])
+        field = np.zeros((self._nfield, self._lat, self._depth))
+        field[:, :, :] = model_state[field_map[: self._nfield], :, :] / self._scaling_field[:, None, None]
+
+        return project_in_pod_space(self._n_active_modes, field, self._phi_pod, self._weights)
