@@ -8,7 +8,7 @@ Welcome to pyTAMS's documentation!
 
 
 .. warning::
-   pyTAMS documentation is under construction and fairly incomplete at this point.
+   pyTAMS documentation is still under construction !
 
 `pyTAMS` is a modular implementation of the trajectory adaptive multilevel splitting (TAMS),
 an algorithm developed to evaluate the probability of rare events associated with a stochastic

@@ -1,5 +1,7 @@
 from __future__ import annotations
+import json
 import logging
+import shutil
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -95,6 +97,10 @@ class Trajectory:
     method to move forward in time, methods to save/load the trajectory to/from disk
     as well as accessor to the trajectory history (time, state, score, ...).
 
+    The _computed_steps variable store the number of steps actually taken by the
+    trajectory. It differs from the _step variable when a trajectory is branched
+    from an ancestor.
+
     Attributes:
         _parameters_full : the full parameters dictionary
         _tid : the trajectory index
@@ -103,6 +109,7 @@ class Trajectory:
         _score_max : the maximum score
         _snaps : a list of snapshots
         _step : the current step counter
+        _computed_steps : the number of steps explicitly advanced by the trajectory
         _t_cur : the current time
         _t_end : the end time
         _dt : the stochastic time step size
@@ -140,6 +147,7 @@ class Trajectory:
         self._score_max: float = 0.0
         self._has_ended: bool = False
         self._has_converged: bool = False
+        self._computed_steps: int = 0
 
         # TAMS is expected to start at t = 0.0, but the forward model
         # itself can have a different internal starting point
@@ -178,7 +186,7 @@ class Trajectory:
         if frozen or fmodel_t is None:
             self._fmodel = None
         else:
-            self._fmodel = fmodel_t(parameters, self.idstr(), self._workdir)
+            self._fmodel = fmodel_t(self._tid * 10000 + self.get_nbranching(), parameters, self._workdir)
 
     def set_checkfile(self, path: Path) -> None:
         """Setter of the trajectory checkFile.
@@ -244,6 +252,7 @@ class Trajectory:
 
         Raises:
             WallTimeLimitError: if the walltime limit is reached
+            RuntimeError: if the model advance run into a problem
         """
         start_time = time.monotonic()
         remaining_time = walltime - time.monotonic() + start_time
@@ -319,6 +328,9 @@ class Trajectory:
         # with mode complex convergence criteria
         self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
 
+        # Increment the computed step counter
+        self._computed_steps += 1
+
         return score
 
     def _setup_noise(self) -> None:
@@ -382,6 +394,7 @@ class Trajectory:
         rest_traj._has_ended = metadata["ended"]
         rest_traj._has_converged = metadata["converged"]
         rest_traj._branching_history = metadata["branching_history"].tolist()
+        rest_traj._computed_steps = metadata.get("c_step", 0)
 
         snapshots = root.find("snapshots")
         if snapshots is not None:
@@ -396,13 +409,11 @@ class Trajectory:
         # handle sparse state, noise backlog and necessary fmodel initialization
         if rest_traj._fmodel:
             # Remove snapshots from the list until a state is available
-            need_update = False
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
                     # Append the noise history to the backlog
                     rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
-                    need_update = True
                 else:
                     # Because the noise in the snapshot is the noise
                     # used to reach the next state, append the last to the backlog too
@@ -417,10 +428,6 @@ class Trajectory:
             # Ensure everything is set to start the time stepping loop
             rest_traj._setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
-
-            # Reset score_max, ended and converged
-            if need_update:
-                rest_traj.update_metadata()
 
             # Enable the model to perform tweaks
             # after a trajectory restore
@@ -488,6 +495,11 @@ class Trajectory:
         rest_traj._branching_history.append(from_traj.id())
         rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
 
+        # If ancestor already have a backlog,
+        # prepend it if the state id matches
+        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj._noise_backlog) > 0:
+            rest_traj._noise_backlog = rest_traj._noise_backlog + list(reversed(from_traj._noise_backlog))
+
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
         for k in range(high_score_idx + 1):
@@ -529,6 +541,7 @@ class Trajectory:
         mdata.append(new_element("ended", self._has_ended))
         mdata.append(new_element("converged", self._has_converged))
         mdata.append(new_element("branching_history", np.array(self._branching_history, dtype=int)))
+        mdata.append(new_element("c_step", self._computed_steps))
         snaps_xml = ET.SubElement(root, "snapshots")
         for k in range(len(self._snaps)):
             snaps_xml.append(
@@ -616,6 +629,14 @@ class Trajectory:
             noises[k] = self._snaps[k].noise
         return noises
 
+    def get_state_list(self) -> list[tuple[int, Any]]:
+        """Return a list of states and associated indices.
+
+        Returns:
+            A list of tuples with index and states
+        """
+        return [(k, self._snaps[k].state) for k in range(len(self._snaps)) if self._snaps[k].has_state()]
+
     def get_length(self) -> int:
         """Return the trajectory length."""
         return len(self._snaps)
@@ -624,6 +645,10 @@ class Trajectory:
         """Return the number of branching events."""
         return len(self._branching_history)
 
+    def get_computed_steps_count(self) -> int:
+        """Return the number of compute steps taken."""
+        return self._computed_steps
+
     def get_last_state(self) -> Any | None:
         """Return the last state in the trajectory."""
         for snap in reversed(self._snaps):
@@ -631,3 +656,35 @@ class Trajectory:
                 return snap.state
 
         return None
+
+    def get_last_state_id(self) -> int | None:
+        """Return the id of the last state in the trajectory."""
+        for s in reversed(range(len(self._snaps))):
+            if self._snaps[s].has_state():
+                return s
+
+        return None
+
+    def get_metadata_json(self) -> str:
+        """Return a json string with metadata.
+
+        Returns:
+            A json string with the trajectory metadata
+        """
+        return json.dumps(
+            {
+                "ended": self._has_ended,
+                "converged": self._has_converged,
+                "score_max": self._score_max,
+                "length": self.get_length(),
+                "nbranching": self.get_nbranching(),
+                "nstep_compute": self._computed_steps,
+            },
+            default=str,
+        )
+
+    def delete(self) -> None:
+        """Clear the trajectory on-disk data."""
+        self._checkFile.unlink()
+        if self._workdir.exists():
+            shutil.rmtree(self._workdir)

@@ -16,7 +16,9 @@ size_M = 40
 size_N = 80
 epsilon = 0.01
 K = 7
-delta_stoch = 0.05
+score_method = "PODdecomp"
+pod_data_file = "./POD_decomp_InstModes.nc"
+pod_d0 = 1.0
 score_time_dep = true
 score_time_scale = 0.5
 
@@ -26,4 +28,4 @@ nworker_init=5
 nworker_iter=2
 
 [database]
-path = "2DBoussinesq.tdb"
+path = "2DBoussinesq_POD.tdb"

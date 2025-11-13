@@ -9,8 +9,8 @@ class MOCModel(ForwardModelBaseClass):
     """Meridional overturning circulation box model."""
 
     def _init_model(self,
-                    params: dict = None,
-                    ioprefix: str = None):
+                    m_id: int,
+                    params: dict[Any, Any] | None = None) -> None:
         """E_A is the forcing amplitude.
 
         opt_params: "temp_params" to give lambda_a
