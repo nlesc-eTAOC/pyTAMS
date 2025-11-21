@@ -107,7 +107,8 @@ def test_store_and_restore_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    rst_test = Trajectory.restore_from_checkfile(chkfile, fmodel, parameters)
+    metadata = t_test.serialize_metadata_json()
+    rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters)
     assert isclose(rst_test.score_max(), 0.2, abs_tol=1e-9)
     rst_test.advance()
     assert rst_test.is_converged() is True
@@ -125,7 +126,8 @@ def test_store_and_restore_frozen_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    rst_test = Trajectory.restore_from_checkfile(chkfile, fmodel, parameters, frozen=True)
+    metadata = t_test.serialize_metadata_json()
+    rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters, frozen=True)
     assert isclose(rst_test.score_max(), 0.2, abs_tol=1e-9)
     with pytest.raises(RuntimeError):
         rst_test.advance()
@@ -190,7 +192,8 @@ def test_store_and_restart_sparse_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    rst_test = Trajectory.restore_from_checkfile(chkfile, fmodel, parameters)
+    metadata = t_test.serialize_metadata_json()
+    rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters)
     rst_test.advance()
     assert rst_test.is_converged() is True
     chkfile.unlink()
@@ -221,7 +224,8 @@ def test_sparse_dw_traj_with_restore():
     t_test.store(chkfile)
     assert isclose(t_test.score_max(), 0.5383998247480907, abs_tol=1e-9)
     assert not t_test.is_converged()
-    rst_test = Trajectory.restore_from_checkfile(chkfile, fmodel, parameters, frozen=False)
+    metadata = t_test.serialize_metadata_json()
+    rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters, frozen=False)
     rst_test.advance()
     assert rst_test.score_max() > 0.95
     assert rst_test.is_converged()

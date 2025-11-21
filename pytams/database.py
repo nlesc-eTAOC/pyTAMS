@@ -384,13 +384,15 @@ class Database:
 
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
-            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
+            checkpath, metadata_str = self._pool_db.fetch_trajectory(n)
+            traj_checkfile = Path(self._abs_path) / checkpath
             workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
                 n_traj_restored += 1
                 self.append_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
+                        metadata_str,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -399,9 +401,8 @@ class Database:
                     False,
                 )
             else:
-                t = Trajectory(
-                    traj_id=n,
-                    weight=0.0,  # TODO : quick fix, need to handle metadata externally
+                t = Trajectory.init_from_metadata(
+                    metadata_str,
                     fmodel_t=self._fmodel_t,
                     parameters=self._parameters,
                     workdir=workdir,
@@ -434,13 +435,15 @@ class Database:
 
         archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
         for n in range(archived_ntraj_in_db):
-            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+            checkpath, metadata_str = self._pool_db.fetch_archived_trajectory(n)
+            traj_checkfile = Path(self._abs_path) / checkpath
             workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
                 n_traj_restored += 1
                 self.append_archived_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
+                        metadata_str,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -469,12 +472,14 @@ class Database:
         """
         # Also adds it to the SQL pool file.
         # and set the checkfile
-        if self._save_to_disk and self._pool_db:
+        if self._save_to_disk:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
-            if update_db:
-                self._pool_db.add_trajectory(checkfile_str, a_traj.get_metadata_json())
+        else:
+            checkfile_str = f"{a_traj.idstr()}.xml"
+        if update_db:
+            self._pool_db.add_trajectory(checkfile_str, a_traj.serialize_metadata_json())
 
         self._trajs_db.append(a_traj)
 
@@ -485,12 +490,11 @@ class Database:
             a_traj: the trajectory
             update_db: True to update the SQL DB content
         """
-        if self._save_to_disk and self._pool_db:
-            checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
-            checkfile = Path(self._abs_path) / checkfile_str
-            a_traj.set_checkfile(checkfile)
-            if update_db:
-                self._pool_db.archive_trajectory(checkfile_str, a_traj.get_metadata_json())
+        checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
+        checkfile = Path(self._abs_path) / checkfile_str
+        a_traj.set_checkfile(checkfile)
+        if update_db:
+            self._pool_db.archive_trajectory(checkfile_str, a_traj.serialize_metadata_json())
 
         self._archived_trajs_db.append(a_traj)
 
@@ -603,7 +607,7 @@ class Database:
         # Update the list of archived trajectories in the SQL DB
         if self._save_to_disk and self._pool_db:
             checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-            self._pool_db.archive_trajectory(checkfile_str, traj.get_metadata_json())
+            self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
@@ -654,7 +658,7 @@ class Database:
             return
 
         checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.get_metadata_json())
+        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.serialize_metadata_json())
 
     def update_trajectories_weights(self) -> None:
         """Upate the weights of all the trajectories.
