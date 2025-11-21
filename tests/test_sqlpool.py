@@ -46,9 +46,9 @@ def test_add_traj_and_update_to_db():
     """Add and update a trajectory to SQLFile."""
     poolfile = SQLFile("test.db")
     poolfile.add_trajectory("test.xml","")
-    assert poolfile.fetch_trajectory(0) == "test.xml"
+    assert poolfile.fetch_trajectory(0)[0] == "test.xml"
     poolfile.update_trajectory(0, "UpdatedTest.xml", "")
-    assert poolfile.fetch_trajectory(0) == "UpdatedTest.xml"
+    assert poolfile.fetch_trajectory(0)[0] == "UpdatedTest.xml"
     Path("./test.db").unlink(missing_ok=True)
 
 def test_try_update_traj_to_db():
@@ -94,7 +94,7 @@ def test_add_traj_and_fetch():
     poolfile.add_trajectory("test.xml","")
     poolfile.add_trajectory("test_2.xml","")
     assert poolfile.get_trajectory_count() == 2
-    traj = poolfile.fetch_trajectory(0)
+    traj, metadata = poolfile.fetch_trajectory(0)
     assert traj == "test.xml"
     Path("./test.db").unlink(missing_ok=True)
 
@@ -104,7 +104,7 @@ def test_fetch_unknown_traj():
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
     with pytest.raises(ValueError):
-        _ = poolfile.fetch_trajectory(1)
+        _, _ = poolfile.fetch_trajectory(1)
     Path("./test.db").unlink(missing_ok=True)
 
 def test_archive_and_fetch_traj_to_db():
@@ -112,7 +112,7 @@ def test_archive_and_fetch_traj_to_db():
     poolfile = SQLFile("test.db")
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
-    traj = poolfile.fetch_archived_trajectory(0)
+    traj, metadata = poolfile.fetch_archived_trajectory(0)
     assert traj == "test.xml"
     Path("./test.db").unlink(missing_ok=True)
 
@@ -122,7 +122,7 @@ def test_fetch_unknown_archived_traj():
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
     with pytest.raises(ValueError):
-        _ = poolfile.fetch_archived_trajectory(1)
+        _, _ = poolfile.fetch_archived_trajectory(1)
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_trajectory():
