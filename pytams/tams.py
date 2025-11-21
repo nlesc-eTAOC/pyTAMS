@@ -365,6 +365,11 @@ class TAMS:
                     k, n_branch, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
                 )
 
+                # Query the current iteration weight
+                # to compute the individual weight of each trajectory in the ensemble
+                # at the end of the splitting iteration
+                new_traj_weight = self._tdb.weights()[-1] / float(self._tdb.n_traj())
+
                 # Exit the loop if needed
                 if early_exit:
                     break
@@ -375,6 +380,7 @@ class TAMS:
                         self._tdb.get_traj(ancestor_idx[i]),
                         self._tdb.get_traj(min_idx_list[i]),
                         min_vals[i],
+                        new_traj_weight,
                         self._endDate,
                         self._tdb.path(),
                     ]
@@ -387,9 +393,13 @@ class TAMS:
                     _logger.exception(err_msg)
                     raise
 
-                # Update the trajectory database
+                # Update the trajectories in the database
                 for t in restarted_trajs:
                     self._tdb.overwrite_traj(t.id(), t)
+
+                # Update the weights of all trajectories with the current
+                # iteration weight
+                self._tdb.update_trajectories_weights()
 
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories

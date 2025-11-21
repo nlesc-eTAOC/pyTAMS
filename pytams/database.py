@@ -342,6 +342,7 @@ class Database:
             workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
             t = Trajectory(
                 traj_id=n,
+                weight=1.0 / float(self._ntraj),
                 fmodel_t=self._fmodel_t,
                 parameters=self._parameters,
                 workdir=workdir,
@@ -400,6 +401,7 @@ class Database:
             else:
                 t = Trajectory(
                     traj_id=n,
+                    weight=0.0,  # TODO : quick fix, need to handle metadata externally
                     fmodel_t=self._fmodel_t,
                     parameters=self._parameters,
                     workdir=workdir,
@@ -638,12 +640,12 @@ class Database:
         else:
             self._pool_db.release_trajectory(tid)
 
-    def update_trajectory_file(self, traj_id: int, checkfile: Path) -> None:
+    def update_trajectory(self, traj_id: int, traj: Trajectory) -> None:
         """Update a trajectory file in the DB.
 
         Args:
             traj_id : The trajectory id
-            checkfile : The new checkfile of that trajectory
+            traj : the trajectory to get the data from
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
@@ -651,8 +653,19 @@ class Database:
         if not self._save_to_disk or not self._pool_db:
             return
 
-        checkfile_str = checkfile.relative_to(self._abs_path).as_posix()
-        self._pool_db.update_trajectory_file(traj_id, checkfile_str)
+        checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
+        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.get_metadata_json())
+
+    def update_trajectories_weights(self) -> None:
+        """Upate the weights of all the trajectories.
+
+        Using the the current splitting iteration weight.
+        """
+        tweight = self.weights()[-1] / self.n_traj()
+        for t in self._trajs_db:
+            t.set_weight(tweight)
+            if self._save_to_disk:
+                self._pool_db.update_trajectory_weight(t.id(), tweight)
 
     def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
@@ -897,7 +910,7 @@ class Database:
             if t.get_nbranching() > 0:
                 for at in self._archived_trajs_db:
                     if at.id() == tid and at.get_nbranching() == 0:
-                        self.update_trajectory_file(tid, at.get_checkfile())
+                        self.update_trajectory(tid, at)
                         t.delete()
 
         # Delete checkfiles of all the archived trajectories we did not

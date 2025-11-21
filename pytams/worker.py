@@ -40,7 +40,11 @@ def traj_advance_with_exception(traj: Trajectory, walltime: float, a_db: Databas
 
     finally:
         if a_db:
+            # Update the SQL database
             a_db.unlock_trajectory(traj.id(), traj.has_ended())
+            a_db.update_trajectory(traj.id(), traj)
+
+            # Trigger a checkfile dump
             a_db.save_trajectory(traj)
 
     return traj
@@ -84,6 +88,7 @@ def ms_worker(
     from_traj: Trajectory,
     rst_traj: Trajectory,
     min_val: float,
+    new_weight: float,
     end_date: datetime.date,
     db_path: str | None = None,
 ) -> Trajectory:
@@ -93,6 +98,7 @@ def ms_worker(
         from_traj: a trajectory to restart from
         rst_traj: the trajectory being restarted
         min_val: the value of the score function to restart from
+        new_weight: the weight of the new child trajectory
         end_date: the time limit to advance the trajectory
         db_path: a database path or None
     """
@@ -117,19 +123,19 @@ def ms_worker(
             # Archive the trajectory we are branching
             db.archive_trajectory(rst_traj)
 
-        inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
+        inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} {new_weight} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
         if db:
-            db.update_trajectory_file(traj.id(), traj.get_checkfile())
+            db.update_trajectory(traj.id(), traj)
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
 
 
 async def worker_async(

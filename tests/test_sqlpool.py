@@ -47,7 +47,7 @@ def test_add_traj_and_update_to_db():
     poolfile = SQLFile("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.fetch_trajectory(0) == "test.xml"
-    poolfile.update_trajectory_file(0, "UpdatedTest.xml")
+    poolfile.update_trajectory(0, "UpdatedTest.xml", "")
     assert poolfile.fetch_trajectory(0) == "UpdatedTest.xml"
     Path("./test.db").unlink(missing_ok=True)
 
@@ -55,7 +55,7 @@ def test_try_update_traj_to_db():
     """Try update missing trajectory to SQLFile."""
     poolfile = SQLFile("test.db")
     with pytest.raises(SQLAlchemyError):
-        poolfile.update_trajectory_file(0, "UpdatedTest.xml")
+        poolfile.update_trajectory(0, "UpdatedTest.xml", "dummy")
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_to_db_inmemory():
