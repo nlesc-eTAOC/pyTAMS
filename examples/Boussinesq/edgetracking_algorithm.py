@@ -9,7 +9,7 @@ from pytams.trajectory import Trajectory
 
 _logger = logging.getLogger(__name__)
 
-def score(state: npt.NDArray[np.number]):
+def score(state: npt.NDArray[np.number]) -> float:
     """Returns the score value for a given system state."""
     return np.mean(state[3, 5:15, 32:48], axis=(0, 1))
 
@@ -25,7 +25,7 @@ def dist(state1: npt.NDArray[np.number], state2: npt.NDArray[np.number]) -> floa
 def mapper(fmodel: Any, input_params: dict[Any, Any], state: npt.NDArray[np.number], suffix: str = "") -> int:
     """Maps a state to an attractor (ON=-1 or OFF=1)."""
     input_params["trajectory"]["sparse_freq"] = 1000
-    traj = Trajectory(0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
+    traj = Trajectory(0, 1.0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
 
     # Trigger the model to initialize the netCDF file
     traj._fmodel.init_storage()
@@ -51,7 +51,7 @@ def forward_finite_time(
 ) -> npt.NDArray[np.number]:
     """Advance the model by a finite time."""
     input_params["trajectory"]["sparse_freq"] = 1
-    traj = Trajectory(0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
+    traj = Trajectory(0, 1.0, fmodel, input_params, workdir=Path(f"./.edge_tmp/tmp_wkdir{suffix}"))
 
     # Trigger the model to initialize the netCDF file
     traj._fmodel.init_storage()
