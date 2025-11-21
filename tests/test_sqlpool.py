@@ -58,6 +58,14 @@ def test_try_update_traj_to_db():
         poolfile.update_trajectory(0, "UpdatedTest.xml", "dummy")
     Path("./test.db").unlink(missing_ok=True)
 
+def test_try_update_weight_to_db():
+    """Try updating weight to missing trajectory to SQLFile."""
+    poolfile = SQLFile("test.db")
+    poolfile.add_trajectory("test.xml","")
+    with pytest.raises(SQLAlchemyError):
+        poolfile.update_trajectory_weight(3, 1.0)
+    Path("./test.db").unlink(missing_ok=True)
+
 def test_add_traj_to_db_inmemory():
     """Add a trajectory to SQL database in memory."""
     poolfile = SQLFile("", in_memory=True)

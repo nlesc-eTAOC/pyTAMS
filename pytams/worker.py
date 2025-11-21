@@ -123,7 +123,7 @@ def ms_worker(
             # Archive the trajectory we are branching
             db.archive_trajectory(rst_traj)
 
-        inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} {new_weight} [time left: {wall_time}]"
+        inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
         traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
@@ -135,7 +135,18 @@ def ms_worker(
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
+    traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
+
+    warn_msg = "MS worker ran out of time before advancing trajectory!"
+    _logger.warning(warn_msg)
+
+    # The branched trajectory has a new checkfile, even if haven't advanced yet
+    # Update the database to point to the latest one.
+    if db_path:
+        db = Database.load(Path(db_path), read_only=False)
+        db.update_trajectory(traj.id(), traj)
+
+    return traj
 
 
 async def worker_async(
