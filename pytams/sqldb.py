@@ -315,7 +315,7 @@ class SQLFile:
         finally:
             session.close()
 
-    def fetch_trajectory(self, traj_id: int) -> str:
+    def fetch_trajectory(self, traj_id: int) -> tuple[str, str]:
         """Get the trajectory file of a trajectory.
 
         Args:
@@ -334,7 +334,8 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 tfile: str = traj.traj_file
-                return tfile
+                metadata_str: str = traj.t_metadata
+                return tfile, metadata_str
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
@@ -376,7 +377,7 @@ class SQLFile:
         finally:
             session.close()
 
-    def fetch_archived_trajectory(self, traj_id: int) -> str:
+    def fetch_archived_trajectory(self, traj_id: int) -> tuple[str, str]:
         """Get the trajectory file of a trajectory in the archive.
 
         Args:
@@ -395,7 +396,8 @@ class SQLFile:
             traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
             if traj:
                 tfile: str = traj.traj_file
-                return tfile
+                metadata_str: str = traj.t_metadata
+                return tfile, metadata_str
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
