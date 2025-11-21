@@ -118,6 +118,7 @@ class Trajectory:
     def __init__(
         self,
         traj_id: int,
+        weight: float,
         fmodel_t: type[ForwardModelBaseClass] | None,
         parameters: dict[Any, Any],
         workdir: Path | None = None,
@@ -127,6 +128,7 @@ class Trajectory:
 
         Args:
             traj_id: a int for the trajectory index
+            weight: the trajectory weight in the ensemble
             fmodel_t: the forward model type
             parameters: a dictionary of input parameters
             workdir: an optional working directory
@@ -148,6 +150,7 @@ class Trajectory:
         self._has_ended: bool = False
         self._has_converged: bool = False
         self._computed_steps: int = 0
+        self._weight: float = weight
 
         # TAMS is expected to start at t = 0.0, but the forward model
         # itself can have a different internal starting point
@@ -378,9 +381,11 @@ class Trajectory:
         root = tree.getroot()
         metadata = xml_to_dict(root.find("metadata"))
         t_id = metadata["id"]
+        weight = metadata["weight"]
 
         rest_traj = Trajectory(
             traj_id=t_id,
+            weight=weight,
             fmodel_t=fmodel_t,
             parameters=parameters,
             workdir=workdir,
@@ -441,6 +446,7 @@ class Trajectory:
         from_traj: Trajectory,
         rst_traj: Trajectory,
         score: float,
+        new_weight: float,
     ) -> Trajectory:
         """Create a new trajectory.
 
@@ -455,6 +461,7 @@ class Trajectory:
             from_traj: an already existing trajectory to restart from
             rst_traj: the trajectory being restarted
             score: a threshold score
+            new_weight: the weight of the child trajectory
         """
         # Check for empty trajectory
         if len(from_traj._snaps) == 0:
@@ -463,6 +470,7 @@ class Trajectory:
             fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
             rest_traj = Trajectory(
                 traj_id=rst_traj.id(),
+                weight=new_weight,
                 fmodel_t=fmodel_t,
                 parameters=from_traj._parameters_full,
                 workdir=new_workdir,
@@ -487,6 +495,7 @@ class Trajectory:
         fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
         rest_traj = Trajectory(
             traj_id=rst_traj.id(),
+            weight=new_weight,
             fmodel_t=fmodel_t,
             parameters=from_traj._parameters_full,
             workdir=new_workdir,
@@ -534,6 +543,7 @@ class Trajectory:
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
         mdata = ET.SubElement(root, "metadata")
         mdata.append(new_element("id", self._tid))
+        mdata.append(new_element("weight", self._weight))
         mdata.append(new_element("t_cur", self._t_cur))
         mdata.append(new_element("t_end", self._t_end))
         mdata.append(new_element("dt", self._dt))
@@ -560,6 +570,14 @@ class Trajectory:
             tree.write(traj_file.as_posix())
         else:
             tree.write(self._checkFile.as_posix())
+
+    def set_weight(self, weight: float) -> None:
+        """Set the trajectory weight.
+
+        Args:
+            weight: the (new) trajectory weight in the ensemble
+        """
+        self._weight = weight
 
     def update_metadata(self) -> None:
         """Update trajectory score/ending metadata.
@@ -679,6 +697,7 @@ class Trajectory:
                 "length": self.get_length(),
                 "nbranching": self.get_nbranching(),
                 "nstep_compute": self._computed_steps,
+                "weight": self._weight,
             },
             default=str,
         )

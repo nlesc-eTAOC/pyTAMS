@@ -40,7 +40,11 @@ def traj_advance_with_exception(traj: Trajectory, walltime: float, a_db: Databas
 
     finally:
         if a_db:
+            # Update the SQL database
             a_db.unlock_trajectory(traj.id(), traj.has_ended())
+            a_db.update_trajectory(traj.id(), traj)
+
+            # Trigger a checkfile dump
             a_db.save_trajectory(traj)
 
     return traj
@@ -84,6 +88,7 @@ def ms_worker(
     from_traj: Trajectory,
     rst_traj: Trajectory,
     min_val: float,
+    new_weight: float,
     end_date: datetime.date,
     db_path: str | None = None,
 ) -> Trajectory:
@@ -93,6 +98,7 @@ def ms_worker(
         from_traj: a trajectory to restart from
         rst_traj: the trajectory being restarted
         min_val: the value of the score function to restart from
+        new_weight: the weight of the new child trajectory
         end_date: the time limit to advance the trajectory
         db_path: a database path or None
     """
@@ -120,16 +126,27 @@ def ms_worker(
         inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+        traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
         if db:
-            db.update_trajectory_file(traj.id(), traj.get_checkfile())
+            db.update_trajectory(traj.id(), traj)
 
         return traj_advance_with_exception(traj, wall_time, db)
 
-    return Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val)
+    traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
+
+    warn_msg = "MS worker ran out of time before advancing trajectory!"
+    _logger.warning(warn_msg)
+
+    # The branched trajectory has a new checkfile, even if haven't advanced yet
+    # Update the database to point to the latest one.
+    if db_path:
+        db = Database.load(Path(db_path), read_only=False)
+        db.update_trajectory(traj.id(), traj)
+
+    return traj
 
 
 async def worker_async(
