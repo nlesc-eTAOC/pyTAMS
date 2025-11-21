@@ -8,13 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 import numpy as np
 import numpy.typing as npt
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
-from pytams.xmlutils import new_element
 from pytams.xmlutils import read_xml_snapshot
-from pytams.xmlutils import xml_to_dict
 
 if TYPE_CHECKING:
     from pytams.fmodel import ForwardModelBaseClass
@@ -170,7 +169,7 @@ class Trajectory:
 
         # When using sparse state or for other reasons, the noise for the next few
         # steps might be already available. This backlog is used to store them.
-        self._noise_backlog: list[Any] = []
+        self.noise_backlog: list[Any] = []
 
         # Keep track of the branching history during TAMS
         # iterations
@@ -297,7 +296,7 @@ class Trajectory:
 
         # Add the initial snapshot to the list
         if self._step == 0:
-            self._setup_noise()
+            self.setup_noise()
             self._append_snapshot()
 
         # Trigger storing the end state of the current time step
@@ -316,7 +315,7 @@ class Trajectory:
         score = self._fmodel.score()
 
         # Prepare the noise for the next step
-        self._setup_noise()
+        self.setup_noise()
 
         # Append a snapshot at the beginning of the time step
         self._append_snapshot(score)
@@ -336,14 +335,14 @@ class Trajectory:
 
         return score
 
-    def _setup_noise(self) -> None:
+    def setup_noise(self) -> None:
         """Prepare the noise for the next step."""
         # Set the noise for the next model step
         # if a noise backlog is available, use it otherwise
         # make a new noise increment
         if self._fmodel:
-            if self._noise_backlog:
-                self._fmodel.set_noise(self._noise_backlog.pop())
+            if self.noise_backlog:
+                self._fmodel.set_noise(self.noise_backlog.pop())
             else:
                 self._fmodel.set_noise(self._fmodel.make_noise())
 
@@ -362,9 +361,42 @@ class Trajectory:
             )
 
     @classmethod
+    def init_from_metadata(
+        cls,
+        metadata_json: str,
+        fmodel_t: type[ForwardModelBaseClass],
+        parameters: dict[Any, Any],
+        workdir: Path | None = None,
+        frozen: bool = False,
+    ) -> Trajectory:
+        """Initialize a trajectory from serialized metadata."""
+        metadata = cls.deserialize_metadata(metadata_json)
+
+        traj = Trajectory(
+            traj_id=metadata["id"],
+            weight=metadata["weight"],
+            fmodel_t=fmodel_t,
+            parameters=parameters,
+            workdir=workdir,
+            frozen=frozen,
+        )
+
+        traj._t_end = metadata["t_end"]
+        traj._t_cur = metadata["t_cur"]
+        traj._dt = metadata["dt"]
+        traj._score_max = metadata["score_max"]
+        traj._has_ended = metadata["ended"]
+        traj._has_converged = metadata["converged"]
+        traj._branching_history = metadata["branching_history"]
+        traj._computed_steps = metadata["nstep_compute"]
+
+        return traj
+
+    @classmethod
     def restore_from_checkfile(
         cls,
         checkfile: Path,
+        metadata_json: str,
         fmodel_t: type[ForwardModelBaseClass],
         parameters: dict[Any, Any],
         workdir: Path | None = None,
@@ -376,39 +408,16 @@ class Trajectory:
             _logger.exception(err_msg)
             raise FileNotFoundError
 
-        # Read in trajectory metadata
+        rest_traj = Trajectory.init_from_metadata(metadata_json, fmodel_t, parameters, workdir, frozen)
+
+        # Read in trajectory data
         tree = ET.parse(checkfile.absolute())
         root = tree.getroot()
-        metadata = xml_to_dict(root.find("metadata"))
-        t_id = metadata["id"]
-        weight = metadata["weight"]
-
-        rest_traj = Trajectory(
-            traj_id=t_id,
-            weight=weight,
-            fmodel_t=fmodel_t,
-            parameters=parameters,
-            workdir=workdir,
-            frozen=frozen,
-        )
-
-        rest_traj._t_end = metadata["t_end"]
-        rest_traj._t_cur = metadata["t_cur"]
-        rest_traj._dt = metadata["dt"]
-        rest_traj._score_max = metadata["score_max"]
-        rest_traj._has_ended = metadata["ended"]
-        rest_traj._has_converged = metadata["converged"]
-        rest_traj._branching_history = metadata["branching_history"].tolist()
-        rest_traj._computed_steps = metadata.get("c_step", 0)
-
         snapshots = root.find("snapshots")
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
                 rest_traj._snaps.append(Snapshot(time, score, noise, state))
-
-        # Current step with python indexing, so remove 1
-        rest_traj._step = len(rest_traj._snaps) - 1
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
@@ -417,26 +426,24 @@ class Trajectory:
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
                 if not rest_traj._snaps[k].has_state():
                     # Append the noise history to the backlog
-                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
+                    rest_traj.noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
                 else:
                     # Because the noise in the snapshot is the noise
                     # used to reach the next state, append the last to the backlog too
-                    rest_traj._noise_backlog.append(rest_traj._snaps[k].noise)
+                    rest_traj.noise_backlog.append(rest_traj._snaps[k].noise)
                     break
 
-            rest_traj._t_cur = rest_traj._snaps[-1].time
-
             # Current step with python indexing, so remove 1
-            rest_traj._step = len(rest_traj._snaps) - 1
+            rest_traj.set_current_time_and_step(rest_traj._snaps[-1].time, len(rest_traj._snaps) - 1)
 
             # Ensure everything is set to start the time stepping loop
-            rest_traj._setup_noise()
+            rest_traj.setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
 
             # Enable the model to perform tweaks
             # after a trajectory restore
-            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_restore_hook(len(rest_traj._snaps) - 1, rest_traj.current_time())
 
         return rest_traj
 
@@ -506,8 +513,8 @@ class Trajectory:
 
         # If ancestor already have a backlog,
         # prepend it if the state id matches
-        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj._noise_backlog) > 0:
-            rest_traj._noise_backlog = rest_traj._noise_backlog + list(reversed(from_traj._noise_backlog))
+        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj.noise_backlog) > 0:
+            rest_traj.noise_backlog = rest_traj.noise_backlog + list(reversed(from_traj.noise_backlog))
 
         # Append snapshots, up to high_score_idx + 1 to
         # ensure > behavior
@@ -516,18 +523,18 @@ class Trajectory:
                 rest_traj._snaps.append(from_traj._snaps[k])
             elif k == last_snap_with_state:
                 rest_traj._snaps.append(from_traj._snaps[k])
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
             else:
-                rest_traj._noise_backlog.append(from_traj._snaps[k].noise)
+                rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
 
         # Reverse the backlog to ensure correct order
-        rest_traj._noise_backlog.reverse()
+        rest_traj.noise_backlog.reverse()
 
         # Update trajectory metadata
         rest_traj._t_cur = rest_traj._snaps[-1].time
         rest_traj._step = len(rest_traj._snaps) - 1
         if rest_traj._fmodel:
-            rest_traj._setup_noise()
+            rest_traj.setup_noise()
             rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
             rest_traj.update_metadata()
 
@@ -538,20 +545,9 @@ class Trajectory:
         return rest_traj
 
     def store(self, traj_file: Path | None = None) -> None:
-        """Store the trajectory to an XML chkfile."""
+        """Store the trajectory data to an XML chkfile."""
         root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
-        mdata = ET.SubElement(root, "metadata")
-        mdata.append(new_element("id", self._tid))
-        mdata.append(new_element("weight", self._weight))
-        mdata.append(new_element("t_cur", self._t_cur))
-        mdata.append(new_element("t_end", self._t_end))
-        mdata.append(new_element("dt", self._dt))
-        mdata.append(new_element("score_max", self._score_max))
-        mdata.append(new_element("ended", self._has_ended))
-        mdata.append(new_element("converged", self._has_converged))
-        mdata.append(new_element("branching_history", np.array(self._branching_history, dtype=int)))
-        mdata.append(new_element("c_step", self._computed_steps))
         snaps_xml = ET.SubElement(root, "snapshots")
         for k in range(len(self._snaps)):
             snaps_xml.append(
@@ -597,6 +593,11 @@ class Trajectory:
             self._has_converged = False
         if self._t_cur >= self._t_end or self._has_converged:
             self._has_ended = True
+
+    def set_current_time_and_step(self, time: float, step: int) -> None:
+        """Set the current time and step."""
+        self._t_cur = time
+        self._step = step
 
     def current_time(self) -> float:
         """Return the current trajectory time."""
@@ -683,7 +684,7 @@ class Trajectory:
 
         return None
 
-    def get_metadata_json(self) -> str:
+    def serialize_metadata_json(self) -> str:
         """Return a json string with metadata.
 
         Returns:
@@ -691,16 +692,42 @@ class Trajectory:
         """
         return json.dumps(
             {
-                "ended": self._has_ended,
-                "converged": self._has_converged,
+                "id": self.id(),
+                "weight": self._weight,
+                "t_end": self._t_end,
+                "t_cur": self._t_cur,
+                "dt": self._dt,
+                "ended": bool(self._has_ended),
+                "converged": bool(self._has_converged),
                 "score_max": self._score_max,
                 "length": self.get_length(),
-                "nbranching": self.get_nbranching(),
                 "nstep_compute": self._computed_steps,
-                "weight": self._weight,
+                "branching_history": self._branching_history,
             },
             default=str,
         )
+
+    @classmethod
+    def deserialize_metadata(cls, json_str: str) -> dict[str, Any]:
+        """Load a json string into a properly typed metadata dict.
+
+        Returns:
+            A dictionary with the metadata
+        """
+        mstr = json.loads(json_str)
+        return {
+            "id": int(mstr["id"]),
+            "weight": float(mstr["weight"]),
+            "t_end": float(mstr["t_end"]),
+            "t_cur": float(mstr["t_cur"]),
+            "dt": float(mstr["dt"]),
+            "ended": mstr["ended"],
+            "converged": mstr["converged"],
+            "score_max": float(mstr["score_max"]),
+            "length": int(mstr["length"]),
+            "nstep_compute": int(mstr["nstep_compute"]),
+            "branching_history": cast("list[int]", mstr["branching_history"]),
+        }
 
     def delete(self) -> None:
         """Clear the trajectory on-disk data."""
