@@ -99,6 +99,7 @@ class TAMS:
         self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
         self._plot_diags = tams_subdict.get("diagnostics", False)
         self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
+        self._detrend = tams_subdict.get("detrend", False)
 
         # Database
         self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
@@ -201,6 +202,9 @@ class TAMS:
 
         if self._tdb.count_ended_traj() == self._tdb.n_traj():
             self._tdb.set_init_ensemble_flag(True)
+
+        if self._detrend:
+            self._tdb.detrend_initial_ensemble()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)

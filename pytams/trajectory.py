@@ -683,6 +683,26 @@ class Trajectory:
             default=str,
         )
 
+    def detrend_score(self, score_trend: npt.NDArray[np.number]) -> None:
+        """Detrend the trajectory score.
+
+        By removing a reference time dependent value.
+
+        Args:
+            score_trend: the reference score time array
+        """
+        if len(score_trend) < self.get_length():
+            err_msg = "Attempting to detrend trajectory with too short time reference!"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
+
+        score_max = self._score_max
+        for i in range(len(self._snaps)):
+            s = self._snaps[i]
+            if s.score >= score_max:
+                self._score_max = (self._score_max - score_trend[i]) / (1.0 - score_trend[i])
+            s.score = (s.score - score_trend[i]) / (1.0 - score_trend[i])
+
     def delete(self) -> None:
         """Clear the trajectory on-disk data."""
         self._checkFile.unlink()

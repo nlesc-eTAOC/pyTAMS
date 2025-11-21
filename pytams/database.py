@@ -958,6 +958,41 @@ class Database:
         plt.clf()
         plt.close()
 
+    def get_active_ensemble_average_score(self) -> npt.NDArray[np.number]:
+        """Compute the averaged score over the active ensemble.
+
+        As function of time. Only the unconverged trajectories are
+        included in the average.
+
+        Returns:
+            A numpy array with the averaged score
+        """
+        time_len = max([t.get_length() for t in self._trajs_db])
+        avg_score = np.zeros(time_len)
+        ntraj = 0
+        for t in self._trajs_db:
+            if not t.is_converged():
+                traj_len = t.get_length()
+                avg_score = avg_score + np.pad(t.get_score_array(), (0, time_len - traj_len), "edge")
+                ntraj += 1
+
+        if ntraj > 0:
+            return avg_score / ntraj
+        return avg_score
+
+    def detrend_initial_ensemble(self) -> None:
+        """Detrend the active ensemble.
+
+        Use the ensemble-averaged score to detrend the initial ensemble.
+        """
+        score_avg = self.get_active_ensemble_average_score()
+        for t in self._trajs_db:
+            t.detrend_score(score_avg)
+            t.store()
+
+        # Write trend to disk for future use.
+        np.save("./init_ensemble_avg_score.npy", score_avg)
+
     def _get_location_and_indices_at_k(self, k_in: int) -> list[tuple[str, int]]:
         """Return the location and indices of active trajectory at k_in.
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._score_builder = None
         self._score_method = subparms.get("score_method", "default")
         self._time_dep_score = subparms.get("score_time_dep", False)
+        self._detrend_score = subparms.get("detrend_score", False)
         if self._score_method == "PODdecomp":
             self._pod_data_file = subparms.get("pod_data_file", None)
             self._score_pod_d0 = subparms.get("pod_d0", None)
@@ -278,6 +280,15 @@ class Boussinesq2DModel(ForwardModelBaseClass):
                 np.sqrt(np.sum((edge_state[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
             )
 
+        self._init_ensemble_score = None
+        if self._detrend_score:
+            trend_file = "./init_ensemble_avg_score.npy"
+            if Path(trend_file).exists():
+                self._init_ensemble_score = np.load(trend_file)
+            else:
+                wrn_msg = f"Detrend score activated but the trend file {trend_file} not found!"
+                _logger.warning(wrn_msg)
+
     def score(self) -> float:
         """Compute the score function.
 
@@ -350,10 +361,19 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         # Compute an exponential decay near the time horizon of the
         # simulation final time if requested
+        xi_time_dep = xi_zero
         if self._time_dep_score:
-            return xi_zero * (1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale) * (1.0 - xi_zero))
+            xi_time_dep = xi_zero * (1.0 - np.exp((self._time - self._score_tfinal)
+                                                  / self._score_tscale) * (1.0 - xi_zero))
+        # Detrend if necessary
+        if self._detrend_score and self._init_ensemble_score is not None:
+            # Trajectory might get an extra step due to rounding error on step size
+            # limit the reference index accordingly
+            ref_idx = min(self._step, len(self._init_ensemble_score)-1)
+            score_ref = self._init_ensemble_score[ref_idx]
+            return (xi_time_dep - score_ref) / (1.0 - score_ref)
 
-        return xi_zero
+        return xi_time_dep
 
     def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.
