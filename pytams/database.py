@@ -196,7 +196,7 @@ class Database:
         # Overwritte default read-only mode
         else:
             self._read_only = False
-            self._pool_db = SQLFile("", in_memory=True)
+            self._pool_db = SQLFile(f".sqldb_tams_{np.random.default_rng().integers(0, 999999):06d}")
 
         # Check minimal parameters
         if self._ntraj == -1 or self._nsplititer == -1:
@@ -1055,3 +1055,12 @@ class Database:
                 active_list_at_k.append(self._archived_trajs_db[idx])
 
         return active_list_at_k
+
+    def __del__(self) -> None:
+        """Destructor of the db.
+
+        Delete the hidden SQL database if we do not intend to keep
+        the database around.
+        """
+        if not self._save_to_disk:
+            Path(self._pool_db.name()).unlink(missing_ok=True)
