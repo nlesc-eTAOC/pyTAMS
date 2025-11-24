@@ -569,7 +569,7 @@ class Database:
         Return:
             True if the list of trajectories is empty
         """
-        return self.traj_list_len() == 0
+        return self._pool_db.get_trajectory_count() == 0
 
     def traj_list_len(self) -> int:
         """Length of the trajectory list.
@@ -832,17 +832,19 @@ class Database:
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
         count = 0
-        for t in self._trajs_db:
-            if t.has_ended():
-                count = count + 1
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            if Trajectory.deserialize_metadata(metadata)["ended"]:
+                count += 1
         return count
 
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
         count = 0
-        for t in self._trajs_db:
-            if t.is_converged():
-                count = count + 1
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            if Trajectory.deserialize_metadata(metadata)["converged"]:
+                count += 1
         return count
 
     def count_computed_steps(self) -> int:
@@ -852,11 +854,13 @@ class Database:
         discarded trajectories.
         """
         count = 0
-        for t in self._trajs_db:
-            count = count + t.get_computed_steps_count()
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
 
-        for t in self._archived_trajs_db:
-            count = count + t.get_computed_steps_count()
+        for i in range(self._pool_db.get_archived_trajectory_count()):
+            _, metadata = self._pool_db.fetch_archived_trajectory(i)
+            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
 
         return count
 
