@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import cast
 import numpy as np
 import numpy.typing as npt
+import gc
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
@@ -764,3 +765,12 @@ class SQLFile:
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
+
+    def __del__(self) -> None:
+        """Explicit delete function.
+
+        On windows, the SQL file is locked.
+        """
+        del self._Session
+        del self._engine
+        gc.collect()
