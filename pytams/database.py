@@ -1075,5 +1075,5 @@ class Database:
 
         # Even if we plan to keep the SQL database around, force
         # deleting the SQL connection
-        if self._pool_db:
+        if hasattr(self, "_pool_db"):
             del self._pool_db
