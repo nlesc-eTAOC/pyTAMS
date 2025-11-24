@@ -15,6 +15,21 @@ from pytams.trajectory import WallTimeLimitError
 _logger = logging.getLogger(__name__)
 
 
+def update_trajectory_in_sql(traj: Trajectory, sqldb: SQLFile | None = None, db_path: str | None = None) -> None:
+    """Wrapper for update SQL trajectory info.
+
+    Args:
+        sqldb: the SQL database to update
+        traj: the traj to get the information from
+        db_path: an optional TAMS database path
+    """
+    if sqldb:
+        checkfile_str = (
+            traj.get_checkfile().relative_to(Path(db_path)).as_posix() if db_path else traj.get_checkfile().as_posix()
+        )
+        sqldb.update_trajectory(traj.id(), checkfile_str, traj.serialize_metadata_json())
+
+
 def traj_advance_with_exception(
     traj: Trajectory, walltime: float, sqldb: SQLFile | None = None, db_path: str | None = None
 ) -> Trajectory:
@@ -48,13 +63,7 @@ def traj_advance_with_exception(
                 sqldb.mark_trajectory_as_completed(traj.id())
             else:
                 sqldb.release_trajectory(traj.id())
-
-            checkfile_str = (
-                traj.get_checkfile().relative_to(Path(db_path)).as_posix()
-                if db_path
-                else traj.get_checkfile().as_posix()
-            )
-            sqldb.update_trajectory(traj.id(), checkfile_str, traj.serialize_metadata_json())
+            update_trajectory_in_sql(traj, sqldb, db_path)
 
         # Trigger a checkfile dump if we are provided with
         # a database path
@@ -147,13 +156,7 @@ def ms_worker(
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
-        if sqldb:
-            checkfile_str = (
-                traj.get_checkfile().relative_to(Path(db_path)).as_posix()
-                if db_path
-                else traj.get_checkfile().as_posix()
-            )
-            sqldb.update_trajectory(traj.id(), checkfile_str, traj.serialize_metadata_json())
+        update_trajectory_in_sql(traj, sqldb, db_path)
 
         return traj_advance_with_exception(traj, wall_time, sqldb, db_path)
 
@@ -164,11 +167,7 @@ def ms_worker(
 
     # The branched trajectory has a new checkfile, even if haven't advanced yet
     # Update the database to point to the latest one.
-    if sqldb:
-        checkfile_str = (
-            traj.get_checkfile().relative_to(Path(db_path)).as_posix() if db_path else traj.get_checkfile().as_posix()
-        )
-        sqldb.update_trajectory(traj.id(), checkfile_str, traj.serialize_metadata_json())
+    update_trajectory_in_sql(traj, sqldb, db_path)
 
     return traj
 
