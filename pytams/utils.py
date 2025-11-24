@@ -10,6 +10,10 @@ import numpy.typing as npt
 
 _logger = logging.getLogger(__name__)
 
+def is_windows_os() -> bool:
+    """Indicates Windows platform."""
+    system = sys.platform.lower()
+    return system.startswith("win")
 
 def setup_logger(params: dict[Any, Any]) -> None:
     """Setup the logger parameters.

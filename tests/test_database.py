@@ -147,6 +147,7 @@ def test_copy_and_access():
     params_load_db = {"database": {"path": "dwTestCopy.tdb"}}
     tdb = Database(fmodel, params_load_db)
     assert tdb.count_converged_traj() == 50
+    del tdb
     shutil.rmtree("dwTestCopy.tdb")
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -238,4 +239,5 @@ def test_restore_tdb():
     tdb.load_data()
     tdb.reset_initial_ensemble_stage()
     assert tdb.k_split() == 0
+    del tdb
     shutil.rmtree("dwTest.tdb")

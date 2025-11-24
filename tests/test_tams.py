@@ -92,6 +92,7 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
     _ = tams.compute_probability()
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 10
+    del tdb
     params_dict["tams"]["ntrajectories"] = 20
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
@@ -99,6 +100,7 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
     _ = tams.compute_probability()
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 20
+    del tdb
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("simpleModelTest.tdb")
 
@@ -118,6 +120,7 @@ def test_simple_model_tams_with_db():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
+    del tams
     assert transition_proba == 1.0
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
@@ -158,10 +161,12 @@ def test_simple_model_twice_tams():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
+    del tams
     # Re-init TAMS and run to test competing database
     # on disk.
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
+    del tams
     ndb = 0
     for folder in Path("./").iterdir():
         if "simpleModelTest" in str(folder):
@@ -226,6 +231,7 @@ def test_doublewell_save_tams():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
+    del tams
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
 
@@ -296,6 +302,7 @@ def test_doublewell_2_workers_tams():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba == 0.692533980184018
+    del tams
     Path("input.toml").unlink(missing_ok=True)
 
 

@@ -23,6 +23,7 @@ def test_createdb_read_only():
     with pytest.raises(SQLAlchemyError):
         _ = SQLFile("testRO.db", ro_mode=True)
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_createdb_fail():
     """Fail to initialize a SQLFile."""
     with pytest.raises(SQLAlchemyError):
@@ -39,6 +40,7 @@ def test_add_traj_to_db():
 def test_add_traj_to_ro_db():
     """Try add a trajectory to an RO SQLFile."""
     poolfile = SQLFile("test.db") # First create the DB
+    del poolfile
     poolfile = SQLFile("test.db", ro_mode=True) # Open in RO
     with pytest.raises(SQLAlchemyError):
         poolfile.add_trajectory("test.xml","")
@@ -78,6 +80,7 @@ def test_add_traj_to_db_inmemory():
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_add_traj_to_missing_db():
     """Add a trajectory to a deleted SQLFile."""
     poolfile = SQLFile("test.db")
@@ -208,6 +211,7 @@ def test_lock_unknown_trajectory():
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_lock_in_missing_db():
     """Lock a trajectory in a missing SQLFile."""
     poolfile = SQLFile("test.db")
@@ -267,6 +271,7 @@ def test_splitting_data_query_fail():
     for i in range(1):
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
     assert poolfile.get_k_split() == 1
+    del poolfile
 
     poolfile = SQLFile("test.db", ro_mode=True)
     with pytest.raises(SQLAlchemyError):
