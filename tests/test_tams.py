@@ -362,7 +362,7 @@ def test_doublewell_slow_tams_stop():
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
             },
             f,
         )
@@ -379,11 +379,11 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 6.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 10.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
             },
             f,
         )
@@ -405,7 +405,7 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0003, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
             },
             f,
         )
