@@ -9,7 +9,7 @@ authors:
     orcid: "https://orcid.org/0000-0002-2438-7292"
 date-released: 2025-01-29
 doi: 10.5281/zenodo.14762701
-version: "0.0.5"
+version: "0.0.6"
 repository-code: "git@github.com:nlesc-eTAOC/pyTAMS"
 keywords:
   - Rare events probability
