@@ -10,6 +10,7 @@ def test_createdb():
     """Initialize a SQLFile."""
     poolfile = SQLFile("test.db")
     assert poolfile.name() == "test.db"
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_createdb_inmemory():
@@ -32,6 +33,7 @@ def test_add_traj_to_db():
     poolfile = SQLFile("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_to_ro_db():
@@ -40,6 +42,7 @@ def test_add_traj_to_ro_db():
     poolfile = SQLFile("test.db", ro_mode=True) # Open in RO
     with pytest.raises(SQLAlchemyError):
         poolfile.add_trajectory("test.xml","")
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_update_to_db():
@@ -49,6 +52,7 @@ def test_add_traj_and_update_to_db():
     assert poolfile.fetch_trajectory(0)[0] == "test.xml"
     poolfile.update_trajectory(0, "UpdatedTest.xml", "")
     assert poolfile.fetch_trajectory(0)[0] == "UpdatedTest.xml"
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_try_update_traj_to_db():
@@ -56,6 +60,7 @@ def test_try_update_traj_to_db():
     poolfile = SQLFile("test.db")
     with pytest.raises(SQLAlchemyError):
         poolfile.update_trajectory(0, "UpdatedTest.xml", "dummy")
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_try_update_weight_to_db():
@@ -64,6 +69,7 @@ def test_try_update_weight_to_db():
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(SQLAlchemyError):
         poolfile.update_trajectory_weight(3, 1.0)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_to_db_inmemory():
@@ -86,6 +92,7 @@ def test_archive_traj_to_db():
     poolfile = SQLFile("test.db")
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_fetch():
@@ -96,6 +103,7 @@ def test_add_traj_and_fetch():
     assert poolfile.get_trajectory_count() == 2
     traj, metadata = poolfile.fetch_trajectory(0)
     assert traj == "test.xml"
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_fetch_unknown_traj():
@@ -105,6 +113,7 @@ def test_fetch_unknown_traj():
     assert poolfile.get_trajectory_count() == 1
     with pytest.raises(ValueError):
         _, _ = poolfile.fetch_trajectory(1)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_archive_and_fetch_traj_to_db():
@@ -114,6 +123,7 @@ def test_archive_and_fetch_traj_to_db():
     assert poolfile.get_archived_trajectory_count() == 1
     traj, metadata = poolfile.fetch_archived_trajectory(0)
     assert traj == "test.xml"
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_fetch_unknown_archived_traj():
@@ -123,6 +133,7 @@ def test_fetch_unknown_archived_traj():
     assert poolfile.get_archived_trajectory_count() == 1
     with pytest.raises(ValueError):
         _, _ = poolfile.fetch_archived_trajectory(1)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_trajectory():
@@ -131,6 +142,7 @@ def test_lock_trajectory():
     poolfile.add_trajectory("test.xml","")
     status = poolfile.lock_trajectory(0)
     assert status
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_locked_trajectory():
@@ -140,6 +152,7 @@ def test_lock_locked_trajectory():
     status = poolfile.lock_trajectory(0)
     status = poolfile.lock_trajectory(0)
     assert status is False
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_release_trajectory():
@@ -150,6 +163,7 @@ def test_lock_and_release_trajectory():
     poolfile.release_trajectory(0)
     status = poolfile.lock_trajectory(0)
     assert status
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_complete_trajectory():
@@ -158,6 +172,7 @@ def test_lock_and_complete_trajectory():
     poolfile.add_trajectory("test.xml","")
     _ = poolfile.lock_trajectory(0)
     poolfile.mark_trajectory_as_completed(0)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_complete_unknown_trajectory():
@@ -167,6 +182,7 @@ def test_lock_and_complete_unknown_trajectory():
     _ = poolfile.lock_trajectory(0)
     with pytest.raises(ValueError):
         poolfile.mark_trajectory_as_completed(1)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_release_multiple_trajectory():
@@ -180,6 +196,7 @@ def test_lock_and_release_multiple_trajectory():
     for _ in range(10):
         status = status or poolfile.lock_trajectory(0)
     assert status
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_unknown_trajectory():
@@ -188,6 +205,7 @@ def test_lock_unknown_trajectory():
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(ValueError):
         _ = poolfile.lock_trajectory(1)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_in_missing_db():
@@ -204,6 +222,7 @@ def test_release_unknown_trajectory():
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(ValueError):
         poolfile.release_trajectory(1)
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_splitting_data_add():
@@ -212,6 +231,7 @@ def test_splitting_data_add():
     for i in range(10):
         poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_splitting_data_add_and_ongoing():
@@ -251,6 +271,7 @@ def test_splitting_data_query_fail():
     poolfile = SQLFile("test.db", ro_mode=True)
     with pytest.raises(SQLAlchemyError):
         poolfile.mark_last_iteration_as_completed()
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_dump_json():
@@ -260,5 +281,6 @@ def test_dump_json():
     poolfile.archive_trajectory("test_arch.xml","")
     poolfile.dump_file_json()
     assert Path("./test.json").exists() is True
+    del poolfile
     Path("./test.db").unlink(missing_ok=True)
     Path("./test.json").unlink(missing_ok=True)
