@@ -148,6 +148,7 @@ def test_simple_model_tams_slurm_fail():
     Path("input.toml").unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_simple_model_twice_tams():
     """Test TAMS with simple model."""
     fmodel = SimpleFModel
