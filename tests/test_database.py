@@ -93,6 +93,7 @@ def test_generate_and_load_tdb():
 
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
+    tdb.info()
     assert tdb
     Path("input.toml").unlink(missing_ok=True)
 
@@ -102,7 +103,6 @@ def test_access_ensemble_length():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    tdb.load_data()
     assert tdb.is_empty() is False
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -111,7 +111,6 @@ def test_access_ended_count():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    tdb.load_data()
     assert tdb.count_ended_traj() == 50
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -120,7 +119,6 @@ def test_access_converged_count():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    tdb.load_data()
     assert tdb.count_converged_traj() == 50
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -140,7 +138,6 @@ def test_copy_and_access():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTestCopy.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    tdb.load_data()
     assert tdb.count_converged_traj() == 50
     shutil.rmtree("dwTestCopy.tdb")
 
