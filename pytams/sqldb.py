@@ -772,5 +772,5 @@ class SQLFile:
         On windows, the SQL file is locked.
         """
         del self._Session
-        del self._engine
+        self._engine.dispose()
         gc.collect()

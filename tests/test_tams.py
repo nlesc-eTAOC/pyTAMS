@@ -454,7 +454,7 @@ def test_doublewell_slow_tams_restore_more_split():
     tams_load = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams_load.compute_probability()
     # Not sure why this particular test is platform dependent
-    if is_mac_os:
+    if is_mac_os():
         assert transition_proba == 0.0853804929982172
     else:
         assert transition_proba == 0.07470793360861466
