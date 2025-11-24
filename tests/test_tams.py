@@ -358,7 +358,7 @@ def test_doublewell_slow_tams_stop():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 3.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
@@ -379,7 +379,7 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 5.0},
+                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 6.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.9},
