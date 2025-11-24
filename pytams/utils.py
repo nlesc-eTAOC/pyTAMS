@@ -15,6 +15,11 @@ def is_windows_os() -> bool:
     system = sys.platform.lower()
     return system.startswith("win")
 
+def is_mac_os() -> bool:
+    """Indicates MacOS platform."""
+    system = sys.platform.lower()
+    return system.startswith("dar")
+
 def setup_logger(params: dict[Any, Any]) -> None:
     """Setup the logger parameters.
 

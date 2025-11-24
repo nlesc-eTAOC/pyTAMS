@@ -484,4 +484,5 @@ class TAMS:
         It is mostly useful on Windows systems
         """
         # Force deletion of database
-        del self._tdb
+        if hasattr(self, "_tdb"):
+            del self._tdb
