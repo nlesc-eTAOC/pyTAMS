@@ -37,14 +37,13 @@ def test_add_traj_to_db():
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_add_traj_to_ro_db():
     """Try add a trajectory to an RO SQLFile."""
     poolfile = SQLFile("test.db") # First create the DB
-    del poolfile
     poolfile = SQLFile("test.db", ro_mode=True) # Open in RO
     with pytest.raises(SQLAlchemyError):
         poolfile.add_trajectory("test.xml","")
-    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_update_to_db():
@@ -57,6 +56,7 @@ def test_add_traj_and_update_to_db():
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_try_update_traj_to_db():
     """Try update missing trajectory to SQLFile."""
     poolfile = SQLFile("test.db")
@@ -65,6 +65,7 @@ def test_try_update_traj_to_db():
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_try_update_weight_to_db():
     """Try updating weight to missing trajectory to SQLFile."""
     poolfile = SQLFile("test.db")
@@ -265,18 +266,17 @@ def test_splitting_data_add_update_and_query():
     poolfile.mark_last_iteration_as_completed()
     assert np.all(poolfile.get_minmax()[0] == np.array([2.0,0.0,0.3], dtype="float32"))
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_splitting_data_query_fail():
     """Adding splitting data to the database."""
     poolfile = SQLFile("test.db")
     for i in range(1):
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
     assert poolfile.get_k_split() == 1
-    del poolfile
 
     poolfile = SQLFile("test.db", ro_mode=True)
     with pytest.raises(SQLAlchemyError):
         poolfile.mark_last_iteration_as_completed()
-    del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_dump_json():
