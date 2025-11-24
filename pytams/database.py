@@ -612,7 +612,11 @@ class Database:
         self._archived_trajs_db.append(traj)
 
         # Update the list of archived trajectories in the SQL DB
-        checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
+        checkfile_str = (
+            traj.get_checkfile().relative_to(self._abs_path).as_posix()
+            if self._save_to_disk
+            else traj.get_checkfile().as_posix()
+        )
         self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
