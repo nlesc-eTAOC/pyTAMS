@@ -1072,3 +1072,7 @@ class Database:
         """
         if not self._save_to_disk:
             Path(self._pool_db.name()).unlink(missing_ok=True)
+
+        # Even if we plan to keep the SQL database around, force
+        # deleting the SQL connection
+        del self._pool_db
