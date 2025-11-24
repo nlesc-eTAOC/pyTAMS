@@ -90,6 +90,7 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
         toml.dump(params_dict, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     _ = tams.compute_probability()
+    del tams
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 10
     del tdb
@@ -98,6 +99,7 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
         toml.dump(params_dict, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     _ = tams.compute_probability()
+    del tams
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 20
     del tdb
@@ -313,6 +315,7 @@ def test_doublewell_2_workers_load_db():
     tdb.load_data(True)
     assert tdb.traj_list_len() == 50
     assert tdb.archived_traj_list_len() == 16
+    del tdb
 
 
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
@@ -334,6 +337,7 @@ def test_doublewell_2_workers_restore_tams():
     transition_proba = tams.compute_probability()
     assert transition_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
+    del tams
     shutil.rmtree("dwTest.tdb")
 
 
@@ -355,6 +359,7 @@ def test_doublewell_very_slow_tams():
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
+    del tams
     shutil.rmtree("vslowdwTest.tdb")
 
 
@@ -376,6 +381,7 @@ def test_doublewell_slow_tams_stop():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    del tams
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -397,6 +403,7 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     assert transition_proba <= 0.0
+    del tams
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -420,6 +427,7 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
     _ = tams.compute_probability()
     assert "Unfinished splitting iteration detected" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
+    del tams
     shutil.rmtree("slowdwTest.tdb")
 
 
@@ -437,6 +445,7 @@ def test_doublewell_slow_tams_restore_more_split():
         toml.dump(params_dict, f)
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
+    del tams
     assert transition_proba == 0.08937321391676148
     params_dict["tams"]["nsplititer"] = 30
     with Path("input.toml").open("w") as f:
@@ -445,4 +454,5 @@ def test_doublewell_slow_tams_restore_more_split():
     transition_proba = tams_load.compute_probability()
     assert transition_proba == 0.07470793360861466
     Path("input.toml").unlink(missing_ok=True)
+    del tams
     shutil.rmtree("dwTest.tdb")
