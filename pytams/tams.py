@@ -477,3 +477,11 @@ class TAMS:
         self._tdb.info()
 
         return transition_probability
+
+    def __del__(self) -> None:
+        """Destructor.
+
+        It is mostly useful on Windows systems
+        """
+        # Force deletion of database
+        del self._tdb
