@@ -102,6 +102,9 @@ class Database:
                 raise ValueError(err_msg)
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
+            self._sql_name = f"{self._name}/trajPool.db"
+        else:
+            self._sql_name = f".sqldb_tams_{np.random.default_rng().integers(0, 999999):06d}.db"
 
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
@@ -196,7 +199,7 @@ class Database:
         # Overwritte default read-only mode
         else:
             self._read_only = False
-            self._pool_db = SQLFile("", in_memory=True)
+            self._pool_db = SQLFile(self.pool_file())
 
         # Check minimal parameters
         if self._ntraj == -1 or self._nsplititer == -1:
@@ -554,7 +557,11 @@ class Database:
         Return:
             Pool file
         """
-        return f"{self._name}/trajPool.db"
+        return self._sql_name
+
+    def get_pool_db(self) -> SQLFile:
+        """Get the pool SQL database handle."""
+        return self._pool_db
 
     def is_empty(self) -> bool:
         """Check if list of trajectories is empty.
@@ -605,9 +612,12 @@ class Database:
         self._archived_trajs_db.append(traj)
 
         # Update the list of archived trajectories in the SQL DB
-        if self._save_to_disk and self._pool_db:
-            checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-            self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
+        checkfile_str = (
+            traj.get_checkfile().relative_to(self._abs_path).as_posix()
+            if self._save_to_disk
+            else traj.get_checkfile().as_posix()
+        )
+        self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
@@ -622,8 +632,6 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return True
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
     def unlock_trajectory(self, tid: int, has_ended: bool) -> None:
@@ -636,9 +644,6 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return
-
         if has_ended:
             self._pool_db.mark_trajectory_as_completed(tid)
         else:
@@ -654,9 +659,6 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return
-
         checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
         self._pool_db.update_trajectory(traj_id, checkfile_str, traj.serialize_metadata_json())
 
@@ -779,7 +781,9 @@ class Database:
 
     def path(self) -> str | None:
         """Return the path to the database."""
-        return self._path
+        if self._save_to_disk:
+            return self._abs_path.absolute().as_posix()
+        return None
 
     def done_with_splitting(self) -> bool:
         """Check if we are done with splitting."""
@@ -1055,3 +1059,12 @@ class Database:
                 active_list_at_k.append(self._archived_trajs_db[idx])
 
         return active_list_at_k
+
+    def __del__(self) -> None:
+        """Destructor of the db.
+
+        Delete the hidden SQL database if we do not intend to keep
+        the database around.
+        """
+        if not self._save_to_disk:
+            Path(self._pool_db.name()).unlink(missing_ok=True)

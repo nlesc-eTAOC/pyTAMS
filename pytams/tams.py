@@ -184,7 +184,7 @@ class TAMS:
             self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_init", 1)
         ) as runner:
             for t in self._tdb.traj_list():
-                task = [t, self._endDate, self._tdb.path()]
+                task = [t, self._endDate, self._tdb.pool_file(), self._tdb.path()]
                 runner.make_promise(task)
 
             try:
@@ -262,7 +262,7 @@ class TAMS:
             ) as runner:
                 for i in ongoing_list:
                     t = self._tdb.get_traj(i)
-                    task = [t, self._endDate, self._tdb.path()]
+                    task = [t, self._endDate, self._tdb.pool_file(), self._tdb.path()]
                     runner.make_promise(task)
 
                 try:
@@ -375,13 +375,19 @@ class TAMS:
                     break
 
                 # Assemble a list of promises
+                # and archive the discarded trajectories
                 for i in range(n_branch):
+                    # Archive
+                    self._tdb.archive_trajectory(self._tdb.get_traj(min_idx_list[i]))
+
+                    # Worker task
                     task = [
                         self._tdb.get_traj(ancestor_idx[i]),
                         self._tdb.get_traj(min_idx_list[i]),
                         min_vals[i],
                         new_traj_weight,
                         self._endDate,
+                        self._tdb.pool_file(),
                         self._tdb.path(),
                     ]
                     runner.make_promise(task)
