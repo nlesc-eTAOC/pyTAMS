@@ -18,6 +18,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 description = "An implementation of the trajectory-adaptive multilevel splitting (TAMS) method."
 keywords = ["Rare events", "Stochastic systems", "Multilevel splitting"]
@@ -78,7 +79,7 @@ command_line = "-m pytest"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py310,py311,py312,py313
+envlist = py310,py311,py312,py313,py314
 skip_missing_interpreters = true
 [testenv]
 commands = pytest
