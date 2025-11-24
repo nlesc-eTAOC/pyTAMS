@@ -48,6 +48,7 @@ def test_init_empty_tdb():
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
     assert tdb.name() == "dwTest.tdb"
+    del tdb
     shutil.rmtree("dwTest.tdb")
 
 def test_reinit_empty_tdb():
