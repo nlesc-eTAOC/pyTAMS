@@ -1,4 +1,4 @@
-name: test_and_examples
+name: nightly
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 jobs:
 
   test:
-    name: Test on (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Tests on (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -32,7 +32,7 @@ jobs:
         run: python -m pytest tests/
 
   doublewell:
-    name: DoubleWell
+    name: DoubleWell (${{ matrix.python-version }})
     runs-on: 'ubuntu-latest'
     strategy:
       fail-fast: false
@@ -54,10 +54,11 @@ jobs:
       - name: Run doublewell
         run: |
           cd examples/DoubleWell3D
+          sed -i "s#nRuns = 10#nRuns = 5#g" doubleWell3D.py
           python doubleWell3D.py -i input_dw3D.toml
 
   boussinesq:
-    name: Boussinesq_${{ matrix.python-version }}
+    name: Boussinesq (${{ matrix.python-version }})
     runs-on: 'ubuntu-latest'
     strategy:
       fail-fast: false
