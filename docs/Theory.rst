@@ -5,10 +5,10 @@
 Theory
 ======
 
-Introduction to TAMS
---------------------
+Dynamical systems
+-----------------
 
-Trajectory-adaptive Multi-level Sampling (`TAMS <https://doi.org/10.1088/1742-5468/aab856>`_) is concerned with the simulation of rare
+Trajectory-adaptive Multi-level Splitting (`TAMS <https://doi.org/10.1088/1742-5468/aab856>`_) is concerned with the simulation of rare
 events associated with a dynamical process. A rare event is an event with a non-zero
 very small probability. The probability is so low that naively sampling the stochastic
 process outcome with a Monte-Carlo (MC) approach yields no reliable estimate of the probability
@@ -26,6 +26,12 @@ In a naive MC approach, we draw :math:`K` i.i.d samples to get the estimate:
 
 An analysis of the normalized variance of this method shows that the estimator is getting worse when :math:`p` goes to zero,
 and :math:`K` needs to be of the order of :math:`1/p`, becoming computationally too expensive for very small :math:`p`.
+
+Rare events
+-----------
+
+Trajectory-adaptive multilevel splitting
+----------------------------------------
 
 To construct a better estimate, we can use a variance reduction technique. TAMS belong to the family of Importance Splitting
 technique and is derived from Adaptive Multilevel Sampling (AMS) 
@@ -106,69 +112,8 @@ An overview of the algorithm is provided hereafter:
 
    </blockquote>
 
-High-dimension considerations
------------------------------
-
-.. warning::
-
-   TODO
-
-Implementation
-==============
-
-`pyTAMS` implements the TAMS algorithm while encapsulating all the model-specific
-functionalities into an Abstract Base Class (ABC). By decoupling the physics from the
-TAMS algorithm, it becomes easier to extend the algorithm to new physics.
-
-In particular, `pyTAMS` aims at tackling computationally expensive stochastic models, such as
-high-dimensional dynamical systems appearing in climate modeling or fluid dynamics, which requires
-High Performance Computing (HPC) platform to be used. As such, `pyTAMS` can be less efficient
-than more simplistic implementations where pure Python physics model can be efficiently vectorized.
-The internals of `pyTAMS` rely on a hierarchy of classes to describe data structures, data storage,
-workers and eventually the algorithm.
-
-The reader is referred to the API documentation for more details on the classes and functions introduced
-hereafter.
-
-Data structures & storage
--------------------------
-
-`pyTAMS` uses an Array-Of-Structs (AOS) data structure to represent trajectories.
-The low-level data container is a ``snapshot``, a dataclass gathering the instantaneous state
-of the model at a given point, along with a time, a noise increment and a value of the score function.
-Note that only the time and score are typed (both as ``float``), while the type of the state and noise
-are up to the model implementation.
-
-A list of snapshots consitutes a ``trajectory``, along with some metadata such as the start and
-end times, the step size or the maximum score. The ``trajectory`` object instanciates the model, and
-implements function to advance the model in time or branch a trajectory.
-
-Finally, a list of trajectories is the central container for the TAMS's ``database``. The algorithm
-writes, reads and accesses trajectories through the database which also contains TAMS algorithm's data
-such as splitting iterations weights and biases. The ``database`` can be instanciated independently
-from a TAMS run in order to explore the database contents.
-
-Workers & parallelism
+Simple 2D double well
 ---------------------
-
-The TAMS algorithm exposes parallelism in two places: during the generation of the initial ensemble
-of trajectories (line 1 in the highlighted algorithm above), and at each splitting iterations where
-more than one trajectory can be branched (the loop on line 6 in the highlighted algorithm).
-
-Distribution of work is handled by a ``taskrunner`` object, which can have either a ``dask`` or
-an ``asyncio`` backend. The runner will spawn several workers, picking up tasks submitted to the
-runner. When using the ``dask`` runner with Slurm, the workers are spawned in individual Slurm
-jobs.
-
-Algorithm
----------
-
-Finally, the TAMS algorithm is implemented in the ``TAMS`` class. The instantiation of a ``TAMS``
-object requires a forward model type and a path to a TOML file to specify the various parameters.
-
-
-A simple example: 2D double well
-================================
 
 Let's now look at a simple example of implementing a ``forward model`` for a 2D double well model.
 In particular, we will cover the basis of the ``forward model`` API and the abstract methods

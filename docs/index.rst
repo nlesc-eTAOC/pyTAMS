@@ -46,6 +46,24 @@ a simple problem:
 otherwise, please read through this documentation and in particular follow the
 :ref:`tutorials Section <sec:tutorials>` to see how to implement your own model within `pyTAMS`.
 
+.. toctree::
+   :maxdepth: 2
+   :caption: User guide:
+
+   Theory.rst
+   Usage.rst
+   Tutorials.rst
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer guide:
+
+   Implementation.rst 
+   autoapi/pytams/index.rst
+
+Documentation
+-------------
+
 The documentation pages are distributed with the code in the ``docs``
 folder as "reStructuredText" files. The HTML is built automatically
 whenever changes are pushed to the main branch on GitHub.
@@ -56,19 +74,6 @@ A local version can also be built as follows:
     cd <pyTAMS_root_folder>/docs
     make html
 
-.. toctree::
-   :maxdepth: 2
-   :caption: User guide:
-
-   TAMS.rst
-   Controls.rst
-   Tutorials.rst
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer guide:
-
-   autoapi/pytams/index.rst
 
 Indices and tables
 ------------------

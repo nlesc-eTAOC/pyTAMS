@@ -1,12 +1,12 @@
 .. highlight:: rst
 
-.. _sec:controls:
+.. _sec:usage:
 
 Usage
 =====
 
 Running pyTAMS
-==============
+--------------
 
 Using `pyTAMS` requires formulating your physics problem within the API defined by the
 `pyTAMS` Abstract Base Class (ABC) interface.
@@ -38,7 +38,7 @@ and then run your code, providing a TOML input file which is described in the ne
    and the associated standard error.
 
 Controls
-========
+--------
 
 Upon instantiation of a `TAMS` object, the code searches for a TOML file containing the
 run parameters. The path to the TOML file can be provided using the `-i` option, and
@@ -134,8 +134,8 @@ initializer. The user can then simply add an `[model]` dictionary to the TOML fi
 model-specific parameters. See the :ref:`tutorials Section <sec:tutorials>` for a more practical
 use of the above input parameters.
 
-Loading the database
-====================
+Accessing the database
+----------------------
 
 If requested (see above the `[database]` section), `pyTAMS` will write to disk the data
 generated while running TAMS. In practice, most large models require to save the data

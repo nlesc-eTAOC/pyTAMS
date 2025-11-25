@@ -6,7 +6,10 @@ Tutorials
 =========
 
 
-Double-well 3D
---------------
+Bi-channel problem
+------------------
 
 TODO
+
+2D Boussinesq model
+-------------------
