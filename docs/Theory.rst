@@ -170,7 +170,7 @@ The process is illustrated on a small ensemble in the following figure:
 .. figure:: images/TAMS_Illustration.png
    :name: TAMS branching
    :align: center
-   :figwidth: 90%
+   :width: 90%
 
    Branching trajectory :math:`1` from :math:`3`, starting after :math:`\xi(X_3(t),t) > \mathcal{Q}^*`.
 
@@ -201,7 +201,37 @@ where :math:`N_{\in \mathcal{B}}^J` is the number of trajectories that reached :
 
 TAMS only provides an estimate of :math:`p` and the algorithm is repeated several times in order to
 get a more accurate estimate, as well as a confidence interval. The choice of :math:`\xi` is critical
-for the performance of the algorithm as well as the quality of the estimate.
+for the performance of the algorithm as well as the quality of the estimator. Repeating the algorithm
+:math:`K` time (i.e. performing :math:`K` TAMS runs) yields:
+
+.. math::
+   \overline{P}_K = \frac{1}{K}\sum_{k=1}^K \hat{P}_k
+
+Theoretical analysis of the AMS method (which also extends to TAMS) have showed that the relative error
+of :math:`\overline{P}_K` scales in the best case scenario:
+
+.. math::
+  \mathrm{RE}(\overline{P}_K)
+   \sim \mathcal{O}\!\left(
+       \sqrt{
+           \frac{-\mathrm{log}(\mathbb{P}(E_{\mathcal{A}\mathcal{B}}))}
+                {K}
+            }
+     \right),
+
+while the worst case scenario is similar to plain Monte Carlo:
+
+.. math::
+  \mathrm{RE}(\overline{P}_K)
+   \sim \mathcal{O}\!\left(
+       \frac{1}{\sqrt{K\,\mathbb{P}(E_{\mathcal{A}\mathcal{B}})}}
+     \right),
+
+The best case scenario corresponds to the ideal case where the intermediate
+conditional probabilities :math:`p_i` are perfectly compute, which corresponds to
+using the optimal score function :math:`\overline{\xi}(y) = \mathbb{P}_y(\tau_{\mathcal{B}} < \tau_{\mathcal{A}})`,
+also known as the `commitor function`. One will note that the commitor function is
+precisely what the TAMS algorithm is after for :math:`y = X_0 = x_0`.
 
 An overview of the algorithm is provided hereafter:
 
@@ -229,134 +259,66 @@ An overview of the algorithm is provided hereafter:
 
    </blockquote>
 
-Simple 2D double well
+Simple 1D double well
 ---------------------
 
-Let's now look at a simple example of implementing a ``forward model`` for a 2D double well model.
-In particular, we will cover the basis of the ``forward model`` API and the abstract methods
-needed during the TAMS algorithm.
-Note that the model is available in the `tests/models.py` module.
+To illustrate the above theory on a simple example, we now consider the concrete case
+of a 1D double well stochastic dynamical system described by:
 
-Let's first import the necessary modules and define the model class:
+.. math::
 
-.. code-block:: python
+   dX_t = f(X_t)\,dt + \sqrt{2\epsilon}\,dW_t.
 
-   from pytams.fmodel import ForwardModelBaseClass
+where :math:`f(X_t) = \nabla V(X_t)` is derived from a symmetric potential:
 
-   class DoubleWellModel(ForwardModelBaseClass):
-    """2D double well forward model.
+.. math::
 
-    V(x,y) = x^4/4 - x^2/2 + y^2
+   V(x) = \frac{1}{4}x^4 - \frac{1}{2}x^2,
 
-    Associated SDE:
-    dX_t = -nabla V(X_t)dt + g(X_t)dW_t
+:math:`\epsilon` is a noise scaling parameter, and :math:`W_t` a 1D Wiener process.
 
-    with:
-    -nabla V(X_t) = [x - x^3, -2y]
+.. figure:: images/DoubleWell1D_intro.png
+   :name: DoubleWell1D
+   :align: center
+   :width: 70%
 
-    With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
-    """
+   1D double well, showing the potential :math:`V` and distribution function of long Markov chains
+   starting in each well, at two noise levels.
 
-The first abstract method to implement is the ``_init_model`` one. It is called by the base
-``ForwardModelBaseClass`` class and is responsible for initializing model-specific attributes:
+The figure above shows the two metastable states of the model: for long Markov chains
+(:math:`T_f = N_t \delta_t` with :math:`N_t = 1e^6` and :math:`\delta_t = 0.01`) initiated
+in either of the two well (clearly marked by local minima of the potential :math:`V(x)`),
+the model state distributions :math:`P(X_t)` remains in the well,
+with the distribution widening as the noise level is increased.
 
-.. code-block:: python
+Using TAMS, we want to evaluate the transition probability from :math:`\mathcal{A}`, the well
+centered at :math:`x_{\mathcal{A}} = -1.0`, to :math:`\mathcal{B}` the well centered at
+:math:`x_{\mathcal{B}} = 1.0`, with a time horizon :math:`T_a = 10.0` and setting :math:`\epsilon = 0.025`.
 
-   def _init_model(self,
-                   params: dict,
-                   ioprefix: Optional[str] = None):
-    """Override the template."""
-    self._state = self.init_condition()
-    self._noise_amplitude = params.get("model",{}).get("noise_amplitude",1.0)
-    self._rng = np.random.default_rng()
+Even for a simple system like this one, there are multiple possible choices for the score function.
+We will use a normalized distance to :math:`\mathcal{B}`:
 
-   def init_condition(self):
-       """Return the initial conditions."""
-       return np.array([-1.0, 0.0])
+.. math::
 
-From the code snippet above, we see that the model state consist of the coordinates of
-the particle in the 2D space. The ``_init_model`` method is called by the ``ForwardModelBaseClass``
-``__init__`` and is provided with the ``params`` dictionary read from the TOML file (see the
-Usage section for more details).
+    \xi(X_t) = 1.0 - \frac{\Vert X_t - x_{\mathcal{B}}\Vert_2}{\Vert x_{\mathcal{A}} - x_{\mathcal{B}} \Vert_2}
 
-We now need to define the ``_advance`` method responsible for advancing the
-system for one stochastic step.
+and select :math:`\xi_b = 0.95`. Note that in this case, choosing a fixed value of :math:`\xi_a` is possible
+but for simplicity, all the trajectories are initialized exactly at :math:`X_0 = x_{\mathcal{A}}`. Additionnaly,
+no dependence on time is included in the score function (it is referred to as a `static` score function).
+The animation below shows the evolution of the TAMS trajectories ensemble (each trajectory
+:math:`\xi(X_t)` as function of time is plotted), during the course of the algorithm. As iterations progress,
+the ensemble deviates from the system metastable state near :math:`\xi(X_t) = 0` towards higher values of :math:`\xi(X_t)`.
 
-.. code-block:: python
+.. figure:: images/tams_doublewell1D.gif
+   :name: TAMS_DoubleWell1D
+   :align: center
+   :width: 70%
 
-    def _advance(self,
-                 step: int,
-                 time: float,
-                 dt: float,
-                 noise: Any,
-                 need_end_state: bool) -> float:
-        """Advance the particle in the 2D space."""
-        self._state = (
-            self._state + dt * self.__RHS(self._state) + self._noise_amplitude * self.__dW(dt, noise)
-        )
-        return dt
+   Evolution of the TAMS trajectories ensemble (:math:`N = 100`, :math:`l_j = 1`)
+   over the course the algorithm iterations.
 
-    def __RHS(self, state):
-        """Double well RHS function."""
-        return np.array([state[0] - state[0] ** 3, -2 * state[1]])
-
-    def __dW(self, dt, noise):
-        """Stochastic forcing."""
-        return np.sqrt(dt) * noise
-
-A few precisions:
- - Note that the time step length ``dt`` and the noise increment ``noise`` are provided externally
-   by the ``ForwardModelBaseClass`` ``advance`` method calling the ``_advance`` method.
-   This is because the TAMS database keeps
-   track of the noise history and can rely on that history to move the model forward instead of
-   generating new noise (when the state stored in the database is subsampled for instance).
- - Additionally, the function returns the actual time step length performed by the model.
-   For complex model, the time step
-   can be constrained by the physics of the model (e.g. CFL condition) and differ from the stochastic
-   time step at which the model is advanced within TAMS. The model substeps might not exactly add up
-   to the provided ``dt``, so TAMS will use the returned ``dt`` to keep track of the model time.
- - Finally, the ``need_end_state`` boolean is used to determine whether the model needs to store the
-   end state or not. This is not relevant here as we do not store the model state to disk, but for
-   higher dimentional models, the model state can not be stored in memory and needs to be stored to disk.
-   Even then, storing to disk at every step might be too expensive such that TAMS can be asked to subsample
-   the state in the database (see the Usage section for more details) to reduce the storage cost.
-
-We now need to define accessors to the model state:
-
-.. code-block:: python
-
-    def get_current_state(self):
-        """Access the model state."""
-        return self._state
-
-    def set_current_state(self, state):
-        """Set the model state."""
-        self._state = state
-
-For the present model, these two functions are trivial. But for more complex models, the state
-might be a path to a file on disk, a dictionary, etc. In that case, more work might be required.
-
-The next abstract method to implement is the ``make_noise`` one. It is called by the base
-``ForwardModelBaseClass`` class and is responsible for generating new noise:
-
-.. code-block:: python
-
-    def make_noise(self):
-     """Make 2D normal noise."""
-     return self._rng.standard_normal(2)
-
-Finally, we need to define the score function:
-
-.. code-block:: python
-
-    def score(self):
-        """Normalized weighted distance between two wells."""
-        a = np.array([-1.0, 0.0])
-        b = np.array([1.0, 0.0])
-        vA = self._state - a
-        vB = self._state - b
-        da = np.sum(vA**2, axis=0)
-        db = np.sum(vB**2, axis=0)
-        f1 = 0.5
-        f2 = 1.0 - f1
-        return f1 - f1 * np.exp(-8 * da) + f2 * np.exp(-8 * db)
+Eventually, all the trajectories transition to :math:`\mathcal{B}` and the algorithm stops.
+The algorithm then provides :math:`\hat{P} = 4.2e^{-5}`. As mentioned above, the algorithm will need to be
+performed multiple times in order to provide the expectancy of the estimator :math:`\hat{P}`, and
+comparing the relative error to the lower and upper bound mentioned above can be used to
+evaluate the quality of the employed score function.
