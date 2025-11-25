@@ -9,12 +9,12 @@ Introduction to TAMS
 --------------------
 
 Trajectory-adaptive Multi-level Sampling (`TAMS <https://doi.org/10.1088/1742-5468/aab856>`_) is concerned with the simulation of rare
-events associated with a dynamical process. A rare event is an event with a non-zero, but
+events associated with a dynamical process. A rare event is an event with a non-zero
 very small probability. The probability is so low that naively sampling the stochastic
 process outcome with a Monte-Carlo (MC) approach yields no reliable estimate of the probability
 within a reasonable simulation time.
 
-Let's consider a random process :math:`X \in R^d` and a measurable set :math:`Y`. We want to estimate the probability:
+Let's consider a random process :math:`X \in \mathbb{R}^d` and a measurable set :math:`Y`. We want to estimate the probability:
 
 .. math::
   p = P(X \in Y)
@@ -32,9 +32,9 @@ technique and is derived from Adaptive Multilevel Sampling (AMS)
 (see for instance the perspective on AMS by `Cerou et al. <https://doi.org/10.1063/1.5082247>`_).
 The idea behind AMS is to simulate following the original distribution (in contrast with Importance Sampling which
 changes the sampling distribution) and to iteratively discard trajectories that are going away from the measurable set :math:`Y`,
-while branching trajectories that are going towards :math:`Y`. Sorting the trajectories requires defining
+while cloning/branching trajectories that are going towards :math:`Y`. Sorting the trajectories requires defining
 a `score function` :math:`\xi` (or `reaction coordinate` due the initial development of the method within
-the molecular dynamics community). Using :math:`\xi`, it is possible to sort the trajectories based on the
+the molecular dynamics community). Using :math:`\xi`, it is possible to sort the trajectories based on
 its maximum value:
 
 .. math::
@@ -54,8 +54,8 @@ The process is illustrated on a small ensemble in the following figure:
 
    Branching trajectory :math:`1` from :math:`3`, starting after :math:`\xi(t, X_3(t)) > \mathcal{Q}^*`.
 
-For each branching or cloning event, a trajectory :math:`\mathcal{T}_{rep}` to branch from is selected
-at random in the :math:`N-l_j` remaining trajectories in the ensemble (where :math:`N` is the total number of trajectories in the initial ensemble).
+For each cloning/branching event, a trajectory :math:`\mathcal{T}_{rep}` to branch from is selected
+randomly (uniformly) in the :math:`N-l_j` remaining trajectories in the ensemble (where :math:`N` is the total number of trajectories in the initial ensemble).
 The branching time :math:`t_b` along :math:`\mathcal{T}_{rep}` is selected to ensure that the branched
 trajectory has a score function strictly higher that the discarded one:
 
@@ -76,7 +76,7 @@ Note that :math:`w_0 = 1`. The final estimate of :math:`p` is given by:
 
 where :math:`N_{\in Y}^J` is the number of trajectories that reached :math:`Y` at step :math:`J`.
 In practice, we define the observable set :math:`Y` as a threshold for the score function :math:`\xi`.
-TAMS only provides an estimate of :math:`p` and the algorithm repeated several times in order to
+TAMS only provides an estimate of :math:`p` and the algorithm is repeated several times in order to
 get a more accurate estimate, as well as a confidence interval. The choice of :math:`\xi` is critical
 for the performance of the algorithm as well as the quality of the estimate.
 
@@ -124,10 +124,10 @@ In particular, `pyTAMS` aims at tackling computationally expensive stochastic mo
 high-dimensional dynamical systems appearing in climate modeling or fluid dynamics, which requires
 High Performance Computing (HPC) platform to be used. As such, `pyTAMS` can be less efficient
 than more simplistic implementations where pure Python physics model can be efficiently vectorized.
-The internals of `pyTAMS` relies on a hierarchy of classes to describe data structures, data storage,
+The internals of `pyTAMS` rely on a hierarchy of classes to describe data structures, data storage,
 workers and eventually the algorithm.
 
-The reader is refered to the API documentation for more details on the classes and functions introduced
+The reader is referred to the API documentation for more details on the classes and functions introduced
 hereafter.
 
 Data structures & storage
@@ -139,7 +139,7 @@ of the model at a given point, along with a time, a noise increment and a value 
 Note that only the time and score are typed (both as ``float``), while the type of the state and noise
 are up to the model implementation.
 
-A list of snapshots consistutes a ``trajectory``, along with some metadata such as the start and
+A list of snapshots consitutes a ``trajectory``, along with some metadata such as the start and
 end times, the step size or the maximum score. The ``trajectory`` object instanciates the model, and
 implements function to advance the model in time or branch a trajectory.
 
@@ -151,7 +151,7 @@ from a TAMS run in order to explore the database contents.
 Workers & parallelism
 ---------------------
 
-The TAMS algorithm exposes parallellism in two places: during the generation of the initial ensemble
+The TAMS algorithm exposes parallelism in two places: during the generation of the initial ensemble
 of trajectories (line 1 in the highlighted algorithm above), and at each splitting iterations where
 more than one trajectory can be branched (the loop on line 6 in the highlighted algorithm).
 
@@ -163,7 +163,7 @@ jobs.
 Algorithm
 ---------
 
-Finally, the TAMS algorithm is implemented in the ``TAMS`` class. The instanciation of a ``TAMS``
+Finally, the TAMS algorithm is implemented in the ``TAMS`` class. The instantiation of a ``TAMS``
 object requires a forward model type and a path to a TOML file to specify the various parameters.
 
 
