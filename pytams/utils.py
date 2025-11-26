@@ -191,7 +191,13 @@ def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None
             else:
                 lines.append('        """TODO: implement method."""\n')
 
-            lines.append("        # Implement concrete method body\n")
+            lines.append("        # Implement concrete method body\n\n")
+
+    # Add the name class method
+    lines.append("    @classmethod\n")
+    lines.append("    def name(cls) -> str:\n")
+    lines.append('        """Return a the model name."""\n')
+    lines.append(f'        return "{class_name}"\n')
 
     # Write to file
     Path(file_path).write_text("".join(lines))
