@@ -152,19 +152,38 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
     @abstractmethod
     def get_current_state(self) -> Any:
-        """Return the current state of the model."""
+        """Return the current state of the model.
+
+        Note that the return type is left to the concrete model definition.
+        """
 
     @abstractmethod
     def set_current_state(self, state: Any) -> Any:
-        """Set the current state of the model."""
+        """Set the current state of the model.
+
+        Args:
+            state: the externally provide state
+        """
 
     @abstractmethod
     def score(self) -> float:
-        """Return the model's current state score."""
+        """Return the model's current state score.
+
+        The score is a real.
+
+        Returns:
+            the score associated with the current model state
+        """
 
     @abstractmethod
     def make_noise(self) -> Any:
-        """Return the model's latest noise increment."""
+        """Return the model's latest noise increment.
+
+        Note that the noise type is left to the concrete model definition.
+
+        Returns:
+            The model next noise increment
+        """
 
     @final
     def post_trajectory_branching_hook(self, step: int, time: float) -> None:
