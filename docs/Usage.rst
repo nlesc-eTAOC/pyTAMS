@@ -102,7 +102,7 @@ data structures of the code:
   cluster. The ``nworker_init`` and ``nworker_iter`` set the number of workers, i.e. number of parallel 
   tasks, used during the generation of the inital ensemble and during the splitting iterations, respectively.
   Note that ``nworker_iter`` effectively set the number of trajectories discarded at each iteration
-  :math:`l_j` (see :ref:`the theory Section <sec:tams>`).
+  :math:`l_j` (see :ref:`the theory Section <sec:theory>`).
 
 - Database parameters:
 

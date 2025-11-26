@@ -1,6 +1,6 @@
 .. highlight:: rst
 
-.. _sec:tams:
+.. _sec:theory:
 
 Theory
 ======
@@ -261,6 +261,7 @@ An overview of the algorithm is provided hereafter:
 
 Simple 1D double well
 ---------------------
+.. _ssec:theory_1ddw:
 
 To illustrate the above theory on a simple example, we now consider the concrete case
 of a 1D double well stochastic dynamical system described by:
@@ -269,7 +270,7 @@ of a 1D double well stochastic dynamical system described by:
 
    dX_t = f(X_t)\,dt + \sqrt{2\epsilon}\,dW_t.
 
-where :math:`f(X_t) = \nabla V(X_t)` is derived from a symmetric potential:
+where :math:`f(X_t) = - \nabla V(X_t)` is derived from a symmetric potential:
 
 .. math::
 

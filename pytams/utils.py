@@ -1,8 +1,11 @@
 """A set of utility functions for TAMS."""
 
 import ast
+import inspect
 import logging
 import sys
+import textwrap
+from abc import ABCMeta
 from pathlib import Path
 from typing import Any
 import numpy as np
@@ -146,3 +149,55 @@ def get_module_local_import(module_name: str) -> list[str]:
             )
         )
     ]
+
+
+def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None:
+    """Generate a subclass skeleton.
+
+    Implementing all abstract methods from `abc_cls`, written to `file_path`.
+
+    Args:
+        abc_cls: an ABC
+        class_name: the new subclass name
+        file_path: where to write the subclass
+    """
+    # Identify abstract methods
+    abstract_methods = {
+        name: value for name, value in abc_cls.__dict__.items() if getattr(value, "__isabstractmethod__", False)
+    }
+
+    # Build import line
+    module_name = abc_cls.__module__
+    abc_name = abc_cls.__name__
+    import_lines = [f"from {module_name} import {abc_name}\n", "import typing\n", "from typing import Any\n\n\n"]
+
+    # Build class header
+    lines = [*import_lines, f"class {class_name}({abc_name}):\n"]
+    lines.append('    """TODO: add class docstring."""\n')
+
+    if not abstract_methods:
+        lines.append("    pass\n")
+    else:
+        # Generate each required method with preserved signature
+        for name, func in abstract_methods.items():
+            sig = inspect.signature(func)
+            doc = inspect.getdoc(func)
+
+            lines.append(f"    def {name}{sig}:\n")
+            if doc:
+                # Indent docstring correctly
+                doc_clean = textwrap.indent('"""' + doc + '\n"""', " " * 8)
+                lines.append(f"{doc_clean}\n")
+            else:
+                lines.append('        """TODO: implement method."""\n')
+
+            lines.append("        # Implement concrete method body\n\n")
+
+    # Add the name class method
+    lines.append("    @classmethod\n")
+    lines.append("    def name(cls) -> str:\n")
+    lines.append('        """Return a the model name."""\n')
+    lines.append(f'        return "{class_name}"\n')
+
+    # Write to file
+    Path(file_path).write_text("".join(lines))
