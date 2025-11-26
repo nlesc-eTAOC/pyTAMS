@@ -1,0 +1,29 @@
+pytams
+======
+
+.. py:module:: pytams
+
+.. autoapi-nested-parse::
+
+   Documentation about pyTAMS.
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/pytams/bin/index
+   /autoapi/pytams/database/index
+   /autoapi/pytams/fmodel/index
+   /autoapi/pytams/sqldb/index
+   /autoapi/pytams/tams/index
+   /autoapi/pytams/taskrunner/index
+   /autoapi/pytams/trajectory/index
+   /autoapi/pytams/utils/index
+   /autoapi/pytams/worker/index
+   /autoapi/pytams/xmlutils/index
+
+

@@ -1,0 +1,46 @@
+pytams.bin
+==========
+
+.. py:module:: pytams.bin
+
+.. autoapi-nested-parse::
+
+   A few CLI functions for pyTAMS.
+
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.bin.parse_cl_args
+   pytams.bin.tams_alive
+   pytams.bin.tams_template_model
+
+
+Module Contents
+---------------
+
+.. py:function:: parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace
+
+   Parse provided list or default CL argv.
+
+   :param a_args: optional list of options
+
+
+.. py:function:: tams_alive() -> None
+
+   Check pyTAMS.
+
+
+.. py:function:: tams_template_model(a_args: list[str] | None = None) -> None
+
+   Copy a templated forward model file.
+
+   A helper function to help getting started from scratch
+   on a new model.
+
+   :param a_args: optional list of options
+
+
