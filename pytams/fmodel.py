@@ -158,7 +158,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def set_current_state(self, state: Any) -> Any:
+    def set_current_state(self, state: Any) -> None:
         """Set the current state of the model.
 
         Args:
