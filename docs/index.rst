@@ -51,6 +51,7 @@ otherwise, please read through this documentation and in particular follow the
    :caption: User guide:
 
    Theory.rst
+   Validation.rst
    Usage.rst
    Tutorials.rst
 
