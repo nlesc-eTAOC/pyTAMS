@@ -1,8 +1,11 @@
 .. highlight:: rst
 
-.. _BaarsThesis: https://research.rug.nl/en/publications/numerical-methods-for-studying-transition-probabilities-in-stocha/
-
 .. _sec:validation:
+
+.. _BaarsThesis: https://research.rug.nl/en/publications/numerical-methods-for-studying-transition-probabilities-in-stocha/
+.. _LestangTAMS: https://doi.org/10.1088/1742-5468/aab856
+.. _LestangThesis: https://theses.hal.science/tel-01974316v1/file/LESTANG_Thibault_2018LYSEN049_These.pdf
+
 
 Validation
 ==========
@@ -11,6 +14,42 @@ Even if the core of the `pyTAMS` algorithm is not particularly complex, details 
 the implementation can lead to systematic biases on the rare event probability
 estimator, especially when the event :math:`\mathcal{E}` probability becomes
 `very` rare (:math:`P(\mathcal{E}) < 1e^{-6}`).
+
+In this section we validate `pyTAMS` implementation on a couple of simple,
+low dimensional cases and since the algorithm is decoupled from the physics
+of the model, the validity extends to more complex physics model for which
+no theoretical data is available.
+
+1D Ornstein-Ulhenbeck process
+-----------------------------
+
+The simple case of a one dimensional Ornstein-Ulhenbeck (OU) process in part of
+`pyTAMS` examples suite. It is an interesting case to consider since
+`Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
+algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
+process do not feature multistability, but we are intersted in predicting
+the occurence of extreme values of the process.
+
+Before jumping into TAMS results, we can provide an estimate of the process
+stationary distribution :math:`P_s(x)` using a very long trajectory (:math:`1e^{8} steps`).
+The log-scale plot of the distribution shows that extreme values of the process
+(:math:`abs(x) > 4\sigma`) are poorly sampled using such a Monte Carlo approach.
+
+.. figure:: images/distribution_OU1D.png
+   :name: Distrib_OU1D
+   :align: center
+   :width: 100%
+
+   Stationary distribution :math:`P_s(x)` of the OU process obtained with TAMS
+
+We will now run TAMS with the parameters listed in `Lestang <LestangThesis>`_, Chap. 6.3.2.
+A small ensemble, of size :math:`N = 32` is employed, with a time horizon of :math:`T_a = 5 \tau_c`
+(where :math:`\tau_c = 1/\theta`). The algorithm is iterated until all the trajectories reach
+:math:`\xi(x) >= \xi_{max}`, with the score function :math:`\xi(x) = x` is simply the process state
+itself and :math:`\xi_{max} = 6\sigma` (where :math:`\sigma` is the stationary distribution
+standard deviation). TAMS is run :math:`K = 5000` to provide :math:`\overline{P}_K`.
+The evolution of :math:`\overline{P}_K` as function of :math:`K` is interesting to
+see the behavior of the rare event probability estimator with an increasing number of samples.
 
 
 2D double well case
@@ -53,3 +92,4 @@ results are expected to be lower due to the relatively small :math:`N` and :math
 compared to `Baars <BaarsThesis>`_. As :math:`T_a` decreases, the IQR become less symetric
 around :math:`\overline{P}_K`, mostly due to the choice of a `static` score function which
 cause TAMS to stall if the transition is initiated too close to :math:`T_a`.
+
