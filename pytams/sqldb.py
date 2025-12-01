@@ -38,8 +38,8 @@ class ArchivedTrajectory(Base):
     __tablename__ = "archived_trajectories"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
     traj_file: Mapped[str] = mapped_column(nullable=False)
+    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
 
 
 class SplittingIterations(Base):
@@ -141,12 +141,13 @@ class SQLFile:
         finally:
             session.close()
 
-    def update_trajectory_file(self, traj_id: int, traj_file: str) -> None:
-        """Update a trajectory file in the DB.
+    def update_trajectory(self, traj_id: int, traj_file: str, metadata: str) -> None:
+        """Update a given trajectory data in the DB.
 
         Args:
             traj_id : The trajectory id
             traj_file : The new trajectory file of that trajectory
+            metadata: a json representation of the traj metadata
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
@@ -157,10 +158,38 @@ class SQLFile:
             db_id = traj_id + 1
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
             traj.traj_file = mapped_column(traj_file)
+            traj.t_metadata = metadata
             session.commit()
         except SQLAlchemyError:
             session.rollback()
             err_msg = f"Failed to update trajectory {traj_id}"
+            _logger.exception(err_msg)
+            raise
+        finally:
+            session.close()
+
+    def update_trajectory_weight(self, traj_id: int, weight: float) -> None:
+        """Update a given trajectory weight in the DB.
+
+        Args:
+            traj_id : The trajectory id
+            weight: the new trajectory weight
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
+        """
+        session = self._Session()
+        try:
+            # SQL indexing starts at 1, adjust ID
+            db_id = traj_id + 1
+            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
+            metadata_d = json.loads(traj.t_metadata)
+            metadata_d["weight"] = str(weight)
+            traj.t_metadata = mapped_column(json.dumps(metadata_d))
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            err_msg = f"Failed to update trajectory {traj_id} weight"
             _logger.exception(err_msg)
             raise
         finally:
@@ -286,7 +315,7 @@ class SQLFile:
         finally:
             session.close()
 
-    def fetch_trajectory(self, traj_id: int) -> str:
+    def fetch_trajectory(self, traj_id: int) -> tuple[str, str]:
         """Get the trajectory file of a trajectory.
 
         Args:
@@ -305,7 +334,8 @@ class SQLFile:
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
                 tfile: str = traj.traj_file
-                return tfile
+                metadata_str: str = traj.t_metadata
+                return tfile, metadata_str
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
@@ -347,7 +377,7 @@ class SQLFile:
         finally:
             session.close()
 
-    def fetch_archived_trajectory(self, traj_id: int) -> str:
+    def fetch_archived_trajectory(self, traj_id: int) -> tuple[str, str]:
         """Get the trajectory file of a trajectory in the archive.
 
         Args:
@@ -366,7 +396,8 @@ class SQLFile:
             traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
             if traj:
                 tfile: str = traj.traj_file
-                return tfile
+                metadata_str: str = traj.t_metadata
+                return tfile, metadata_str
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
@@ -707,7 +738,8 @@ class SQLFile:
                 for traj in session.query(Trajectory).all()
             }
             db_data["archived_trajectories"] = {
-                traj.id - 1: {"file": traj.traj_file} for traj in session.query(ArchivedTrajectory).all()
+                traj.id - 1: {"file": traj.traj_file, "metadata": traj.t_metadata}
+                for traj in session.query(ArchivedTrajectory).all()
             }
             db_data["splitting_data"] = {
                 split.id: {

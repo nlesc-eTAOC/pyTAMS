@@ -130,11 +130,17 @@ class PODScore:
 
         # Open data file and metadata
         nc_pod_in = netCDF4.Dataset(pod_data_file, mode="r")
-        self._ntimes = nc_pod_in.dimensions["time"].size
         self._nfield = nc_pod_in.dimensions["field"].size
         self._lat = nc_pod_in.dimensions["lat"].size
         self._depth = nc_pod_in.dimensions["depth"].size
         self._nmodes = nc_pod_in.dimensions["mode"].size
+        self._ntimes = None
+        try:
+            ntimes = nc_pod_in.dimensions["time"].size
+            self._ntimes = ntimes
+        except AttributeError:
+            wrn_msg = "POD database does not contains a transition path ! Only projection is available."
+            _logger.warning(wrn_msg)
 
         # Checks
         if not (self._lat == lat_in and self._depth == depth_in):
@@ -148,26 +154,29 @@ class PODScore:
             raise ValueError(err_msg)
 
         # Load data
-        self._psi_pod = nc_pod_in["psi"][:, :]
         self._sigma_pod = nc_pod_in["sigma"][:]
-        self._psi_pod[:, :] *= np.sqrt(self._sigma_pod[None, :])
         self._phi_pod = np.zeros((self._nfield, self._nmodes, self._lat, self._depth))
         self._phi_pod[:, :, :, :] = nc_pod_in["field_phi"][:, :, :, :]
         self._phi_pod[:, :, :, :] /= np.sqrt(self._sigma_pod[None, :, None, None])
         self._weights = nc_pod_in["spatial_weights"][:, :]
         self._scaling_field = nc_pod_in["scaling_field"][:]
 
-        # Use self-distance to remove loops
-        self.self_distance_crop()
+        # Load transition path
+        if self._ntimes is not None:
+            self._psi_pod = nc_pod_in["psi"][:, :]
+            self._psi_pod[:, :] *= np.sqrt(self._sigma_pod[None, :])
 
-        # Resample and smooth the reference trajectory
-        self.resample_psi_pod_spline(n_uniform=nsample)
+            # Use self-distance to remove loops
+            self.self_distance_crop()
 
-        # Compute the abscissa
-        self.compute_curvilinear_abs()
+            # Resample and smooth the reference trajectory
+            self.resample_psi_pod_spline(n_uniform=nsample)
 
-        # Compute the trajectory curvature
-        self.compute_curvature()
+            # Compute the abscissa
+            self.compute_curvilinear_abs()
+
+            # Compute the trajectory curvature
+            self.compute_curvature()
 
     def self_distance_crop(self) -> None:
         """Compute self-distance and crop loops."""
@@ -249,6 +258,11 @@ class PODScore:
         Returns:
             The score function associated with the input state
         """
+        if self._ntimes is None:
+            err_msg = "get_score is not available if a transition path is not provided"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
+
         # Map Boussinesq model field order to POD database order
         field_map = np.array([3, 1, 2])
         field = np.zeros((self._nfield, self._lat, self._depth))
@@ -261,7 +275,7 @@ class PODScore:
         )
 
     def project_in_podspace(self, model_state: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
-        """Compute projection of the model state in the POD space
+        """Compute projection of the model state in the POD space.
 
         Args:
             model_state: The model state as a numpy array (fix typing)

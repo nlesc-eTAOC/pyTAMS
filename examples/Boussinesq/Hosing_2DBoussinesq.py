@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-import numpy as np
 import toml
 import matplotlib.pyplot as plt
 from TAMS_2DBoussinesq import Boussinesq2DModel
@@ -10,10 +9,10 @@ _logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     fmodel = Boussinesq2DModel
-    with open("input_hosing.toml", "r") as f:
+    with Path("input_hosing.toml").open("r") as f:
         input_params = toml.load(f)
 
-    traj = Trajectory(0, fmodel, input_params)
+    traj = Trajectory(0, 1.0, fmodel, input_params)
     traj.advance()
     traj.store(Path("./hysteresis_traj.xml"))
 

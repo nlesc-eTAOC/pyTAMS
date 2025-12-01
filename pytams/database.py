@@ -102,6 +102,9 @@ class Database:
                 raise ValueError(err_msg)
             self._name = f"{self._path}"
             self._abs_path: Path = Path.cwd() / self._name
+            self._sql_name = f"{self._name}/trajPool.db"
+        else:
+            self._sql_name = f".sqldb_tams_{np.random.default_rng().integers(0, 999999):06d}.db"
 
         self._store_archive = params.get("database", {}).get("archive_discarded", True)
 
@@ -196,7 +199,7 @@ class Database:
         # Overwritte default read-only mode
         else:
             self._read_only = False
-            self._pool_db = SQLFile("", in_memory=True)
+            self._pool_db = SQLFile(self.pool_file())
 
         # Check minimal parameters
         if self._ntraj == -1 or self._nsplititer == -1:
@@ -342,6 +345,7 @@ class Database:
             workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
             t = Trajectory(
                 traj_id=n,
+                weight=1.0 / float(self._ntraj),
                 fmodel_t=self._fmodel_t,
                 parameters=self._parameters,
                 workdir=workdir,
@@ -383,13 +387,15 @@ class Database:
 
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
-            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_trajectory(n)
+            checkpath, metadata_str = self._pool_db.fetch_trajectory(n)
+            traj_checkfile = Path(self._abs_path) / checkpath
             workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
                 n_traj_restored += 1
                 self.append_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
+                        metadata_str,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -398,8 +404,8 @@ class Database:
                     False,
                 )
             else:
-                t = Trajectory(
-                    traj_id=n,
+                t = Trajectory.init_from_metadata(
+                    metadata_str,
                     fmodel_t=self._fmodel_t,
                     parameters=self._parameters,
                     workdir=workdir,
@@ -432,13 +438,15 @@ class Database:
 
         archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
         for n in range(archived_ntraj_in_db):
-            traj_checkfile = Path(self._abs_path) / self._pool_db.fetch_archived_trajectory(n)
+            checkpath, metadata_str = self._pool_db.fetch_archived_trajectory(n)
+            traj_checkfile = Path(self._abs_path) / checkpath
             workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
                 n_traj_restored += 1
                 self.append_archived_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
+                        metadata_str,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -467,12 +475,14 @@ class Database:
         """
         # Also adds it to the SQL pool file.
         # and set the checkfile
-        if self._save_to_disk and self._pool_db:
+        if self._save_to_disk:
             checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
             checkfile = Path(self._abs_path) / checkfile_str
             a_traj.set_checkfile(checkfile)
-            if update_db:
-                self._pool_db.add_trajectory(checkfile_str, a_traj.get_metadata_json())
+        else:
+            checkfile_str = f"{a_traj.idstr()}.xml"
+        if update_db:
+            self._pool_db.add_trajectory(checkfile_str, a_traj.serialize_metadata_json())
 
         self._trajs_db.append(a_traj)
 
@@ -483,12 +493,11 @@ class Database:
             a_traj: the trajectory
             update_db: True to update the SQL DB content
         """
-        if self._save_to_disk and self._pool_db:
-            checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
-            checkfile = Path(self._abs_path) / checkfile_str
-            a_traj.set_checkfile(checkfile)
-            if update_db:
-                self._pool_db.archive_trajectory(checkfile_str, a_traj.get_metadata_json())
+        checkfile_str = f"./trajectories/{a_traj.idstr()}.xml"
+        checkfile = Path(self._abs_path) / checkfile_str
+        a_traj.set_checkfile(checkfile)
+        if update_db:
+            self._pool_db.archive_trajectory(checkfile_str, a_traj.serialize_metadata_json())
 
         self._archived_trajs_db.append(a_traj)
 
@@ -548,7 +557,11 @@ class Database:
         Return:
             Pool file
         """
-        return f"{self._name}/trajPool.db"
+        return self._sql_name
+
+    def get_pool_db(self) -> SQLFile:
+        """Get the pool SQL database handle."""
+        return self._pool_db
 
     def is_empty(self) -> bool:
         """Check if list of trajectories is empty.
@@ -556,7 +569,7 @@ class Database:
         Return:
             True if the list of trajectories is empty
         """
-        return self.traj_list_len() == 0
+        return self._pool_db.get_trajectory_count() == 0
 
     def traj_list_len(self) -> int:
         """Length of the trajectory list.
@@ -599,9 +612,12 @@ class Database:
         self._archived_trajs_db.append(traj)
 
         # Update the list of archived trajectories in the SQL DB
-        if self._save_to_disk and self._pool_db:
-            checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-            self._pool_db.archive_trajectory(checkfile_str, traj.get_metadata_json())
+        checkfile_str = (
+            traj.get_checkfile().relative_to(self._abs_path).as_posix()
+            if self._save_to_disk
+            else traj.get_checkfile().as_posix()
+        )
+        self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
@@ -616,8 +632,6 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return True
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
     def unlock_trajectory(self, tid: int, has_ended: bool) -> None:
@@ -630,29 +644,34 @@ class Database:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return
-
         if has_ended:
             self._pool_db.mark_trajectory_as_completed(tid)
         else:
             self._pool_db.release_trajectory(tid)
 
-    def update_trajectory_file(self, traj_id: int, checkfile: Path) -> None:
+    def update_trajectory(self, traj_id: int, traj: Trajectory) -> None:
         """Update a trajectory file in the DB.
 
         Args:
             traj_id : The trajectory id
-            checkfile : The new checkfile of that trajectory
+            traj : the trajectory to get the data from
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if not self._save_to_disk or not self._pool_db:
-            return
+        checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
+        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.serialize_metadata_json())
 
-        checkfile_str = checkfile.relative_to(self._abs_path).as_posix()
-        self._pool_db.update_trajectory_file(traj_id, checkfile_str)
+    def update_trajectories_weights(self) -> None:
+        """Upate the weights of all the trajectories.
+
+        Using the the current splitting iteration weight.
+        """
+        tweight = self.weights()[-1] / self.n_traj()
+        for t in self._trajs_db:
+            t.set_weight(tweight)
+            if self._save_to_disk:
+                self._pool_db.update_trajectory_weight(t.id(), tweight)
 
     def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
@@ -762,7 +781,9 @@ class Database:
 
     def path(self) -> str | None:
         """Return the path to the database."""
-        return self._path
+        if self._save_to_disk:
+            return self._abs_path.absolute().as_posix()
+        return None
 
     def done_with_splitting(self) -> bool:
         """Check if we are done with splitting."""
@@ -811,17 +832,19 @@ class Database:
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
         count = 0
-        for t in self._trajs_db:
-            if t.has_ended():
-                count = count + 1
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            if Trajectory.deserialize_metadata(metadata)["ended"]:
+                count += 1
         return count
 
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
         count = 0
-        for t in self._trajs_db:
-            if t.is_converged():
-                count = count + 1
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            if Trajectory.deserialize_metadata(metadata)["converged"]:
+                count += 1
         return count
 
     def count_computed_steps(self) -> int:
@@ -831,11 +854,13 @@ class Database:
         discarded trajectories.
         """
         count = 0
-        for t in self._trajs_db:
-            count = count + t.get_computed_steps_count()
+        for i in range(self._pool_db.get_trajectory_count()):
+            _, metadata = self._pool_db.fetch_trajectory(i)
+            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
 
-        for t in self._archived_trajs_db:
-            count = count + t.get_computed_steps_count()
+        for i in range(self._pool_db.get_archived_trajectory_count()):
+            _, metadata = self._pool_db.fetch_archived_trajectory(i)
+            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
 
         return count
 
@@ -897,7 +922,7 @@ class Database:
             if t.get_nbranching() > 0:
                 for at in self._archived_trajs_db:
                     if at.id() == tid and at.get_nbranching() == 0:
-                        self.update_trajectory_file(tid, at.get_checkfile())
+                        self.update_trajectory(tid, at)
                         t.delete()
 
         # Delete checkfiles of all the archived trajectories we did not
@@ -1073,3 +1098,12 @@ class Database:
                 active_list_at_k.append(self._archived_trajs_db[idx])
 
         return active_list_at_k
+
+    def __del__(self) -> None:
+        """Destructor of the db.
+
+        Delete the hidden SQL database if we do not intend to keep
+        the database around.
+        """
+        if not self._save_to_disk:
+            Path(self._pool_db.name()).unlink(missing_ok=True)

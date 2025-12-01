@@ -6,41 +6,77 @@
 Welcome to pyTAMS's documentation!
 ==========================================================
 
-
-.. warning::
-   pyTAMS documentation is still under construction !
-
 `pyTAMS` is a modular implementation of the trajectory adaptive multilevel splitting (TAMS),
-an algorithm developed to evaluate the probability of rare events associated with a stochastic
+an algorithm developed to evaluate the probability of rare events associated with stochastic
 systems. In particular, TAMS can be used to evaluate the transition probability between
 two stable states of a multi-stable system.
 `pyTAMS` was developed to specifically handle (computationally) expensive stochastic models,
-where advancing the model can take hours to days on supercomputer and using a naive Monte-Carlo
-approach is unreasonable.
+where advancing the model can take hours to days on supercomputers and using a naive Monte-Carlo
+approach is impractical.
 
-The documentation pages appearing hereafter are distributed with the code in the ``docs``
-folder as "restructured text" files. The html is built automatically with certain pushes
-to the `pyTAMS` main branch on GitHub. A local version can also be built as follows ::
+Installation:
+-------------
 
-    cd <pyTAMS_root_folder>/docs
-    make html
+To install `pyTAMS`, simply use ``pip`` in your favorite environment manager
+to get the latest stable version:
+
+.. code-block:: shell
+
+   pip install pytams
+
+or if you plan on modifying the code, install from sources:
+
+.. code-block:: shell
+
+    git clone git@github.com:nlesc-eTAOC/pyTAMS.git
+    cd pyTAMS
+    pip install -e .
+
+Quick start:
+------------
+
+Only if you have used the second option above you can readily test `pyTAMS` on
+a simple problem:
+
+.. code-block:: shell
+
+    cd pyTAMS/examples/DoubleWell3D
+    python doubleWell3D.py -i input_dw3D.toml
+
+otherwise, please read through this documentation and in particular follow the
+:ref:`tutorials Section <sec:tutorials>` to see how to implement your own model within `pyTAMS`.
 
 .. toctree::
    :maxdepth: 2
-   :caption: User corner:
+   :caption: User guide:
 
-   TAMS.rst
-   Controls.rst
+   Theory.rst
+   Usage.rst
    Tutorials.rst
 
 .. toctree::
    :maxdepth: 2
-   :caption: Developer corner:
+   :caption: Developer guide:
 
+   Implementation.rst 
    autoapi/pytams/index.rst
 
+Documentation
+-------------
+
+The documentation pages are distributed with the code in the ``docs``
+folder as "reStructuredText" files. The HTML is built automatically
+whenever changes are pushed to the main branch on GitHub.
+A local version can also be built as follows:
+
+.. code-block:: shell
+
+    cd <pyTAMS_root_folder>/docs
+    make html
+
+
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

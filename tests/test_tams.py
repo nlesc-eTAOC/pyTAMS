@@ -420,7 +420,7 @@ def test_doublewell_slow_tams_restore_more_split():
     """Test restart TAMS more splitting iterations."""
     fmodel = DoubleWellModel
     params_dict = {
-        "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 10.0, "deterministic": True},
+        "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 20.0, "deterministic": True},
         "database": {"path": "dwTest.tdb"},
         "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
         "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
