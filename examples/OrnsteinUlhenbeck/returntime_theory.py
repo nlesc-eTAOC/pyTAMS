@@ -1,13 +1,12 @@
 """Compute the theoretical return time from the OrnsteinUlhenbeck process."""
 
-import toml
 from pathlib import Path
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import scipy.integrate
+import toml
 from scipy.interpolate import interp1d
-from scipy.special import erfi, erfcx
-import matplotlib.pyplot as plt
 
 
 def stat_mean_first_passage_time_theory(a: float, x0: float, theta: float, epsilon: float) -> float:
@@ -54,8 +53,8 @@ if __name__ == "__main__":
         params = toml.load(f)["model"]
 
     # OU parameters
-    theta = params.get("theta",1.0)
-    epsilon = params.get("epsilon",0.5)
+    theta = params.get("theta", 1.0)
+    epsilon = params.get("epsilon", 0.5)
     sigma = np.sqrt(epsilon / theta)
 
     # Integration parameters

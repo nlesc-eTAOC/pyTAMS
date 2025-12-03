@@ -24,9 +24,6 @@ class OrnsteinUlhenbeck(ForwardModelBaseClass):
             m_id: the model instance unique identifier
             params: an optional dict containing parameters
         """
-        # The model state is a float
-        self._state = 0.0
-
         # Theta: the inverse time scale
         self._theta = params.get("model", {}).get("theta", 1.0)
 
@@ -39,6 +36,10 @@ class OrnsteinUlhenbeck(ForwardModelBaseClass):
 
         # Store the time scale
         self._tau = 1.0 / self._theta
+
+        # The model state is a float
+        # drawn from the stationary distribution
+        self._state = np.random.default_rng().normal(scale=self._sigma)
 
         # Initialize the RNG
         if params["model"]["deterministic"]:
