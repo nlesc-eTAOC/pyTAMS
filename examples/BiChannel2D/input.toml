@@ -1,15 +1,15 @@
 [tams]
-ntrajectories = 50
+ntrajectories = 32
 nsplititer = 1000
 loglevel = "WARNING"
 
 [trajectory]
-end_time = 30.0
+end_time = 20.0
 step_size = 0.01
 targetscore = 1.05
 
 [model]
-inv_temperature = 8.67
+inv_temperature = 6.67
 
 [runner]
 type = "asyncio"
