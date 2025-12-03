@@ -45,15 +45,7 @@ The log-scale plot of the distribution shows that extreme values of the process
 
    :Stationary distribution :math:`P_s(x)` of the OU process obtained with TAMS
 
-We will now run TAMS with the parameters listed in `Lestang <LestangThesis>`_, Chap. 6.3.2.
-A small ensemble, of size :math:`N = 32` is employed, with a time horizon of :math:`T_a = 5 \tau_c`
-(where :math:`\tau_c = 1/\theta`). The algorithm is iterated until all the trajectories reach
-:math:`\xi(x) >= \xi_{max}`, with the score function :math:`\xi(x) = x` is simply the process state
-itself and :math:`\xi_{max} = 6\sigma`. TAMS is run :math:`K = 5000` to provide :math:`\overline{P}_K`.
-The evolution of :math:`\overline{P}_K` as function of :math:`K` is interesting depict in order to
-see the behavior of the rare event probability estimator with an increasing number of samples.
-
-Finally, we will also use TAMS to predict the return time :math:`r(a)` of the value $a$ in the OU process.
+We will now use TAMS to predict the return time :math:`r(a)` of the value $a$ in the OU process.
 This is specifically what TAMS was developed for. The results of TAMS are obtained from 25
 independent TAMS runs, with :math:`N = 100`, :math:`T_a = 5 \tau_c` and :math:`\xi_{max} = 8\sigma`.
 The long trajectory used in producing :numref:`fig-Distrib_OU1D` is processed using the block-maximum
