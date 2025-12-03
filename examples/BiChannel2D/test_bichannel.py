@@ -1,3 +1,4 @@
+import contextlib
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,7 +32,8 @@ if __name__ == "__main__":
 
     X, Y = np.meshgrid(x_range, y_range)
 
-    plt.rcParams.update({"text.usetex": True, "font.family": "serif"})
+    with contextlib.suppress(Exception):
+        plt.rcParams.update({"text.usetex": True, "font.family": "serif"})
 
     plt.figure(figsize=(6, 4))
     ctr = plt.contourf(X, Y, np.transpose(potential), levels=25, cmap="viridis_r")
