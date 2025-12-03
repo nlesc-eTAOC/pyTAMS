@@ -83,7 +83,7 @@ class AsIORunner(BaseRunner):
     """A task runner class based on asyncIO.
 
     An runner that relies on asyncio to schedule
-    a tasks concurently in worker processes.
+    a tasks concurrently in worker processes.
     Tasks are added to an internal queue from
     which worker can take them and put the results
     back into result queue.
@@ -183,7 +183,7 @@ class DaskRunner(BaseRunner):
     """A task runner class based on Dask.
 
     An runner that relies on dask to schedule
-    a tasks concurently in workers.
+    a tasks concurrently in workers.
     """
 
     def __init__(

@@ -66,7 +66,7 @@ class Database:
         Initialize TAMS database object, bare in-memory or on-disk.
 
         On-disk database trigger if a path is provided in the
-        parameters dictonary. The user can chose to not append/override
+        parameters dictionary. The user can chose to not append/override
         the existing database in which case the existing path
         will be copied to a new random name.
 
@@ -125,7 +125,7 @@ class Database:
 
     @classmethod
     def load(cls, a_path: Path, read_only: bool = True) -> Database:
-        """Instanciate a TAMS database from disk.
+        """Instantiate a TAMS database from disk.
 
         Args:
             a_path: the path to the database
@@ -168,7 +168,7 @@ class Database:
             db_exists = self._abs_path.exists()
 
             # If no previous db or we force restart
-            # Overwritte the default read-only mode
+            # Overwrite the default read-only mode
             if not db_exists or self._restart:
                 # The 'restart' is no longer useful, drop it
                 self._parameters["database"].pop("restart", None)
@@ -196,7 +196,7 @@ class Database:
                 self._pool_db = SQLFile(self.pool_file())
 
         # Initialize in-memory database metadata
-        # Overwritte default read-only mode
+        # Overwrite default read-only mode
         else:
             self._read_only = False
             self._pool_db = SQLFile(self.pool_file())
@@ -211,7 +211,7 @@ class Database:
         """Update database params and metadata.
 
         Upon loading a database from disk, compare the dictionary of
-        parameters stored in the database against the newly inputed one
+        parameters stored in the database against the newly inputted one
         and update the database metadata when possible.
         Note that only the [tams] sub-dictionary can be updated updated at this point
         and the database params overwrite the other subdicts.
@@ -663,7 +663,7 @@ class Database:
         self._pool_db.update_trajectory(traj_id, checkfile_str, traj.serialize_metadata_json())
 
     def update_trajectories_weights(self) -> None:
-        """Upate the weights of all the trajectories.
+        """Update the weights of all the trajectories.
 
         Using the the current splitting iteration weight.
         """
@@ -793,7 +793,7 @@ class Database:
         """Return the list of trajectories undergoing branching or None.
 
         Ongoing trajectories are extracted from the last splitting
-        iteration data if it has not been flaged as "completed".
+        iteration data if it has not been flagged as "completed".
         """
         return self._pool_db.get_ongoing()
 
@@ -1054,7 +1054,7 @@ class Database:
         # active at iteration k
         active_list_index = self._get_location_and_indices_at_k(k_in)
 
-        # Retrive the trajectories from the active/archived lists
+        # Retrieve the trajectories from the active/archived lists
         active_list_at_k = []
         for location, idx in active_list_index:
             if location == "active":
