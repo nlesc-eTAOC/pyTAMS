@@ -213,7 +213,7 @@ class TAMS:
 
         Returns:
             bool to trigger splitting loop break
-            array of maximas accros all trajectories
+            array of maximas across all trajectories
         """
         # Gather max score from all trajectories
         # and check for early convergence

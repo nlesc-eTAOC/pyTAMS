@@ -68,6 +68,10 @@ exec = [
   "scipy",
 ]
 
+[project.scripts]
+tams_init_model = "pytams.bin:tams_template_model"
+tams_check = "pytams.bin:tams_alive"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
@@ -153,6 +157,9 @@ ignore_missing_imports = true
 
 [tool.setuptools.package-data]
 pytams = ["py.typed"]
+
+#[tool.setuptools.packages.find]
+#where = ["pytams"]
 
 [tool.bumpversion]
 current_version = "0.0.6"

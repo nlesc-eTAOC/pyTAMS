@@ -59,7 +59,7 @@ class Snapshot:
     actual type of the noise and state are completely
     determined by the forward model.
     A snapshot is allowed to have a state or not to
-    accomodate memory savings.
+    accommodate memory savings.
 
     Attributes:
         time : snapshot time
