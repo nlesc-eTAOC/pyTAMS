@@ -477,3 +477,11 @@ class TAMS:
         self._tdb.info()
 
         return transition_probability
+
+    def get_database(self) -> Database:
+        """Accessor to database.
+
+        Returns:
+            A reference to the database in use
+        """
+        return self._tdb

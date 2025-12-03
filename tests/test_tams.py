@@ -122,6 +122,23 @@ def test_simple_model_tams_with_db():
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
+def test_simple_model_tams_with_db_access():
+    """Test TAMS with simple model and access to the database."""
+    fmodel = SimpleFModel
+    with Path("input.toml").open("w") as f:
+        toml.dump(
+            {
+                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "runner": {"type": "dask"},
+                "database": {"path": "simpleModelTest.tdb"},
+                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
+            },
+            f,
+        )
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    _ = tams.compute_probability()
+    tdb = tams.get_database()
+    assert tdb.get_transition_probability() == 1
 
 def test_simple_model_tams_slurm_fail():
     """Test TAMS with simple model with Slurm dask backend."""
