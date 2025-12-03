@@ -28,13 +28,13 @@ of the model at a given point, along with a time, a noise increment and a value 
 Note that only the time and score are typed (both as ``float``), while the type of the state and noise
 are up to the model implementation.
 
-A list of snapshots consitutes a ``trajectory``, along with some metadata such as the start and
-end times, the step size or the maximum score. The ``trajectory`` object instanciates the model, and
+A list of snapshots constitutes a ``trajectory``, along with some metadata such as the start and
+end times, the step size or the maximum score. The ``trajectory`` object instantiates the model, and
 implements function to advance the model in time or branch a trajectory.
 
 Finally, a list of trajectories is the central container for the TAMS's ``database``. The algorithm
 writes, reads and accesses trajectories through the database which also contains TAMS algorithm's data
-such as splitting iterations weights and biases. The ``database`` can be instanciated independently
+such as splitting iterations weights and biases. The ``database`` can be instantiated independently
 from a TAMS run in order to explore the database contents.
 
 Workers & parallelism

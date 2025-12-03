@@ -66,8 +66,8 @@ Now create a new folder for us to work in:
    mkdir tams_1d_doublewell
    cd tams_1d_doublewell
 
-Writting the forward model
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Writing the forward model
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Our first task is to implement the SDE provided above in a class that can interact
 with `pyTAMS`. As mentioned in the :ref:`Implementation Section <sec:implementation>`,
@@ -379,7 +379,7 @@ This is all for this tutorial. We have covered the following points:
 - Testing the model on a single, isolated trajectory
 - Running TAMS
 
-To go a further, modify the ``tams_dw1D.py`` scritp to run TAMS :math:`K` times and
+To go a further, modify the ``tams_dw1D.py`` script to run TAMS :math:`K` times and
 provide a better estimate of the transition probability :math:`\overline{P}_K`, as well as
 its relative error. What happens when :math:`\epsilon` is reduced ? Can you trigger saving
 the TAMS database to disk ?

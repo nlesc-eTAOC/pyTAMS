@@ -100,7 +100,7 @@ data structures of the code:
   more suited when running `pyTAMS` locally (or within the scope of a Slurm job), and ``dask``
   leverage `Dask <https://www.dask.org/>`_ and is required when deploying a large `pyTAMS` run on a
   cluster. The ``nworker_init`` and ``nworker_iter`` set the number of workers, i.e. number of parallel 
-  tasks, used during the generation of the inital ensemble and during the splitting iterations, respectively.
+  tasks, used during the generation of the initial ensemble and during the splitting iterations, respectively.
   Note that ``nworker_iter`` effectively set the number of trajectories discarded at each iteration
   :math:`l_j` (see :ref:`the theory Section <sec:theory>`).
 

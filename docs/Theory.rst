@@ -25,7 +25,7 @@ governing the deterministic component of the dynamics, while
 :math:`m`-dimensional Wiener process :math:`W_t \in \mathbb{R}^{m}`.
 
 Solving analytically the above SDE to obtain the system probability distributions is
-rarely feasable, especially in nonlinear or high-dimensional settings. Markov
+rarely feasible, especially in nonlinear or high-dimensional settings. Markov
 chain Monte Carlo (MCMC) methods address this challenge by constructing a
 discrete-time Markov chain whose stationary distribution approximates the
 target distribution of the stochastic dynamical system. In this
@@ -139,7 +139,7 @@ one dimensional space. The :math:`\mathcal{A}` and :math:`\mathcal{B}` states ca
 The successive regions :math:`\mathcal{C}_i` can similarly be defined using levels of :math:`\xi` between
 :math:`\xi_a` and :math:`\xi_b`. In AMS, these levels are automatically selected by the algorithm which alleviate
 a strong convergence issue arising with older multilevel splitting methods which required selecting these levels
-a-priori, using the practioner intuition.
+a-priori, using the practitioner intuition.
 
 In addition, TAMS targets the evaluation of :math:`\mathcal{A}` to :math:`\mathcal{B}` transitions within a finite
 time interval of the Markov chain :math:`[0, T_a]`, which then requires the use of a time dependent score function
@@ -155,7 +155,7 @@ with Monte Carlo), discarding trajectories that are going away from :math:`\math
 cloning/branching trajectories that are going towards :math:`\mathcal{B}`. This effectively biases the ensemble
 toward the rare transition event.
 
-The selection process uses the score function :math:`\xi(X_t,t)`. At each iteration :math:`j` of the algoritm,
+The selection process uses the score function :math:`\xi(X_t,t)`. At each iteration :math:`j` of the algorithm,
 the trajectories are ranked based on the maximum of :math:`\xi(X_t,t)` over the time interval :math:`[0, T_a]`:
 
 .. math::
@@ -304,7 +304,7 @@ We will use a normalized distance to :math:`\mathcal{B}`:
     \xi(X_t) = 1.0 - \frac{\Vert X_t - x_{\mathcal{B}}\Vert_2}{\Vert x_{\mathcal{A}} - x_{\mathcal{B}} \Vert_2}
 
 and select :math:`\xi_b = 0.95`. Note that in this case, choosing a fixed value of :math:`\xi_a` is possible
-but for simplicity, all the trajectories are initialized exactly at :math:`X_0 = x_{\mathcal{A}}`. Additionnaly,
+but for simplicity, all the trajectories are initialized exactly at :math:`X_0 = x_{\mathcal{A}}`. Additionally,
 no dependence on time is included in the score function (it is referred to as a `static` score function).
 The animation below shows the evolution of the TAMS trajectories ensemble (each trajectory
 :math:`\xi(X_t)` as function of time is plotted), during the course of the algorithm. As iterations progress,

@@ -24,7 +24,7 @@ to get the latest stable version:
 
    pip install pytams
 
-or if you plan on modifying the code, install from sources:
+or if you plan on modifying the code or test the shipped-in examples, install from sources:
 
 .. code-block:: shell
 
@@ -40,8 +40,8 @@ a simple problem:
 
 .. code-block:: shell
 
-    cd pyTAMS/examples/DoubleWell3D
-    python doubleWell3D.py -i input_dw3D.toml
+    cd pyTAMS/examples/DoubleWell2D
+    python tams_dw2dim.py
 
 otherwise, please read through this documentation and in particular follow the
 :ref:`tutorials Section <sec:tutorials>` to see how to implement your own model within `pyTAMS`.
@@ -51,6 +51,7 @@ otherwise, please read through this documentation and in particular follow the
    :caption: User guide:
 
    Theory.rst
+   Validation.rst
    Usage.rst
    Tutorials.rst
 
