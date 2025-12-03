@@ -23,33 +23,56 @@ no theoretical data is available.
 1D Ornstein-Ulhenbeck process
 -----------------------------
 
-The simple case of a one dimensional Ornstein-Ulhenbeck (OU) process in part of
+The simple case of a one dimensional Ornstein-Ulhenbeck (OU) process is part of
 `pyTAMS` examples suite. It is an interesting case to consider since
 `Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
 algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
-process do not feature multistability, but we are intersted in predicting
-the occurence of extreme values of the process.
+process do not feature multistability, but we are interested in predicting
+the occurrence of extreme values of the process.
 
 Before jumping into TAMS results, we can provide an estimate of the process
-stationary distribution :math:`P_s(x)` using a very long trajectory (:math:`1e^{8} steps`).
+stationary distribution :math:`P_s(x)` using a very long trajectory (:math:`10^{8} steps`).
+The OU process parameters are set to :math:`\theta = 1.0` and :math:`epsilon = 0.5`, for which
+theoretical :math:`P_s(x) = \mathcal{N}(0,\sigma)` with :math:`\sigma = \sqrt{\epsilon/\theta}`.
 The log-scale plot of the distribution shows that extreme values of the process
 (:math:`abs(x) > 4\sigma`) are poorly sampled using such a Monte Carlo approach.
 
+.. _fig-Distrib_OU1D:
 .. figure:: images/distribution_OU1D.png
    :name: Distrib_OU1D
    :align: center
    :width: 100%
 
-   Stationary distribution :math:`P_s(x)` of the OU process obtained with TAMS
+   :Stationary distribution :math:`P_s(x)` of the OU process obtained with TAMS
 
 We will now run TAMS with the parameters listed in `Lestang <LestangThesis>`_, Chap. 6.3.2.
 A small ensemble, of size :math:`N = 32` is employed, with a time horizon of :math:`T_a = 5 \tau_c`
 (where :math:`\tau_c = 1/\theta`). The algorithm is iterated until all the trajectories reach
 :math:`\xi(x) >= \xi_{max}`, with the score function :math:`\xi(x) = x` is simply the process state
-itself and :math:`\xi_{max} = 6\sigma` (where :math:`\sigma` is the stationary distribution
-standard deviation). TAMS is run :math:`K = 5000` to provide :math:`\overline{P}_K`.
-The evolution of :math:`\overline{P}_K` as function of :math:`K` is interesting to
+itself and :math:`\xi_{max} = 6\sigma`. TAMS is run :math:`K = 5000` to provide :math:`\overline{P}_K`.
+The evolution of :math:`\overline{P}_K` as function of :math:`K` is interesting depict in order to
 see the behavior of the rare event probability estimator with an increasing number of samples.
+
+Finally, we will also use TAMS to predict the return time :math:`r(a)` of the value $a$ in the OU process.
+This is specifically what TAMS was developed for. The results of TAMS are obtained from 25
+independent TAMS runs, with :math:`N = 100`, :math:`T_a = 5 \tau_c` and :math:`\xi_{max} = 8\sigma`.
+The long trajectory used in producing :numref:`fig-Distrib_OU1D` is processed using the block-maximum
+method to provide an estimate of :math:`\hat{r}(a)`
+and the theoretical :math:`r(a)` in also given by equation A6 of `Lestang et al. <LestangTAMS>`_.
+The graph :numref:`fig-ReturnTime_OU1D` shows the return time in abscissa and the value of :math:`a` in ordonate for all
+three methods. The agreements between `pyTAMS` and the theoretical value of the return time demonstrate
+that the current implementation is able to correctly estimate rare events, down to very probability
+(:math:`P(\mathcal{E}) < 10^{-10}`)
+
+
+.. _fig-ReturnTime_OU1D:
+.. figure:: images/returntimes_OU.png
+   :name: ReturnTime_OU1D
+   :align: center
+   :width: 70%
+
+   : Comparison of return times :math:`\hat{r}(a)` of an OU process obtained
+   with the block-maximum method, TAMS and the theoretical expression of Lestang et al.
 
 
 2D double well case
@@ -75,21 +98,22 @@ estimator. Following `Baars <BaarsThesis>`_, we also use the 25-75 interquartile
 to give an indication of the estimator quality (standard confidence interval are not
 appropriate for near-zero distributions).
 
-The figure below show `pyTAMS` :math:`\overline{P}_K` in the range of values of
+:numref:`fig-Valid_DoubleWell2D` shows `pyTAMS` :math:`\overline{P}_K` in the range of values of
 :math:`T_a` considered, along with the IQR given by the shaded area and results
 from `Baars <BaarsThesis>`_.
 
+.. _fig-Valid_DoubleWell2D:
 .. figure:: images/valid_doublewell2D.png
    :name: Valid_DoubleWell2D
    :align: center
    :width: 70%
 
-   Transition probability estimate :math:`\overline{P}_K` at several
+   : Transition probability estimate :math:`\overline{P}_K` at several
    values of :math:`T_a` in the 2D double well case
 
 The agreement between the two datasets is good, even though the accuracy of the `pyTAMS`
 results are expected to be lower due to the relatively small :math:`N` and :math:`K` used
-compared to `Baars <BaarsThesis>`_. As :math:`T_a` decreases, the IQR become less symetric
+compared to `Baars <BaarsThesis>`_. As :math:`T_a` decreases, the IQR become less symmetric
 around :math:`\overline{P}_K`, mostly due to the choice of a `static` score function which
-cause TAMS to stall if the transition is initiated too close to :math:`T_a`.
+causes TAMS to stall if the transition is initiated too close to :math:`T_a`.
 
