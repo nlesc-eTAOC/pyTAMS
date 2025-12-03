@@ -409,6 +409,7 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
     Path("input.toml").unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("skip_on_windows")
 @pytest.mark.dependency(depends=["test_doublewell_slow_tams_restore_during_initial_ensemble"])
 def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCaptureFixture):
     """Test TAMS restarting a slow doublewell."""
@@ -433,6 +434,7 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
     shutil.rmtree("slowdwTest.tdb")
 
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_doublewell_slow_tams_restore_more_split():
     """Test restart TAMS more splitting iterations."""
     fmodel = DoubleWellModel
