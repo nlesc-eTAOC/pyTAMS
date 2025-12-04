@@ -51,7 +51,7 @@ def get_min_scored(maxes: npt.NDArray[Any], nworkers: int) -> tuple[list[int], n
     """Get the nworker lower scored trajectories or more if equal score.
 
     Args:
-        maxes: array of maximas accros all trajectories
+        maxes: array of maximas across all trajectories
         nworkers: number of workers
 
     Returns:

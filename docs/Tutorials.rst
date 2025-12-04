@@ -66,8 +66,8 @@ Now create a new folder for us to work in:
    mkdir tams_1d_doublewell
    cd tams_1d_doublewell
 
-Writting the forward model
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Writing the forward model
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Our first task is to implement the SDE provided above in a class that can interact
 with `pyTAMS`. As mentioned in the :ref:`Implementation Section <sec:implementation>`,
@@ -379,13 +379,411 @@ This is all for this tutorial. We have covered the following points:
 - Testing the model on a single, isolated trajectory
 - Running TAMS
 
-To go a further, modify the ``tams_dw1D.py`` scritp to run TAMS :math:`K` times and
+To go further, modify the ``tams_dw1D.py`` script to run TAMS :math:`K` times and
 provide a better estimate of the transition probability :math:`\overline{P}_K`, as well as
 its relative error. What happens when :math:`\epsilon` is reduced ? Can you trigger saving
 the TAMS database to disk ?
 
 Bi-channel problem
 ------------------
+
+In this tutorial, you will explore transitions in the bi-channel/triple wells, two-dimensional
+dynamical system. This system is regularly used for testing rare event algorithm, see for instance
+`Brehier et al. <https://www.jstor.org/stable/44249972>`_. In contrast with the 1D double well tutorial,
+we will use the implementation already available in `pyTAMS` examples and focus on using the algorithm
+to explore the system behavior.
+
+Background
+~~~~~~~~~~
+
+The bi-channel/triple well is a 2D overdamped diffusion process in which the potential landscape
+features two global minimum (at :math:`(\pm 1.0, 0.0)`) as well as a local minimum near
+:math:`(0.0, 1.5)`. The global minima are connected by two channels: the `upper` channel
+through the local minima while the `lower` channel goes through the saddle point near :math:`(0.0, -0.4)`.
+To take the `upper` channel, a trajectory will need to overcome two energy barriers to enter and exit
+the local minima, while the `lower` channel one feature a single barrier albeit of higher depth.
+
+The potential as well as a system trajectory initiated near the left global minima
+:math:`\mathcal{A} = (x_A,y_A) = (-1,0)` is presented in Fig. :numref:`fig-Pot_BiChannel`.
+
+.. _fig-Pot_BiChannel:
+.. figure:: images/Potential_BiChannel.png
+   :name: Pot_BiChannel
+   :align: center
+   :width: 70%
+
+   : Potential landscape of the bi-channel/triple well 2D case.
+
+The noise level in this model is set by the inverse temperature parameter :math:`\beta`, with low
+values of :math:`\beta` corresponding to a high noise level. At low noise levels, the `upper` channel
+is more likely as the two smaller energy barriers are easier to cross. In contrast, at high noise levels
+the shorter `lower` path becomes more likely as strong noise is able to push the system across the saddle
+point.
+
+Getting set up
+~~~~~~~~~~~~~~
+
+If you haven't done so yet, let's get `pyTAMS` installed on your system.
+In order to have access to the example suite, you will need to install the package from sources.
+
+.. code-block:: shell
+
+   git clone git@github.com:nlesc-eTAOC/pyTAMS.git
+   cd pyTAMS
+   pip install -e .
+   tams_check
+
+The last line check that `pyTAMS` is effectively installed and should return (with proper version numbers):
+
+.. code-block:: shell
+
+   == pyTAMS vX.Y.Z :: a rare-event finder tool ==
+
+More into the example folder
+
+.. code-block:: shell
+
+   cd pyTAMS/examples/BiChannel2D
+
+
+The Forward Model
+~~~~~~~~~~~~~~~~~
+
+We will not have to modify the forward model in this tutorial, but it is still interesting
+to have a look at the content of the ``bichannel2d.py`` file. A quick check of the methods
+defined for this model reveals that all the required `@abstractmethod` from the `pyTAMS` ABC are
+provided with a concrete implementations (see Tutorial on 1D double well for more details
+on this point).
+
+In addition, a ``potential`` and ``drift`` are available to readily access the process
+parameters.
+
+.. code-block:: python
+
+    def _init_model(self, m_id: int, params: dict[typing.Any, typing.Any]) -> None:
+    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
+    def potential(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
+    def drift(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
+    def get_current_state(self) -> Any:
+    def set_current_state(self, state: Any) -> None:
+    def score(self) -> float:
+    def make_noise(self) -> Any:
+
+The state is a Numpy array with two elements and the noise dimension is also :math:`m=2`.
+The model also uses an Euler-Murayama scheme to advance in time and the score function is the
+normalized distance to :math:`\mathcal{A}`:
+
+
+.. math::
+
+    \xi(X_t) = \frac{\Vert X_t - X_A \Vert_2}{\Vert X_B - X_A \Vert_2}
+
+
+To test that the model is effectively available, you can reproduce Fig. :numref:`fig-Pot_BiChannel`
+by running the provided test script:
+
+.. code-block:: shell
+
+    python test_bichannel.py
+
+The script uses the Forward Model ``potential`` function to draw contours of :math:`V(x,y)`.
+
+Running TAMS
+~~~~~~~~~~~~
+
+Let's now focus on running TAMS. As mentioned above, this case features two paths for transitioning
+from :math:`\mathcal{A} = X_A = (x_A,y_A) = (-1,0)` to :math:`\mathcal{B} = X_B = (x_B,y_B) = (1,0)`. We will start
+with running TAMS using :math:`N=32` and up to :math:`J=1000` iteration. The time horizon is
+set to :math:`T_a = 20` and the stopping criterion delimiting :math:`\mathcal{B}` is :math:`\xi_b = 1.05`.
+All of these parameter can be set in the ``input.toml`` file:
+
+
+.. code-block:: python
+
+    [tams]
+    ntrajectories = 32
+    nsplititer = 1000
+    loglevel = "WARNING"
+
+    [trajectory]
+    end_time = 20.0
+    step_size = 0.01
+    targetscore = 1.05
+
+    [model]
+    inv_temperature = 5.67
+
+    [runner]
+    type = "asyncio"
+    nworker_init=1
+    nworker_iter=1
+
+Note that the log level here was decreased to ``WARNING`` in order to minimize standard output clutering
+when running TAMS multiple times. Let's now look at the short script provided for running TAMS with the
+bi-channel model ``tams_bichannel.py``:
+
+.. code-block:: python
+
+  import numpy as np           
+  from bichannel2d import BiChannel2D
+  from bichannel2d import plot_in_landscape
+  from pytams.tams import TAMS 
+  
+  if __name__ == "__main__":   
+      # For convenience
+      fmodel = BiChannel2D     
+    
+      # Enable TAMS trajectory plots  
+      plot_ensemble = True     
+
+      # Number of consecutive TAMS runs
+      K = 10
+
+      # Run the model several times
+      for i in range(K):
+          # Initialize the algorithm object
+          tams = TAMS(fmodel_t=fmodel)
+
+          # Run TAMS and report
+          try:
+              probability = tams.compute_probability()
+          except RuntimeError as e:
+              print(e) # noqa: T201
+              continue
+
+          print(f"[{i}] : {probability}") # noqa: T201
+
+          if plot_ensemble:
+              plot_in_landscape(fmodel, tams.get_database(), i)
+
+      print(f"Averaged transition P_K: {probabilities.mean()}, RE: {np.sqrt(probabilities.var()) / probabilities.mean()}")  # noqa : T201  
+
+As listed above, the script will perform :math:`K = 10` consecutive TAMS runs and report on the averaged
+transition probability :math:`P_K` as well as the relative error. In addition, if the ``plot_ensemble`` is activated,
+a figure showing the TAMS trajectory ensemble in the potential landscape will be generated for each run.
+Let's run the script:
+
+.. code-block:: shell
+
+   python tams_bichannel.py
+
+
+Depending on the platform you are using, it will take a few minutes to run.
+
+.. note::
+   Some of the individual TAMS run might have terminated with:
+   ```
+   Splitting is stalling with all trajectories stuck at a score_max: 0.7399799334097721
+   ```
+   This is an occurrence of `extinction`, a known issue of (T)AMS algorithms in which the
+   ensemble collapse on a single ancestor trajectory and no significant progress is made
+   through iterations until all trajectories have the same :math:`Q_{tr}`. This problem
+   is more likely when using small ensemble or using a static score function in TAMS, as
+   we do here.
+
+
+At the value of the inverse temperature
+set in the input file :math:`\beta = 5.67`, transition through both channel can occurs with a significant probability
+such that out of the 10 runs, you should observe both `upper` and `lower` channel transition as depicted in
+the figure below.
+
+
+.. _fig-TAMS_BiChannel:
+.. figure:: images/TAMS_Upper_BiChannel.png
+   :name: Upper_BiChannel
+   :align: center
+   :width: 70%
+
+.. figure:: images/TAMS_Lower_BiChannel.png
+   :name: Lower_BiChannel
+   :align: center
+   :width: 70%
+
+   : Example of TAMS run with transition in the `upper` or `lower` channel
+
+Let's have a look at the behavior of the transition estimator :math:`P_K` as
+:math:`K` increases. This is similar to the experiment reported in `Brehier et al. <https://www.jstor.org/stable/44249972>`_,
+but we will limit the exercise to :math:`K = 200`. Running such an experiment would
+take significant time, beyond the scope of this tutorial. Instead, the probability of 200
+TAMS runs are already available in the example folder and can be readily analyzed. Note that
+the data were generated using :math:`\beta = 6.67` for which the transition probability is
+lower than in the earlier runs we performed here.
+
+The data are stored in a Numpy file ``Pk_beta_6p67_K200.npy``. We will write a small script
+to load the data and plot the evolution of :math:`P_K` as :math:`K` goes from 1 to 200.
+In a new Python file ((e.g. ``Pk_estimator.py``):
+
+.. code-block:: python
+
+  import contextlib
+  import matplotlib.pyplot as plt
+  import numpy as np
+  
+  if __name__ == "__main__":
+      # Load the numpy data
+      proba = np.load("./Pk_beta_6p67_K200.npy")
+  
+      # Initialize data containers for P_K
+      # and the confidence interval
+      pbar = np.zeros(proba.shape[0] - 1)
+      pbar[0] = proba[0]
+      pbar_ci = np.zeros(proba.shape[0] - 1)
+  
+      # Compute pbar and pbar_ci
+      for k in range(1, proba.shape[0] - 1):
+          pbar[k] = proba[:k].mean()
+          pbar_ci[k] = 1.0 / np.sqrt(k) * np.sqrt(proba[:k].var())
+  
+      # Plot the results
+      with contextlib.suppress(Exception):
+          plt.rcParams.update({"text.usetex": True, "font.family": "serif"})
+      plt.figure(figsize=(6, 4))
+      plt.xticks(fontsize="x-large")
+      plt.yticks(fontsize="x-large")
+      plt.xlabel("$K$", fontsize="x-large")
+      plt.ylabel("$P_K$", fontsize="x-large")
+      plt.plot(np.linspace(1, proba.shape[0] - 1, proba.shape[0] - 1), pbar, color="r")
+      plt.fill_between(
+          np.linspace(1, proba.shape[0] - 1, proba.shape[0] - 1),
+          pbar - pbar_ci,
+          pbar + pbar_ci,
+          color="r",
+          alpha=0.2,
+          linewidth=0.0,
+      )
+      plt.grid(linestyle=":", color="silver")
+      plt.tight_layout()
+      plt.show()
+
+Running the script above in the bi-channel folder should produce the graph shown in Fig.:numref:`fig-PK_BiChannel`_.
+Over the course of 200 runs, the estimator varies significantly and even with :math:`K = 200` the value of :math:`P_K`
+continues to change. Of interest is the shaded area, showing the 90% confidence interval, which gives an indication of
+the transition probability estimator quality.
+
+.. _fig-PK_BiChannel:
+.. figure:: images/TAMS_PK_BiChannel.png
+   :name: PK_BiChannel
+   :align: center
+   :width: 70%
+
+   : Evolution of :math:`P_K` with :math:`K` repetitions of the TAMS algorithm.
+
+Accessing the TAMS database
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+So far, we have performed multiple runs of TAMS but have had limited access to the welth of data
+generated during the course of the algorithm. Looking back into the previous section, we have
+used TAMS data to visualize the trajectory ensemble on the potential landscape.
+The TAMS database object can be accessed during or after a TAMS run using:
+
+.. code-block:: python
+
+    tdb = tams.get_database()
+
+where ``tams`` is an instance of the TAMS object. In the example script used above, the database
+object is send to the function constructing the plot: the ``plot_in_landscape`` function
+in ``bichannel2d.py``. The few lines of code used to access the data in the database are reported
+below:
+
+
+.. code-block:: python
+
+   for t in tdb.traj_list():
+       state_x = np.array([s[1][0] for s in t.get_state_list()]) 
+       state_y = np.array([s[1][1] for s in t.get_state_list()])
+
+Here we loop on the list of `active` trajectories ``tdb.traj_list()``, i.e. the ensemble
+of :math:`N` trajectories active at the current iteration of the algorithm. We then used Python
+list comprehension to go through the trajectory and extract a Numpy array of the system state
+components :math:`x` and :math:`y`.
+
+In our previous TAMS runs, we could no longer access the database after exiting the script
+since the data was not saved to disk. Let's now run one more time the algorithm, allowing to
+create a database on disk. To do so, let's add the appropriate keyword to the input file
+``input.toml``:
+
+
+.. code-block:: python
+
+   [database]
+   path = "./db_tams_bichannel.tdb"
+
+
+,update the ``tams_bichannel.py`` script to only run once by changing the value of :math:`K`:
+
+
+.. code-block:: python
+
+   # Number of consecutive TAMS runs
+   K = 1
+    
+and run the script again:
+
+.. code-block:: shell
+
+   python tams_bichannel.py
+
+Note that saving the database to disk incurs an overhead, which is not negligeable for
+such a small model. Looking into your run folder should now show that a TAMS database
+was saved:
+
+.. code-block:: shell
+
+  ls -d db*
+  db_tams_bichannel.tdb
+
+Let's now put together a small script to load the database and access some of its data.
+In a new Python file (e.g. ``load_database.py``):
+
+.. code-block:: python
+
+  from pytams.database import Database
+  from pathlib import Path
+
+
+  if __name__ == "__main__":   
+      # Load the database from disk
+      tdb = Database.load(Path("./db_tams_bichannel.tdb"))
+      tdb.load_data(load_archived_trajectories=True)
+
+      # Show the ensemble scores at the last iteration
+      tdb.plot_score_functions("./ScoreEnsemble.png")
+
+      # Show the evolution of the ensemble span over
+      # the course of TAMS iterations
+      tdb.plot_min_max_span("./ScoreMinMax.png")
+
+      # Go through the active trajectories
+      # and display the max score
+      for t in tdb.traj_list():
+          print(f"Trajectory {t.id()} final max score: {t.score_max()}")
+
+      # Get the active trajectory list at initial iteration
+      # and display the max score
+      for t in tdb.get_trajectory_active_at_k(0):
+          print(f"Trajectory {t.id()} initial max score: {t.score_max()}")
+
+The first line above instantiate the ``Database`` object, but only load metadata from disk. Only data such
+as the number of trajectories, the current index of the TAMS iteration and some trajectories metadata
+(did it converged, what is the maximum of the score function, ...) are available.
+The ``load_data`` function effectively load the entire content of the trajectories in memory. By default
+only the `active` trajectory data are loaded, i.e. the trajectory at the end of the TAMS algorithm. By
+activating the ``load_archived_trajectories`` flag, we trigger loading the full list of trajectories
+including the ones discarded during the TAMS iterations.
+A couple of helper functions allow to asses the state of the ensemble by plotting the score functions
+as well as the evolution of the ensemble over the course of the iterations.
+
+
+This is all for this tutorial. We have covered the following points:
+
+- Exploring one of `pyTAMS` built-in example
+- Running TAMS multiple times in order to get a better transition probability estimator and uncertainty
+- Accessing, saving and loading the TAMS database
+
+To go further, modify the change the value of the inverse temperature :math:`\beta` parameter
+and see how that affect the probability of transitioning through the `upper` and `lower` channels,
+look at the ``Database`` and ``Trajectory`` APIs (`database API <./autoapi/pytams/database/index.html>`_)
+to extract more data from the database and get the most out of your TAMS runs !
 
 2D Boussinesq model
 -------------------
