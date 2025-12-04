@@ -280,6 +280,7 @@ def test_doublewell_deterministic_tams():
     Path("input.toml").unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("skip_on_windows")
 def test_doublewell_deterministic_tams_with_diags(caplog: pytest.LogCaptureFixture):
     """Test TAMS with the doublewell model."""
     caplog.set_level(logging.WARNING)
