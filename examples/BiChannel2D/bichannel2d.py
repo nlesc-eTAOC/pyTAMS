@@ -1,7 +1,10 @@
+import contextlib
 import typing
 from typing import Any
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+from pytams.database import Database
 from pytams.fmodel import ForwardModelBaseClass
 
 
@@ -143,3 +146,36 @@ class BiChannel2D(ForwardModelBaseClass):
     def name(cls) -> str:
         """Return a the model name."""
         return "BiChannel2D"
+
+
+def plot_in_landscape(fmodel: BiChannel2D, tdb: Database, idx: int) -> None:
+    """Wrapper function to plot TAMS ensemble."""
+    # Get a potential map
+    x_range = np.linspace(-1.6, 1.6, 101)
+    y_range = np.linspace(-1.6, 2.6, 132)
+    x, y = np.meshgrid(x_range, y_range)
+    potential = np.zeros((101, 132))
+    for i in range(len(x_range)):
+        for j in range(len(y_range)):
+            potential[i, j] = fmodel.potential(np.array([x_range[i], y_range[j]]))
+
+    with contextlib.suppress(Exception):
+        plt.rcParams.update({"text.usetex": True, "font.family": "serif"})
+
+    plt.figure(figsize=(6, 4))
+    ctr = plt.contourf(x, y, np.transpose(potential), levels=25, cmap="viridis_r")
+
+    for t in tdb.traj_list():
+        state_x = np.array([s[1][0] for s in t.get_state_list()])
+        state_y = np.array([s[1][1] for s in t.get_state_list()])
+        plt.plot(state_x, state_y, color="k", alpha=0.6)
+
+    plt.xticks(fontsize="x-large")
+    plt.yticks(fontsize="x-large")
+    plt.xlabel("x", fontsize="x-large")
+    plt.ylabel("y", fontsize="x-large")
+    plt.colorbar(ctr, label="V(x,y)")
+    plt.grid(linestyle=":", color="silver")
+    plt.tight_layout()
+    plt.savefig(f"./Path_run_{idx:04d}.png", dpi=1200)
+    plt.close()
