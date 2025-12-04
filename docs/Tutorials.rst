@@ -439,7 +439,7 @@ The last line check that `pyTAMS` is effectively installed and should return (wi
 
    == pyTAMS vX.Y.Z :: a rare-event finder tool ==
 
-More into the example folder
+Move into the example folder
 
 .. code-block:: shell
 
@@ -787,3 +787,422 @@ to extract more data from the database and get the most out of your TAMS runs !
 
 2D Boussinesq model
 -------------------
+
+So far, the tutorials have been focused on fairly simple models for which `pyTAMS` is practical,
+but also incurs a computational overhead that might not be justified compared to more simple
+implementation of the algorithm.
+
+We will now turn our attention to a more complex model, with :math:`10^4` degrees-of-freedom
+for which `pyTAMS` is specifically designed for. The model is a stochastic partial
+differential equation (SPDE) described in `Soons et al. <https://doi.org/10.1017/jfm.2025.248>`_.
+Two versions of this model are available in `pyTAMS` examples and the present tutorial will
+focus on the C++ implementation ``examples/BoussinesqCpp`` in order to demonstrate how
+to couple `pyTAMS` with an external software (as might be the case for many user of existing
+physics models). The interested reader can dig into the ``examples/Boussinesq`` to study the
+implementation of a Python-only version.
+
+One final note to motivate the use of `pyTAMS`: a :math:`10^4` state requires about 80 kB
+of memory and considering a model trajectory consists of 4000 individual states, an `active` set of
+:math:`N=20` trajectories requires about 6 GB of memory. This turns out to be only a fraction
+of the full memory requirements of TAMS as the total number of trajectories increases with
+the number of iterations, making it impossible to run TAMS on such a model without
+partially storing data to disk and sub-sampling the states (both native features of `pyTAMS`).
+
+Getting set up
+~~~~~~~~~~~~~~
+
+If you haven't done so yet, let's get `pyTAMS` installed on your system.
+In order to have access to the example suite, you will need to install the package from sources.
+
+.. code-block:: shell
+
+   git clone git@github.com:nlesc-eTAOC/pyTAMS.git
+   cd pyTAMS
+   pip install -e .
+   tams_check
+
+The last line check that `pyTAMS` is effectively installed and should return (with proper version numbers):
+
+.. code-block:: shell
+
+   == pyTAMS vX.Y.Z :: a rare-event finder tool ==
+
+Move into the example folder
+
+.. code-block:: shell
+
+   cd pyTAMS/examples/BoussinesqCpp
+
+
+BoussinesqCpp Folder content
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before diving into the code, let's first have a look at the content of the folder
+as many more files are involved compared to previous tutorials:
+
+.. code-block:: shell
+
+     Boussinesq.cpp             # Implementation of physics model in C++
+     Boussinesq.h               # C++ model headers
+     Makefile                   # GNUmake file
+     Messaging.h                # Messaging library header, C++ side
+     OFFState.bin               # Model OFF state data, in binary format
+     OFFState.xmf               # Model OFF state data visualization (use Paraview)
+     ONState.bin                # Model ON state data, in binary format
+     ONState.xmf                # Model ON state data visualization (use Paraview)
+     README.md
+     __init__.py
+     boussinesq2d.py            # The forward model implementation
+     eigen_lapack_interf.h      # Eigen to LAPACK interface C++ header
+     input.toml                 # TAMS input file
+     messaging.py               # Messaging library, Python side
+     tams_boussinesq2d.py       # Script for running TAMS
+
+There are three main components to this model:
+
+- The model physics is encapsulated in a C++ program (``Boussinesq.h``, ``Boussinesq.cpp``, ``eigen_lapack_interf.h``)
+- An inter-process communication (IPC) module with a C++ (``Messaging.h``) and a Python (``messaging.py``) side
+- The `pyTAMS` ABC concrete implementation for this model (``boussinesq2d.py``)
+
+When coupling an external model to `pyTAMS`, one should consider the possibility of
+maintaining the physics program continuously running in the background to avoid having to start and
+terminate the program repeatedly. In the present case, we implemented a simple IPC that enables running the C++
+in the background all the time while controlling its flow from Python as `pyTAMS` proceeds. This might not
+always be possible if you do not have access to the physics program source code.
+
+Our aim here is not to dive too much into the C++ side, as the physics implementation is not
+particularly transferable to other cases, but to explore how to set up the ABC forward model
+implementation for an external program.
+
+Let's kick off this tutorial by compiling the physics program.
+Follow the instructions of the ``README.md`` file to obtain the external dependencies for this
+case (Eigen and LAPACK) and make sure you are able to compile the C++ program:
+
+.. code-block:: shell
+
+   make
+   ls boussinesq.exe
+
+BoussinesqCpp forward model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Let's first look at the ``_init_model`` function in ``boussinesq2d.py`` to get a clear view of the
+model attributes:
+
+.. code-block:: python
+
+  self._m_id = m_id                               # The unique id of the model instance
+  self._M = subparms.get("size_M", 40)            # Number of grid point in latitude
+  self._N = subparms.get("size_N", 80)            # Number of grid point in depth
+  self._K = subparms.get("K", 7)                  # Number of Fourier modes for the stochastic forcing
+  self._eps = subparms.get("epsilon", 0.05)       # Variance of the Wiener noise process
+  self._exec = subparms.get("exec", None)         # The executable of the external physics program
+  self._exec_cmd = [                              # The command to start the external physics program
+      self._exec,
+      "-M",
+      str(self._M),
+      "-N",
+      str(self._N),
+      "-K",
+      str(self._K),
+      "--eps",
+      str(self._eps),
+      "--pipe_id",
+      str(m_id),
+  ]
+  self._proc = None                               # The id of the process of the external program
+  self._pipe = None                               # The IPC (named here pipe as it uses two-way pipes)
+  self._state = subparms.get("init_state", None)  # The model state
+
+The model physical parameters are read from the input file (``size_M``, ``size_N``, ``K``, ``epsilon``) and used
+to start the external program along with a path to its executable. The C++ program does not start at this point,
+but will be launched upon calling the advance function for the first time.
+In this model, the state is not directly the model state as an array of data but rather a path to
+a file on disk, generated/read by the external model. This has direct implication for the setter and getter
+function of the ABC: the ``set_current_state`` function must not only set the ``self._state`` variable on the
+Python side, but also communicate that information with the C++ program:
+
+.. code-block:: python
+
+  def set_current_state(self, state: Any) -> None:
+      """Set the model state.
+
+      And transfer it to the C++ process if opened
+
+      Args:
+          state: the new state
+      """
+      self._state = state
+      if not self._proc:
+          return
+
+      self._pipe.post_message(Message(MessageType.SETSTATE, data=state.encode("utf-8")))
+
+      ret = self._pipe.get_message()
+      if ret.mtype != MessageType.DONE:
+          err_msg = "Unable to set the state of the C++ code"
+          _logger.error(err_msg)
+          raise RuntimeError
+
+If we now take a closer look at the advance function, there are a few notable things to notice:
+
+
+.. code-block:: python
+
+    def _advance(self, _step: int, _time: float, dt: float, noise: Any, need_end_state: bool) -> float:
+        """Advance the model.
+
+        Args:
+            step: the current step counter
+            time: the starting time of the advance call
+            dt: the time step size over which to advance
+            noise: the noise to be used in the model step
+            need_end_state: whether the step end state is needed
+
+        Return:
+            Some model will not do exactly dt (e.g. sub-stepping) return the actual dt
+        """
+        if not self._proc:
+            # Initialize the C++ process and the twoway pipe
+            self._proc = subprocess.Popen(self._exec_cmd)
+
+            self._pipe = TwoWayPipe(str(self._m_id))
+            self._pipe.open()
+
+            # Send the workdir
+            self._pipe.post_message(Message(MessageType.SETWORKDIR, data=self._workdir.as_posix().encode("utf-8")))
+
+            # Set the initial state
+            self.set_current_state(self._state)
+
+        if need_end_state:
+            self._pipe.post_message(trigger_save_msg)
+
+        self._pipe.post_message(Message(MessageType.ONESTOCHSTEP, data=noise.tobytes()))
+        ret = self._pipe.get_message()
+        if ret.mtype != MessageType.DONE:
+            err_msg = "Unable to access the score from the C++ code"
+            _logger.error(err_msg)
+            raise RuntimeError
+
+        self._score = struct.unpack("d", ret.data)[0]
+
+        if need_end_state:
+            self._state = self.get_last_statefile()
+        else:
+            self._state = None
+
+        return dt
+
+- Upon the first call to the advance function, the C++ program is started using Python `subprocess`. At
+  the same time, the IPC two-way pipe is initialized and the initial condition communicated to the 
+  external program.
+- `pyTAMS`'s trajectory API allows to downsample the state stored in the trajectory and the advance function
+  ``need_end_state`` argument is set to ``True`` when the algorithm expects a state. This is also transferred
+  to the C++ program before effectively advancing the model. Depending on how your model handles IO, you can use
+  this parameter to make sure a checkpoint file is generated (or possibly suppress a checkpoint file if your
+  model always produces IO but it is not needed)
+
+The noise increment for the model's stochastic forcing is still generated on the Python side and
+communicated to the external C++ program when performing a model time step. Additionally, the Python
+ABC does not have access to the C++ program state variables (i.e. the physical field of temperature, salinity, ...)
+and must query the model to get the score function (transferring entire variable fields to Python would
+slow the model significantly).
+
+One last function worth noting is ``_clear_model``:
+
+.. code-block:: python
+
+    def _clear_model(self) -> None:
+        if self._proc:
+            self._pipe.post_message(exit_msg)
+            self._proc.wait()
+            self._proc = None
+            self._pipe.close()
+            self._pipe = None
+
+This function is part of `pyTAMS` forward model ABC but does not *need* to be overwritten by a concrete
+implementation. It is always called upon completing a trajectory (i.e. reaching the score function target
+value or the final time horizon) and in the current model, it terminates the external C++ program.
+
+Running TAMS locally
+~~~~~~~~~~~~~~~~~~~~
+
+We will now run TAMS with the Boussinesq model. This model is significantly more computationally
+expensive that the other models used in previous tutorial, but it still only takes a few dozens
+minutes to perform a TAMS run on a laptop.
+
+Let's review the content of the input file ``input.toml``:
+
+.. code-block:: python
+
+    [tams]
+    ntrajectories = 20
+    nsplititer = 200
+    loglevel = "INFO"
+    diagnostics = true
+
+
+The number of ensemble member is set to :math:`N=20` and the maximum of iteration set to :math:`J = 200`.
+We enable diagnostic to ``True`` is order to visualize the evolution of the ensemble during the course
+of the iterations, as depicted in the last graph of the :ref:`Theory Section <sec:theory>`.
+
+.. code-block:: python
+
+    [trajectory]
+    end_time = 20.0
+    step_size = 0.005
+    targetscore = 0.95
+    sparse_freq = 10
+
+The time horizon is set to :math:`T_a = 20` time units and the step size 0.005. The target score function
+defining the model AMOC collapsed state is :math:`\xi_b = 0.95`. Finally, only one state every 10 steps will
+be requested (i.e. the advance function argument ``need_end_state`` will be ``False`` 9 out of 10 calls. This
+reduce by an order of magnitude the disk space requirements. Note that this parameter is a disk space versus
+compute trade-off, as sparser trajectory will require to recompute some model steps during the cloning/branching
+step of the algorithm.
+
+.. code-block:: python
+
+    [model]
+    exec = "./boussinesq.exe"
+    init_state = "./ONState.bin"
+    size_M = 40
+    size_N = 80
+    epsilon = 0.05
+    K = 7
+
+The model parameters are parsed in the model ``_init_model`` function and control the size of computational
+model as well as stochastic forcing shape and intensity. The initial condition is set to be the AMOC `ON` state.
+Note that the noise level here is fairly high :math:`\epsilon = 0.05`, such that the transition is not so rare
+in order to limit the compute time.
+
+.. code-block:: python
+
+    [runner]
+    type = "dask"
+    nworker_init=2
+    nworker_iter=2
+
+When running the model locally, both `asyncio` and `dask` runner are valid options. Here we use Dask by default,
+spawning two workers during the initial ensemble generation and two workers during the TAMS iterations. The
+later parameter effectively means that at least the two trajectories with the lowest value of the maximum score
+function will be discarded and new trajectory cloned/branched at each TAMS iterations.
+
+.. code-block:: python
+
+    [database]
+    path = "2DBoussinesqCpp.tdb"
+
+Running this model always requires creating a database on disk to store the external model data.
+
+As with previous Tutorials, there a short script in the example folder to launch TAMS:
+
+.. code-block:: shell
+
+    python tams_boussinesq2d.py
+
+For the sake of keeping this tutorial short, only a single TAMS run is required.
+
+The standard output should look something like:
+
+.. code-block:: shell
+
+    [INFO] 2025-12-04 22:46:02,769 -
+                ####################################################
+                # TAMS v0.0.6             trajectory database      #
+                # Date: 2025-12-04 21:46:02.752567+00:00           #
+                # Model: 2DBoussinesqModelCpp                      #
+                ####################################################
+                # Requested # of traj:                          20 #
+                # Requested # of splitting iter:               500 #
+                # Number of 'Ended' trajectories:                0 #
+                # Number of 'Converged' trajectories:            0 #
+                # Current splitting iter counter:                0 #
+                # Current total number of steps:                 0 #
+                # Transition probability:                      0.0 #
+                ####################################################
+
+    [INFO] 2025-12-04 22:46:02,785 - Computing 2DBoussinesqModelCpp rare event probability using TAMS
+    [INFO] 2025-12-04 22:46:02,785 - Creating the initial ensemble of 20 trajectories
+    [INFO] 2025-12-04 22:46:03,292 - Advancing traj000002_0000 [time left: 86399.487147]
+    [INFO] 2025-12-04 22:46:03,293 - Advancing traj000003_0000 [time left: 86399.486938]
+    [INFO] 2025-12-04 22:46:28,092 - Advancing traj000018_0000 [time left: 86374.679952]
+    [INFO] 2025-12-04 22:46:28,120 - Advancing traj000006_0000 [time left: 86374.651914]
+    ...
+    [INFO] 2025-12-04 22:50:49,663 - Advancing traj000010_0000 [time left: 86113.108818]
+    [INFO] 2025-12-04 22:51:14,384 - Advancing traj000012_0000 [time left: 86088.387617]
+    [INFO] 2025-12-04 22:51:14,437 - Advancing traj000000_0000 [time left: 86088.334118]
+    [INFO] 2025-12-04 22:51:39,418 - Run time: 336.648924 s
+    [INFO] 2025-12-04 22:51:39,418 - Using multi-level splitting to get the probability
+    [INFO] 2025-12-04 22:51:39,992 - Starting TAMS iter. 0 with 2 workers
+    [INFO] 2025-12-04 22:51:40,595 - Restarting [19] from traj000003_0000 [time left: 86062.184477]
+    [INFO] 2025-12-04 22:51:40,597 - Restarting [4] from traj000001_0000 [time left: 86062.183612]
+    [INFO] 2025-12-04 22:52:02,934 - Starting TAMS iter. 2 with 2 workers
+    [INFO] 2025-12-04 22:52:03,365 - Restarting [10] from traj000019_0001 [time left: 86039.406361]
+    [INFO] 2025-12-04 22:52:03,383 - Restarting [2] from traj000017_0000 [time left: 86039.388611]
+    [INFO] 2025-12-04 22:52:23,398 - Starting TAMS iter. 4 with 2 workers
+    ...
+    [INFO] 2025-12-04 22:59:55,533 - Starting TAMS iter. 102 with 2 workers
+    [INFO] 2025-12-04 22:59:55,848 - Restarting [8] from traj000016_0008 [time left: 85566.924079]
+    [INFO] 2025-12-04 22:59:55,879 - Restarting [7] from traj000000_0003 [time left: 85566.892251]
+    [INFO] 2025-12-04 22:59:57,955 - Starting TAMS iter. 104 with 2 workers
+    [INFO] 2025-12-04 22:59:58,134 - All trajectories converged after 104 splitting iterations
+    [INFO] 2025-12-04 22:59:58,317 - Run time: 835.547348 s
+    [INFO] 2025-12-04 23:00:02,499 - 104 archived trajectories loaded
+    [INFO] 2025-12-04 23:00:02,521 -
+                ####################################################
+                # TAMS v0.0.6             trajectory database      #
+                # Date: 2025-12-04 21:46:02.752567+00:00           #
+                # Model: 2DBoussinesqModelCpp                      #
+                ####################################################
+                # Requested # of traj:                          20 #
+                # Requested # of splitting iter:               500 #
+                # Number of 'Ended' trajectories:               20 #
+                # Number of 'Converged' trajectories:           20 #
+                # Current splitting iter counter:              106 #
+                # Current total number of steps:            183619 #
+                # Transition probability:    0.0037570973859534823 #
+                ####################################################
+
+
+Since ``diagnostic`` is set to ``True``, a series of images ``Score_k0****.png`` showing the
+ensemble at each iterations (every two cloning/branching events) is generated.
+
+Running TAMS on a Slurm cluster
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the event you have access to an HPC cluster, we will now update the input file to run
+TAMS on a Slurm cluster.
+
+.. code-block:: python
+
+    [tams]
+    walltime = 7100
+
+    [dask]
+    backend = "slurm"
+    worker_walltime = "2:00:00"
+    queue = "genoa"
+    ntasks_per_job = 1
+    job_prologue = ['module load Python', 'conda activate pyTAMS']
+
+The default backend of the ``dask`` runner is ``local``, by setting it to ``slurm`` Dask will
+submit the workers as Slurm jobs. The job wall time will be set to 2 hours and be submitted to
+the ``genoa`` partition. The algorithm walltime must thus be updated to not exceed the job wall time.
+The strings listed in the ``job_prologue`` will be executed before starting the worker and can be
+used to setup your environment.
+
+If your cluster allows it, can launch the TAMS script from the login node (very to no compute is done by the main
+process in TAMS), otherwise you will have to launch the TAMS script from a Slurm batch script.
+
+This is all for this tutorial. We have covered the following points:
+
+- Interfacing an external program with `pyTAMS`
+- Triggering diagnostics while running TAMS
+- Using multiple workers and running TAMS on a Slurm cluster
+
+To go further, interested users can change the model noise parameters or repeat the experiment
+multiple times. Additionally, the Python version of the Boussinesq model has several custom
+features and comparing the two implementations could be a good source of information for developing
+your own model.
