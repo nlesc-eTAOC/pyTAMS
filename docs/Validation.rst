@@ -1,10 +1,12 @@
 .. highlight:: rst
 
-.. _sec:validation:
-
 .. _BaarsThesis: https://research.rug.nl/en/publications/numerical-methods-for-studying-transition-probabilities-in-stocha/
+
 .. _LestangTAMS: https://doi.org/10.1088/1742-5468/aab856
+
 .. _LestangThesis: https://theses.hal.science/tel-01974316v1/file/LESTANG_Thibault_2018LYSEN049_These.pdf
+
+.. _sec:validation:
 
 
 Validation
@@ -32,7 +34,7 @@ the occurrence of extreme values of the process.
 
 Before jumping into TAMS results, we can provide an estimate of the process
 stationary distribution :math:`P_s(x)` using a very long trajectory (:math:`10^{8} steps`).
-The OU process parameters are set to :math:`\theta = 1.0` and :math:`epsilon = 0.5`, for which
+The OU process parameters are set to :math:`\theta = 1.0` and :math:`\epsilon = 0.5`, for which
 theoretical :math:`P_s(x) = \mathcal{N}(0,\sigma)` with :math:`\sigma = \sqrt{\epsilon/\theta}`.
 The log-scale plot of the distribution shows that extreme values of the process
 (:math:`abs(x) > 4\sigma`) are poorly sampled using such a Monte Carlo approach.
