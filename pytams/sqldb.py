@@ -1,13 +1,13 @@
 """A class for the TAMS data as an SQL database using SQLAlchemy."""
 
 from __future__ import annotations
+import gc
 import json
 import logging
 from pathlib import Path
 from typing import cast
 import numpy as np
 import numpy.typing as npt
-import gc
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
