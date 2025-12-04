@@ -1,0 +1,86 @@
+pytams.worker
+=============
+
+.. py:module:: pytams.worker
+
+.. autoapi-nested-parse::
+
+   A set of functions used by TAMS workers.
+
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.worker.update_trajectory_in_sql
+   pytams.worker.traj_advance_with_exception
+   pytams.worker.pool_worker
+   pytams.worker.ms_worker
+   pytams.worker.worker_async
+
+
+Module Contents
+---------------
+
+.. py:function:: update_trajectory_in_sql(traj: pytams.trajectory.Trajectory, sqldb: pytams.sqldb.SQLFile | None = None, db_path: str | None = None) -> None
+
+   Wrapper for update SQL trajectory info.
+
+   :param sqldb: the SQL database to update
+   :param traj: the traj to get the information from
+   :param db_path: an optional TAMS database path
+
+
+.. py:function:: traj_advance_with_exception(traj: pytams.trajectory.Trajectory, walltime: float, sqldb: pytams.sqldb.SQLFile | None = None, db_path: str | None = None) -> pytams.trajectory.Trajectory
+
+   Advance a trajectory with exception handling.
+
+   :param traj: a trajectory
+   :param walltime: the time limit to advance the trajectory
+   :param sqldb: a handle to the SQL database
+   :param db_path: an optional path to the run database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: pool_worker(traj: pytams.trajectory.Trajectory, end_date: datetime.date, sql_path: str | None = None, db_path: str | None = None) -> pytams.trajectory.Trajectory
+
+   A worker to generate each initial trajectory.
+
+   :param traj: a trajectory
+   :param end_date: the time limit to advance the trajectory
+   :param sql_path: an optional path to the SQL database
+   :param db_path: an optional path to the run database
+
+   :returns: The updated trajectory
+
+
+.. py:function:: ms_worker(from_traj: pytams.trajectory.Trajectory, rst_traj: pytams.trajectory.Trajectory, min_val: float, new_weight: float, end_date: datetime.date, sql_path: str | None = None, db_path: str | None = None) -> pytams.trajectory.Trajectory
+
+   A worker to restart trajectories.
+
+   :param from_traj: a trajectory to restart from
+   :param rst_traj: the trajectory being restarted
+   :param min_val: the value of the score function to restart from
+   :param new_weight: the weight of the new child trajectory
+   :param end_date: the time limit to advance the trajectory
+   :param sql_path: a path to the SQL database
+   :param db_path: an optional path to the run database
+
+
+.. py:function:: worker_async(queue: asyncio.Queue[tuple[collections.abc.Callable[Ellipsis, Any], pytams.trajectory.Trajectory, float, bool, str]], res_queue: asyncio.Queue[asyncio.Future[pytams.trajectory.Trajectory]], executor: concurrent.futures.Executor) -> None
+   :async:
+
+
+   An async worker for the asyncio taskrunner.
+
+   It wraps the call to one of the above worker functions
+   with access to the queue.
+
+   :param queue: a queue from which to get tasks
+   :param res_queue: a queue to put the results in
+   :param executor: an executor to launch the work in
+
+
