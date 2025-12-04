@@ -27,4 +27,3 @@ nworker_iter=2
 
 [database]
 path = "2DBoussinesqCpp.tdb"
-archive_discarded = true
