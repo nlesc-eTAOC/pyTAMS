@@ -4,10 +4,10 @@ import numpy as np
 from pytams.fmodel import ForwardModelBaseClass
 
 
-class OrnsteinUlhenbeck(ForwardModelBaseClass):
-    """A one dimensional Ornstein-Ulhenbeck process.
+class OrnsteinUhlenbeck(ForwardModelBaseClass):
+    """A one dimensional Ornstein-Uhlenbeck process.
 
-    The classic Ornstein-Ulhenbeck process SDE:
+    The classic Ornstein-Uhlenbeck process SDE:
         dX_t = -theta X_t dt + sqrt(2*epsilon) dW_t
 
     The stationary distribution of X_t is a Normal distribution
@@ -104,4 +104,4 @@ class OrnsteinUlhenbeck(ForwardModelBaseClass):
     @classmethod
     def name(cls) -> str:
         """Return a the model name."""
-        return "OrnsteinUlhenbeck"
+        return "OrnsteinUhlenbeck"
