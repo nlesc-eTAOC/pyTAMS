@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytams"
-version = "0.0.6"
+version = "1.0.0"
 authors = [
     { name = "Lucas Esclapez", email = "l.esclapez@esciencecenter.nl" }
 ]
@@ -162,7 +162,7 @@ pytams = ["py.typed"]
 #where = ["pytams"]
 
 [tool.bumpversion]
-current_version = "0.0.6"
+current_version = "1.0.0"
 
 [[tool.bumpversion.files]]
 filename = "pytams/__init__.py"
