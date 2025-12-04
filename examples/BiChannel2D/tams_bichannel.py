@@ -11,7 +11,7 @@ if __name__ == "__main__":
     plot_ensemble = False
 
     # Number of consecutive TAMS runs
-    K = 20
+    K = 10
 
     probabilities = np.zeros(K)
 
