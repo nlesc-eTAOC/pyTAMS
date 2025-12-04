@@ -31,6 +31,33 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/
 
+  ornsteinuhlenbeck:
+    name: OrnsteinUhlenbeck (${{ matrix.python-version }})
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python info
+        shell: bash -e {0}
+        run: |
+          which python
+          python --version
+      - name: Install dependencies
+        run: python -m pip install .[exec]
+      - name: Run OrnsteinUhlenbeck
+        run: |
+          cd examples/OrnsteinUhlenbeck
+          sed -i "s#K = 10#K = 3#g" tams_ou1dim.py
+          python tams_ou1dim.py
+
+
   doublewell:
     name: DoubleWell (${{ matrix.python-version }})
     runs-on: 'ubuntu-latest'
@@ -54,8 +81,35 @@ jobs:
       - name: Run doublewell
         run: |
           cd examples/DoubleWell2D
-          sed -i "s#K = 10#K = 5#g" tams_dw2dim.py
+          sed -i "s#K = 10#K = 3#g" tams_dw2dim.py
           python tams_dw2dim.py
+
+  bichannel:
+    name: BiChannel (${{ matrix.python-version }})
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python info
+        shell: bash -e {0}
+        run: |
+          which python
+          python --version
+      - name: Install dependencies
+        run: python -m pip install .[exec]
+      - name: Run BiBchannel
+        run: |
+          cd examples/BiChannel2D
+          sed -i "s#K = 10#K = 3#g" tams_bichannel.py
+          python tams_bichannel.py
+
 
   boussinesq:
     name: Boussinesq (${{ matrix.python-version }})
