@@ -146,6 +146,7 @@ def test_simple_model_tams_with_db_access():
     tdb = tams.get_database()
     assert tdb.get_transition_probability() == 1
     del tams
+    del tdb
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
