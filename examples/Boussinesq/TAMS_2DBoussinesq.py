@@ -390,5 +390,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 if __name__ == "__main__":
     fmodel = Boussinesq2DModel
     tams = TAMS(fmodel_t=fmodel)
-    transition_proba = tams.compute_probability()
-    print(f"Transition probability: {transition_proba}")
+    try:
+        transition_proba = tams.compute_probability()
+    except RuntimeError as e:
+        print(e) # noqa: T201
+    print(f"Transition probability: {transition_proba}") # noqa: T201

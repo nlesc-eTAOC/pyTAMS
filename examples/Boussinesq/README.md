@@ -34,7 +34,7 @@ time scale $`\tau_t`$ of the system using `score_time_scale = <some_value>`. The
 described above is then multiplied by a time factor $`t_f`$:
 
 ```math
-t_f = 1.0 - \exp(t - T_a) / \tau_t)
+t_f = 1.0 - \exp((t - T_a) / \tau_t)
 ```
 
 ## Hosing
