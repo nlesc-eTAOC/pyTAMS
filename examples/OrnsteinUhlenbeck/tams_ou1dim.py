@@ -1,10 +1,10 @@
 import numpy as np
-from ornsteinulhenbeck import OrnsteinUlhenbeck
+from ornsteinuhlenbeck import OrnsteinUhlenbeck
 from pytams.tams import TAMS
 
 if __name__ == "__main__":
     # For convenience
-    fmodel = OrnsteinUlhenbeck
+    fmodel = OrnsteinUhlenbeck
 
     # Run the model K times
     K = 10

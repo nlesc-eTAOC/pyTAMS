@@ -4,11 +4,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
-from ornsteinulhenbeck import OrnsteinUlhenbeck
+from ornsteinuhlenbeck import OrnsteinUhlenbeck
 from pytams.trajectory import Trajectory
 
 if __name__ == "__main__":
-    fmodel = OrnsteinUlhenbeck
+    fmodel = OrnsteinUhlenbeck
     with Path("./input_stationary.toml").open("r") as f:
         input_params = toml.load(f)
 
