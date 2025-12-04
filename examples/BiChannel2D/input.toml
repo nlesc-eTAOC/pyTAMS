@@ -9,7 +9,7 @@ step_size = 0.01
 targetscore = 1.05
 
 [model]
-inv_temperature = 6.67
+inv_temperature = 5.67
 
 [runner]
 type = "asyncio"
