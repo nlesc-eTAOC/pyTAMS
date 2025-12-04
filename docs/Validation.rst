@@ -22,10 +22,10 @@ low dimensional cases and since the algorithm is decoupled from the physics
 of the model, the validity extends to more complex physics model for which
 no theoretical data is available.
 
-1D Ornstein-Ulhenbeck process
+1D Ornstein-Uhlenbeck process
 -----------------------------
 
-The simple case of a one dimensional Ornstein-Ulhenbeck (OU) process is part of
+The simple case of a one dimensional Ornstein-Uhlenbeck (OU) process is part of
 `pyTAMS` examples suite. It is an interesting case to consider since
 `Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
 algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
