@@ -22,8 +22,7 @@ if __name__ == "__main__":
 
     try:
         upper, lower, edgetrack = edgetracking(
-            fmodel, input_params, 0.1, on_state, off_state,
-            eps1=1e-3, eps2=3e-3, maxiter=100, accuracy=1e-2
+            fmodel, input_params, 0.1, on_state, off_state, eps1=1e-3, eps2=3e-3, maxiter=100, accuracy=1e-2
         )
 
     except:

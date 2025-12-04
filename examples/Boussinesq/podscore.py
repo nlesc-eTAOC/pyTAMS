@@ -289,3 +289,23 @@ class PODScore:
         field[:, :, :] = model_state[field_map[: self._nfield], :, :] / self._scaling_field[:, None, None]
 
         return project_in_pod_space(self._n_active_modes, field, self._phi_pod, self._weights)
+
+    def get_reference_trajectories(self) -> npt.NDArray[np.number]:
+        """Return the reference trajs in full space.
+
+        Return:
+            the reference trajectory in full model space
+        """
+        refdata = np.zeros((self._nsample, self._nfield, self._lat, self._depth))
+
+        for i in range(self._nsample):
+            refdata[i, :, :, :] = (
+                np.sum(
+                    self._phi_pod[:, : self._n_active_modes, :, :]
+                    * self._psi_pod[i, None, : self._n_active_modes, None, None],
+                    axis=(1),
+                )
+                * self._scaling_field[:, None, None]
+            )
+
+        return refdata

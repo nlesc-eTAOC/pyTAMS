@@ -9,9 +9,11 @@ from pytams.trajectory import Trajectory
 
 _logger = logging.getLogger(__name__)
 
+
 def score(state: npt.NDArray[np.number]) -> float:
     """Returns the score value for a given system state."""
     return np.mean(state[3, 5:15, 32:48], axis=(0, 1))
+
 
 def dist(state1: npt.NDArray[np.number], state2: npt.NDArray[np.number]) -> float:
     """Computes the distance metric between two states.
@@ -21,6 +23,7 @@ def dist(state1: npt.NDArray[np.number], state2: npt.NDArray[np.number]) -> floa
     state1_pos = score(state1)
     state2_pos = score(state2)
     return abs(state1_pos - state2_pos)
+
 
 def mapper(fmodel: Any, input_params: dict[Any, Any], state: npt.NDArray[np.number], suffix: str = "") -> int:
     """Maps a state to an attractor (ON=-1 or OFF=1)."""
@@ -157,7 +160,7 @@ def edgetracking(
     - maxiter: number of iterations until the algorithm stops
     - accuracy: Convergence criterion for maximum change in edge state variables (between iterations)
     """
-    upper, lower, edgetrack = [state1], [state2], [(state1 + state2)/2]
+    upper, lower, edgetrack = [state1], [state2], [(state1 + state2) / 2]
 
     ite_counter = 0
     max_change = np.inf
@@ -188,5 +191,5 @@ def edgetracking(
 
         inf_msg = f"Maximum abs. change in edge state from iteration {ite_counter - 1} to {ite_counter}: {max_change}"
         _logger.info(inf_msg)
-        
+
     return upper, lower, edgetrack
