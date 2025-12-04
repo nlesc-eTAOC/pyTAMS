@@ -145,7 +145,7 @@ class Trajectory:
         # The workdir is a runtime parameter, not saved in the chkfile.
         self._tid: int = traj_id
         self._workdir: Path = Path.cwd() if workdir is None else workdir
-        self._score_max: float = 0.0
+        self._score_max: float = -1.0e12
         self._has_ended: bool = False
         self._has_converged: bool = False
         self._computed_steps: int = 0
