@@ -2,9 +2,7 @@
 ntrajectories = 20
 nsplititer = 200
 loglevel = "INFO"
-walltime = 7200.0
 diagnostics = true
-deterministic = true
 
 [trajectory]
 end_time = 20.0
@@ -17,14 +15,13 @@ exec = "./boussinesq.exe"
 init_state = "./ONState.bin"
 size_M = 40
 size_N = 80
-epsilon = 0.01
-K = 4
+epsilon = 0.05
+K = 7
 
 [runner]
-type = "asyncio"
+type = "dask"
 nworker_init=2
 nworker_iter=2
 
 [database]
 path = "2DBoussinesqCpp.tdb"
-archive_discarded = true
