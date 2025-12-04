@@ -11,12 +11,13 @@
 
 ## Overview
 
-*pyTAMS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) method
-introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856). This method aims at predicting
-rare events probabilities in dynamical systems by biasing an ensemble of system trajectories.
-
-The main objective of *pyTAMS* is to provide a general framework for applying TAMS to high-dimensional
-systems such as the ones encountered in geophysical or engineering applications.
+Rare events algorithms are powerful techniques allowing to sample rare occurrences of a computational model
+at a much lower cost than brute force Monte-Carlo. However, running such algorithms on models featuring more
+than a handull of dimensions become cumbersome as both compute and memory requirements increase.
+*pyTAMS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) rare event method
+introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856), aiming at alleviating the difficulty
+of performing rare event algorithms for to high-dimensional systems such as the ones encountered in geophysical
+or engineering applications.
 
 
 ## Installation
@@ -30,10 +31,10 @@ python -m pip install .
 ```
 
 Note that the latest version of *pyTAMS* is available on PyPI [here](https://pypi.org/project/pytams/)
-and can be installed with `pip install pytams`, but functioning examples are not readily available using
+and can be installed with `pip install pytams`, but built-in examples are not readily available using
 the PyPI version.
 
-Finally, a few example cases are shipped with *pyTAMS*, but additional dependencies are required.
+To run the example cases shipped with *pyTAMS*, additional dependencies are required.
 To install the examples dependencies, run:
 
 ```console
