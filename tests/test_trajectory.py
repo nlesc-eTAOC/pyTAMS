@@ -48,7 +48,7 @@ def test_init_blank_traj():
     assert t_test.id() == 1
     assert t_test.idstr() == "traj000001_0000"
     assert t_test.current_time() == 0.0
-    assert t_test.score_max() == 0.0
+    assert t_test.score_max() == -1000000000000.0
 
 
 def test_init_parametrized_traj():
