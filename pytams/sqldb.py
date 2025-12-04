@@ -1,6 +1,7 @@
 """A class for the TAMS data as an SQL database using SQLAlchemy."""
 
 from __future__ import annotations
+import gc
 import json
 import logging
 from pathlib import Path
@@ -764,3 +765,12 @@ class SQLFile:
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
+
+    def __del__(self) -> None:
+        """Explicit delete function.
+
+        On windows, the SQL file is locked.
+        """
+        del self._Session
+        self._engine.dispose()
+        gc.collect()

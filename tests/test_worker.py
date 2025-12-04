@@ -36,6 +36,7 @@ def test_run_pool_worker_with_sql():
     _ = pool_worker(t_test, enddate, "./test.db")
     _, metadata_str = poolfile.fetch_trajectory(0)
     assert Trajectory.deserialize_metadata(metadata_str)["ended"]
+    del poolfile
     Path("./test.db").unlink()
 
 
@@ -96,6 +97,7 @@ def test_run_ms_worker_with_sql():
     _ = ms_worker(t_test, rst_test, 0.049, 1.0, enddate, "./test.db")
     _, metadata_str = poolfile.fetch_trajectory(1)
     assert Trajectory.deserialize_metadata(metadata_str)["ended"]
+    del poolfile
     Path("./test.db").unlink()
 
 

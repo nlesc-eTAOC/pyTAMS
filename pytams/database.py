@@ -1070,5 +1070,10 @@ class Database:
         Delete the hidden SQL database if we do not intend to keep
         the database around.
         """
-        if not self._save_to_disk:
-            Path(self._pool_db.name()).unlink(missing_ok=True)
+        # Even if we plan to keep the SQL database around, force
+        # deleting the SQL connection
+        if hasattr(self, "_pool_db"):
+            del self._pool_db
+            # Remove the hidden db file
+            if not self._save_to_disk:
+                Path(self.pool_file()).unlink(missing_ok=True)

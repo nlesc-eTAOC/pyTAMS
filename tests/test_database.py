@@ -48,15 +48,20 @@ def test_init_empty_tdb():
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
     assert tdb.name() == "dwTest.tdb"
+    # Necessary on Windows
+    del tdb
     shutil.rmtree("dwTest.tdb")
 
 def test_reinit_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTestDouble.tdb"}}
-    _ = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    # Necessary on Windows
+    del tdb
     params_load_db = {"database": {"path": "dwTestDouble.tdb", "restart": True}}
-    _ = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    del tdb
     ndb = 0
     for folder in Path("./").iterdir():
         if "dwTestDouble" in str(folder):
@@ -69,8 +74,11 @@ def test_init_and_load_empty_tdb():
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
+    tdb_path = Path(tdb.path())
     assert tdb.name() == "dwTest.tdb"
-    _ = Database.load(Path(tdb.path()))
+    del tdb
+    tdb = Database.load(tdb_path)
+    del tdb
     shutil.rmtree("dwTest.tdb")
 
 @pytest.mark.dependency(name="genDB")
@@ -139,6 +147,7 @@ def test_copy_and_access():
     params_load_db = {"database": {"path": "dwTestCopy.tdb"}}
     tdb = Database(fmodel, params_load_db)
     assert tdb.count_converged_traj() == 50
+    del tdb
     shutil.rmtree("dwTestCopy.tdb")
 
 @pytest.mark.dependency(depends=["genDB"])
@@ -230,4 +239,5 @@ def test_restore_tdb():
     tdb.load_data()
     tdb.reset_initial_ensemble_stage()
     assert tdb.k_split() == 0
+    del tdb
     shutil.rmtree("dwTest.tdb")
