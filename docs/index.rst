@@ -11,7 +11,7 @@ an algorithm developed to evaluate the probability of rare events associated wit
 systems. In particular, TAMS can be used to evaluate the transition probability between
 two stable states of a multi-stable system.
 `pyTAMS` was developed to specifically handle (computationally) expensive stochastic models,
-where advancing the model can take hours to days on supercomputers and using a naive Monte-Carlo
+where integrating the model can take hours to days on supercomputers and using a naive Monte-Carlo
 approach is impractical.
 
 Installation:

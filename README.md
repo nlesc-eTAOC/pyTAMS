@@ -16,7 +16,7 @@ at a much lower cost than brute force Monte-Carlo. However, running such algorit
 than a handull of dimensions become cumbersome as both compute and memory requirements increase.
 *pyTAMS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) rare event method
 introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856), aiming at alleviating the difficulty
-of performing rare event algorithms for to high-dimensional systems such as the ones encountered in geophysical
+of performing rare event algorithms on high-dimensional systems such as the ones encountered in geophysical
 or engineering applications.
 
 

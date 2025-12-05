@@ -15,7 +15,7 @@ Validation
 Even if the core of the `pyTAMS` algorithm is not particularly complex, details of
 the implementation can lead to systematic biases on the rare event probability
 estimator, especially when the event :math:`\mathcal{E}` probability becomes
-`very` rare (:math:`P(\mathcal{E}) < 1e^{-6}`).
+`very` rare (:math:`P(\mathcal{E}) < 10^{-6}`).
 
 In this section we validate `pyTAMS` implementation on a couple of simple,
 low dimensional cases and since the algorithm is decoupled from the physics
@@ -29,7 +29,7 @@ The simple case of a one dimensional Ornstein-Uhlenbeck (OU) process is part of
 `pyTAMS` examples suite. It is an interesting case to consider since
 `Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
 algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
-process do not feature multistability, but we are interested in predicting
+process does not feature multistability, but we are interested in predicting
 the occurrence of extreme values of the process.
 
 Before jumping into TAMS results, we can provide an estimate of the process
