@@ -1,18 +1,18 @@
+"""Boussinesq 2D pyTAMS concrete implementation."""
 import logging
 from pathlib import Path
 from typing import Any
 import netCDF4
 import numpy as np
 import scipy as sp
-from Boussinesq_2DAMOC import Boussinesq
+from boussinesq_core import BoussinesqCore
 from podscore import PODScore
 from pytams.fmodel import ForwardModelBaseClass
-from pytams.tams import TAMS
 
 _logger = logging.getLogger(__name__)
 
 
-class Boussinesq2DModel(ForwardModelBaseClass):
+class Boussinesq2D(ForwardModelBaseClass):
     """A forward model for the 2D Boussinesq model.
 
     The computational grid is [horizontal, vertical] of size (M+1)x(N+1).
@@ -51,10 +51,10 @@ class Boussinesq2DModel(ForwardModelBaseClass):
         self._hosing_end = subparms.get("hosing_end", -1.0)
         self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
 
+        # Asymmetry parameter
+        self._beta = 0.1
+
         # Load the ON and OFF conditions
-        # The 140th is with Beta = 0.1
-        n_select = 140
-        self._beta_span = np.load("beta.npy", allow_pickle=True)[n_select]
         self._on = np.load("stateON_beta_0p1.npy", allow_pickle=True)
         self._off = np.load("stateOFF_beta_0p1.npy", allow_pickle=True)
 
@@ -84,8 +84,8 @@ class Boussinesq2DModel(ForwardModelBaseClass):
 
         # Initialize the Boussinesq model
         dt = params.get("trajectory", {}).get("step_size", 0.001)
-        self._B = Boussinesq(self._M, self._N, dt)
-        self._B.make_salinity_forcing(self._beta_span)
+        self._B = BoussinesqCore(self._M, self._N, dt)
+        self._B.make_salinity_forcing(self._beta)
         self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
         self._B.init_hosing(
             self._hosing_shape, self._hosing_start, self._hosing_end, self._hosing_start_val, self._hosing_rate
@@ -110,7 +110,7 @@ class Boussinesq2DModel(ForwardModelBaseClass):
     @classmethod
     def name(cls) -> str:
         """Return the model name."""
-        return "2DBoussinesqModel"
+        return "Boussinesq2D"
 
     def init_condition(self) -> tuple[str, str]:
         """Return the initial conditions."""
@@ -385,13 +385,3 @@ class Boussinesq2DModel(ForwardModelBaseClass):
             return np.zeros(2 * self._K)
 
         return self._rng.normal(0, 1, size=(2 * self._K))
-
-
-if __name__ == "__main__":
-    fmodel = Boussinesq2DModel
-    tams = TAMS(fmodel_t=fmodel)
-    try:
-        transition_proba = tams.compute_probability()
-    except RuntimeError as e:
-        print(e) # noqa: T201
-    print(f"Transition probability: {transition_proba}") # noqa: T201

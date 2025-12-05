@@ -1,13 +1,14 @@
+"""A short script to track edge state in Boussinesq model."""
 import shutil
 from pathlib import Path
 import numpy as np
 import toml
+from boussinesq2d import Boussinesq2D
 from edgetracking_algorithm import edgetracking
-from TAMS_2DBoussinesq import Boussinesq2DModel
 from pytams.utils import setup_logger
 
 if __name__ == "__main__":
-    fmodel = Boussinesq2DModel
+    fmodel = Boussinesq2D
     with Path("input_edge.toml").open("r") as f:
         input_params = toml.load(f)
 

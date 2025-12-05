@@ -1,14 +1,15 @@
+"""A short script to perform hosing runs."""
 import logging
 from pathlib import Path
-import toml
 import matplotlib.pyplot as plt
-from TAMS_2DBoussinesq import Boussinesq2DModel
+import toml
+from boussinesq2d import Boussinesq2D
 from pytams.trajectory import Trajectory
 
 _logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    fmodel = Boussinesq2DModel
+    fmodel = Boussinesq2D
     with Path("input_hosing.toml").open("r") as f:
         input_params = toml.load(f)
 
