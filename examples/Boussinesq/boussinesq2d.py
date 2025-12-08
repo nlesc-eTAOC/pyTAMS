@@ -19,10 +19,11 @@ class Boussinesq2D(ForwardModelBaseClass):
     Note that all the physical parameters of the Boussinesq model are not
     exposed here, but are hard-coded in the Boussinesq class.
 
-    The model state is a 3D numpy array of vorticity, salinity,
+    The core model state is a 3D numpy array of vorticity, salinity,
     temperature and streamfunction (4x(M+1)x(N+1)).
 
-    The model state (returned to TAMS) is a path to a numpy file, but
+    The model state (explosed to pyTAMS) is a tuple with a path to
+    a netCDF file and the name of the field in the file, but
     this class also keeps the last version of the state in memory.
 
     Additional attributes:
@@ -269,8 +270,8 @@ class Boussinesq2D(ForwardModelBaseClass):
     def _initialize_score_function(self) -> None:
         """Initialize the data for the score function."""
         if self._score_method == "default":
-            self._psi_south_on = np.mean(self._on[3, 5:15, 32:48], axis=(0, 1))
-            self._psi_south_off = np.mean(self._off[3, 5:15, 32:48], axis=(0, 1))
+            self._psi_north_on = np.mean(self._on[3, 28:34, 34:46], axis=(0, 1))
+            self._psi_north_off = np.mean(self._off[3, 28:34, 34:46], axis=(0, 1))
         elif self._score_method == "BaarsJCP":
             edge_state = np.load(self._edge_state_file, allow_pickle=True)
             self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3, :, :] - self._off[1:3, :, :]) ** 2))
@@ -305,9 +306,10 @@ class Boussinesq2D(ForwardModelBaseClass):
         xi_zero = None
 
         if self._score_method == "default":
-            psi_south = np.mean(self._state_arrays[3, 5:15, 32:48], axis=(0, 1))
+            psi_north = np.mean(self._state_arrays[3, 28:34, 34:46], axis=(0, 1))
 
-            xi_zero = (psi_south - self._psi_south_on) / (self._psi_south_off - self._psi_south_on)
+            xi_zero = (np.sqrt((psi_north - self._psi_north_on)**2.0) /
+                       np.sqrt((self._psi_north_off - self._psi_north_on)**2.0))
 
         if self._score_method == "PODdecomp":
             if self._score_builder is None:
