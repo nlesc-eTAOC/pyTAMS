@@ -11,12 +11,13 @@
 
 ## Overview
 
-*pyTAMS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) method
-introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856). This method aims at predicting
-rare events probabilities in dynamical systems by biasing an ensemble of system trajectories.
-
-The main objective of *pyTAMS* is to provide a general framework for applying TAMS to high-dimensional
-systems such as the ones encountered in geophysical or engineering applications.
+Rare events algorithms are powerful techniques allowing to sample rare occurrences of a computational model
+at a much lower cost than brute force Monte-Carlo. However, running such algorithms on models featuring more
+than a handull of dimensions become cumbersome as both compute and memory requirements increase.
+*pyTAMS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) rare event method
+introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856), aiming at alleviating the difficulty
+of performing rare event algorithms for to high-dimensional systems such as the ones encountered in geophysical
+or engineering applications.
 
 
 ## Installation
@@ -30,9 +31,10 @@ python -m pip install .
 ```
 
 Note that the latest version of *pyTAMS* is available on PyPI [here](https://pypi.org/project/pytams/)
-and can be installed with `pip install pytams`.
+and can be installed with `pip install pytams`, but built-in examples are not readily available using
+the PyPI version.
 
-Finally, a few example cases are shipped with *pyTAMS*, but additional dependencies are required.
+To run the example cases shipped with *pyTAMS*, additional dependencies are required.
 To install the examples dependencies, run:
 
 ```console
@@ -43,16 +45,16 @@ python -m pip install .[exec]
 
 To get started with *pyTAMS*, let's have a look at the classical double-well potential case.
 Although it is not a high-dimensional system, it provides a good overview of *pyTAMS* capabilities.
-A 3D version of the double-well is available in the [examples](examples) folder. To run the case,
+A 2D version of the double-well is available in the [examples](examples) folder. To run the case,
 simply do:
 
 ```console
-cd examples
-python doubleWell3D.py -i input_dw3D.toml
+cd examples/DoubleWell2D
+python tams_dw2dim.py
 ```
 
 This minimal example runs TAMS 10 times in order to get an estimate of the transition probability
-as well as the corresponding standard error. For a more in-depth explanation about this case, setting up the
+as well as the corresponding relative error. For a more in-depth explanation about this case, setting up the
 model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyTAMS/Tutorials.html).
 
 ## Documentation

@@ -92,7 +92,7 @@ def manual_cast_str(type_str: str, elem_text: str) -> Any:
 
 
 def dict_to_xml(tag: str, d: dict[Any, Any]) -> ET.Element:
-    """Return an Element from a dictionnary.
+    """Return an Element from a dictionary.
 
     Args:
         tag: a root tag
@@ -110,7 +110,7 @@ def dict_to_xml(tag: str, d: dict[Any, Any]) -> ET.Element:
 
 
 def xml_to_dict(elem: ET.Element | None) -> dict[Any, Any]:
-    """Return an dictionnary an Element.
+    """Return an dictionary an Element.
 
     Args:
         elem: an etree element
@@ -172,7 +172,7 @@ def new_element(key: str, val: Any) -> ET.Element:
 
 
 def make_xml_snapshot(idx: int, time: float, score: float, noise: Any, state: Any) -> ET.Element:
-    """Return a snapshot in XML elemt format.
+    """Return a snapshot in XML element format.
 
     Args:
         idx: snapshot index
@@ -198,10 +198,10 @@ def make_xml_snapshot(idx: int, time: float, score: float, noise: Any, state: An
 
 
 def read_xml_snapshot(snap: ET.Element) -> tuple[float, float, Any, Any]:
-    """Return snapshot data from an XML snapshot elemt.
+    """Return snapshot data from an XML snapshot element.
 
     Args:
-        snap: an XML snapshot elemt
+        snap: an XML snapshot element
     """
     time = float(snap.attrib["time"])
     score = float(snap.attrib["score"])

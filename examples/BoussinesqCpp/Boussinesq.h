@@ -441,10 +441,10 @@ class Boussinesq2D {
       std::cout << "Error: incompatible file mesh size [" << l_M << ", " << l_N << "] with current mesh size [" << m_M << ", " << m_N << "]\n";
       exit(0);
     }
-    if (l_K != m_K) {
-      std::cout << "Error: incompatible file forcing K [" << l_K << "] with current one [" << m_K << "]\n";
-      exit(0);
-    }
+    //if (l_K != m_K) {
+    //  std::cout << "Error: incompatible file forcing K [" << l_K << "] with current one [" << m_K << "]\n";
+    //  exit(0);
+    //}
 
     (*is).read((char*)&a_step, sizeof(int));
     (*is).read((char*)&a_t, sizeof(double));

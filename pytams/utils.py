@@ -13,6 +13,15 @@ import numpy.typing as npt
 
 _logger = logging.getLogger(__name__)
 
+def is_windows_os() -> bool:
+    """Indicates Windows platform."""
+    system = sys.platform.lower()
+    return system.startswith("win")
+
+def is_mac_os() -> bool:
+    """Indicates MacOS platform."""
+    system = sys.platform.lower()
+    return system.startswith("dar")
 
 def setup_logger(params: dict[Any, Any]) -> None:
     """Setup the logger parameters.
@@ -51,7 +60,7 @@ def get_min_scored(maxes: npt.NDArray[Any], nworkers: int) -> tuple[list[int], n
     """Get the nworker lower scored trajectories or more if equal score.
 
     Args:
-        maxes: array of maximas accros all trajectories
+        maxes: array of maximas across all trajectories
         nworkers: number of workers
 
     Returns:

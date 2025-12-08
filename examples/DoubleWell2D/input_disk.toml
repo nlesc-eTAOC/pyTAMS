@@ -1,9 +1,7 @@
 [tams]
-ntrajectories = 200
-nsplititer = 1000
+ntrajectories = 50
+nsplititer = 2000
 loglevel = "WARNING"
-walltime = 200.0
-diagnostics = false
 
 [trajectory]
 end_time = 10.0
@@ -11,9 +9,13 @@ step_size = 0.01
 targetscore = 0.95
 
 [model]
-noise_amplitude = 0.3
+epsilon = 0.1
 
 [runner]
 type = "asyncio"
-nworker_init=4
+nworker_init=2
 nworker_iter=2
+
+[database]
+path = "./dw2dim.tdb"
+restart = true

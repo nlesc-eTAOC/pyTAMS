@@ -1,5 +1,5 @@
-EIGEN_HOME = ../../../eigen/
-LAPACK_HOME = /opt/homebrew/Cellar/lapack/3.12.0/
+EIGEN_HOME = ../../../Eigen/eigen/
+LAPACK_HOME = /opt/homebrew/Cellar/lapack/3.12.1/
 executable = boussinesq.exe
 
 all: exec

@@ -217,7 +217,7 @@ class TAMS:
 
         Returns:
             bool to trigger splitting loop break
-            array of maximas accros all trajectories
+            array of maximas across all trajectories
         """
         # Gather max score from all trajectories
         # and check for early convergence
@@ -481,3 +481,20 @@ class TAMS:
         self._tdb.info()
 
         return transition_probability
+
+    def get_database(self) -> Database:
+        """Accessor to database.
+
+        Returns:
+            A reference to the database in use
+        """
+        return self._tdb
+
+    def __del__(self) -> None:
+        """Destructor.
+
+        It is mostly useful on Windows systems
+        """
+        # Force deletion of database
+        if hasattr(self, "_tdb"):
+            del self._tdb

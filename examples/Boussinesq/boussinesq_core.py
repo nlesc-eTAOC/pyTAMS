@@ -1,5 +1,4 @@
-# %% Stable Equilibria of the Stochastic Model
-
+"""Boussinesq 2D model core physics module."""
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,8 +8,8 @@ import scipy as sp
 _logger = logging.getLogger(__name__)
 
 
-class Boussinesq:
-    """Class for the 2D Boussinesq model of the AMOC.
+class BoussinesqCore:
+    """Class for the 2D Boussinesq model of the AMOC core physics.
 
     The model includes stochastic forcing on freshwater.
     The model is described in J. Soons et al. doi:10.1017/jfm.2025.248
