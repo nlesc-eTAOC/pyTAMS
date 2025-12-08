@@ -1,0 +1,211 @@
+pytams.tams
+===========
+
+.. py:module:: pytams.tams
+
+.. autoapi-nested-parse::
+
+   The main TAMS class.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   pytams.tams.STALL_TOL
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pytams.tams.TAMS
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   pytams.tams.parse_cl_args
+
+
+Module Contents
+---------------
+
+.. py:data:: STALL_TOL
+   :value: 1e-10
+
+
+.. py:function:: parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace
+
+   Parse provided list or default CL argv.
+
+   :param a_args: optional list of options
+
+
+.. py:class:: TAMS(fmodel_t: Any, a_args: list[str] | None = None)
+
+   A class implementing TAMS.
+
+   The interface to TAMS, implementing the main steps of
+   the algorithm.
+
+   Initialization of the TAMS class requires a forward model
+   type which encapsulate all the model-specific code, and
+   an optional list of options.
+
+   The algorithm is roughly divided in two steps:
+   1. Initialization of the trajectory ensemble
+   2. Splitting iterations
+
+   Separate control of the parallelism is provided for
+   both steps.
+
+   All the algorithm data are contained in the TAMS database.
+   For control purposes, a walltime limit is also provided. It is
+   passed to working and lead to the termination of the algorithm
+   in a state that can be saved to disk and restarted at a later stage.
+
+   :ivar _fmodel_t: the forward model type
+   :ivar _parameters: the dictionary of parameters
+   :ivar _wallTime: the walltime limit
+   :ivar _startDate: the date the algorithm started
+   :ivar _plot_diags: whether or not to plot diagnostics during splitting iterations
+   :ivar _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
+   :ivar _tdb: the trajectory database (containing all trajectories)
+
+
+
+   .. py:method:: n_traj() -> int
+
+      Return the number of trajectory used for TAMS.
+
+      Note that this is the requested number of trajectory, not
+      the current length of the trajectory ensemble.
+
+      :returns: number of trajectory
+
+
+
+   .. py:method:: elapsed_time() -> float
+
+      Return the elapsed wallclock time.
+
+      Since the initialization of the TAMS object [seconds].
+
+      :returns: TAMS elapse time.
+
+      :raises ValueError: if the start date is not set
+
+
+
+   .. py:method:: remaining_walltime() -> float
+
+      Return the remaining wallclock time.
+
+      [seconds]
+
+      :returns: TAMS remaining wall time.
+
+
+
+   .. py:method:: out_of_time() -> bool
+
+      Return true if insufficient walltime remains.
+
+      Allows for 5% slack to allows time for workers to finish
+      their work (especially with Dask+Slurm backend).
+
+      :returns: boolean indicating wall time availability.
+
+
+
+   .. py:method:: generate_trajectory_ensemble() -> None
+
+      Schedule the generation of an ensemble of stochastic trajectories.
+
+      Loop over all the trajectories in the database and schedule
+      advancing them to either end time or convergence with the
+      runner.
+
+      The runner will use the number of workers specified in the
+      input file under the runner section.
+
+      :raises Error if the runner fails:
+
+
+
+   .. py:method:: check_exit_splitting_loop(k: int) -> tuple[bool, numpy.typing.NDArray[numpy.number]]
+
+      Check for exit criterion of the splitting loop.
+
+      :param k: loop counter
+
+      :returns: bool to trigger splitting loop break
+                array of maximas across all trajectories
+
+
+
+   .. py:method:: finish_ongoing_splitting() -> None
+
+      Check and finish unfinished splitting iterations.
+
+      If the run was interrupted during a splitting iteration,
+      the branched trajectories might not have ended yet. In that case,
+      a list of trajectories to finish is listed in the database.
+
+
+
+   .. py:method:: get_restart_at_random(min_idx_list: list[int]) -> list[int]
+
+      Get a list of trajectory index to restart from at random.
+
+      Select trajectories to restart from among the ones not
+      in min_idx_list.
+
+      :param min_idx_list: list of trajectory index to restart from
+
+      :returns: list of trajectory index to restart from
+
+
+
+   .. py:method:: do_multilevel_splitting() -> None
+
+      Schedule splitting of the initial ensemble of stochastic trajectories.
+
+      Perform the multi-level splitting iterations, possibly restarting multiple
+      trajectories at each iterations. All the trajectories in an iterations are
+      advanced together, such that each iteration takes the maximum duration among
+      the branched trajectories.
+
+      If the walltime is exceeded, the splitting loop is stopped and ongoing
+      trajectories are flagged in the database in order to finish them upon
+      restart.
+
+      The runner will use the number of workers specified in the
+      input file under the runner section.
+
+      :raises Error if the runner fails:
+
+
+
+   .. py:method:: compute_probability() -> float
+
+      Compute the probability using TAMS.
+
+      :returns: the transition probability
+
+
+
+   .. py:method:: get_database() -> pytams.database.Database
+
+      Accessor to database.
+
+      :returns: A reference to the database in use
+
+
+

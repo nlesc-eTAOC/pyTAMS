@@ -1,0 +1,1076 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#"><link rel="search" title="Search" href="search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 --><title>Index - pyTAMS 1.0.0 documentation</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/theme.css?v=df66b05f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">pyTAMS 1.0.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">pyTAMS 1.0.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">User guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Theory.html">Theory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Validation.html">Validation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Tutorials.html">Tutorials</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer guide:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Implementation.html">Implementation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="autoapi/pytams/index.html">pytams</a><input aria-label="Toggle navigation of pytams" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/bin/index.html">pytams.bin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/database/index.html">pytams.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/fmodel/index.html">pytams.fmodel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/sqldb/index.html">pytams.sqldb</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/tams/index.html">pytams.tams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/taskrunner/index.html">pytams.taskrunner</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/trajectory/index.html">pytams.trajectory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/utils/index.html">pytams.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/worker/index.html">pytams.worker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/pytams/xmlutils/index.html">pytams.xmlutils</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#J"><strong>J</strong></a> | <a href="#K"><strong>K</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a> | <a href="#X"><strong>X</strong></a></div>
+</section>
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.add_splitting_data">add_splitting_data() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.add_task">add_task() (AsIORunner method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.add_trajectory">add_trajectory() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.advance">advance() (ForwardModelBaseClass method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.advance">(Trajectory method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.ancestor_traj_ids">ancestor_traj_ids (SplittingIterations attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.append_archived_traj">append_archived_traj() (Database method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.append_splitting_iteration_data">append_splitting_iteration_data() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.append_traj">append_traj() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.archive_trajectory">archive_trajectory() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.archive_trajectory">(SQLFile method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.archived_traj_list_len">archived_traj_list_len() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.ArchivedTrajectory">ArchivedTrajectory (class in pytams.sqldb)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner">AsIORunner (class in pytams.taskrunner)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Base">Base (class in pytams.sqldb)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner">BaseRunner (class in pytams.taskrunner)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.bias">bias (SplittingIterations attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.branch_from_trajectory">branch_from_trajectory() (Trajectory class method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.check_convergence">check_convergence() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.check_exit_splitting_loop">check_exit_splitting_loop() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.clear">clear() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.clear_archived_trajectories">clear_archived_trajectories() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.clear_splitting_data">clear_splitting_data() (SQLFile method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.compute_probability">compute_probability() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.count_computed_steps">count_computed_steps() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.count_converged_traj">count_converged_traj() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.count_ended_traj">count_ended_traj() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.current_time">current_time() (Trajectory method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.dask_backend">dask_backend (DaskRunner attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner">DaskRunner (class in pytams.taskrunner)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database">Database (class in pytams.database)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.delete">delete() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.deserialize_metadata">deserialize_metadata() (Trajectory class method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.dict_to_xml">dict_to_xml() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.discarded_traj_ids">discarded_traj_ids (SplittingIterations attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.do_multilevel_splitting">do_multilevel_splitting() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.done_with_splitting">done_with_splitting() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.dump_file_json">dump_file_json() (SQLFile method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.elapsed_time">elapsed_time() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.execute_promises">execute_promises() (AsIORunner method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.execute_promises">(BaseRunner method)</a>
+</li>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.execute_promises">(DaskRunner method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.fetch_archived_trajectory">fetch_archived_trajectory() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.fetch_splitting_data">fetch_splitting_data() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.fetch_trajectory">fetch_trajectory() (SQLFile method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.finish_ongoing_splitting">finish_ongoing_splitting() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.form_trajectory_id">form_trajectory_id() (in module pytams.trajectory)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass">ForwardModelBaseClass (class in pytams.fmodel)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.generate_subclass">generate_subclass() (in module pytams.utils)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.generate_trajectory_ensemble">generate_trajectory_ensemble() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_archived_trajectory_count">get_archived_trajectory_count() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_biases">get_biases() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_checkfile">get_checkfile() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_computed_steps_count">get_computed_steps_count() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.get_current_state">get_current_state() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.get_database">get_database() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.get_index_from_id">get_index_from_id() (in module pytams.trajectory)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_iteration_count">get_iteration_count() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_k_split">get_k_split() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_last_state">get_last_state() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_last_state_id">get_last_state_id() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_length">get_length() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.get_min_scored">get_min_scored() (in module pytams.utils)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_minmax">get_minmax() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.get_module_local_import">get_module_local_import() (in module pytams.utils)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_nbranching">get_nbranching() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.get_noise">get_noise() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_noise_array">get_noise_array() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.get_ongoing">get_ongoing() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_ongoing">(SQLFile method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.get_pool_db">get_pool_db() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.get_restart_at_random">get_restart_at_random() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.get_runner_type">get_runner_type() (in module pytams.taskrunner)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_score_array">get_score_array() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_state_list">get_state_list() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_time_array">get_time_array() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.get_traj">get_traj() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.get_trajectory_active_at_k">get_trajectory_active_at_k() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_trajectory_count">get_trajectory_count() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.get_transition_probability">get_transition_probability() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.get_val_type">get_val_type() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.get_weights">get_weights() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.get_workdir">get_workdir() (Trajectory method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="H" class="genindex-section">
+  <h2>H</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.has_ended">has_ended() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.has_started">has_started() (Trajectory method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot.has_state">has_state() (Snapshot method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.header_file">header_file() (Database method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.ArchivedTrajectory.id">id (ArchivedTrajectory attribute)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.id">(SplittingIterations attribute)</a>
+</li>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Trajectory.id">(Trajectory attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.id">id() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.idstr">idstr() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.info">info() (Database method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.init_active_ensemble">init_active_ensemble() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.init_ensemble_done">init_ensemble_done() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.init_from_metadata">init_from_metadata() (Trajectory class method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.is_converged">is_converged() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.is_empty">is_empty() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.is_mac_os">is_mac_os() (in module pytams.utils)</a>
+</li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.is_windows_os">is_windows_os() (in module pytams.utils)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="J" class="genindex-section">
+  <h2>J</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.just_delay">just_delay() (DaskRunner method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="K" class="genindex-section">
+  <h2>K</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.k_split">k_split() (Database method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.load">load() (Database class method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.load_archived_trajectories">load_archived_trajectories() (Database method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.load_data">load_data() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.lock_trajectory">lock_trajectory() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.lock_trajectory">(SQLFile method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.make_noise">make_noise() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.make_promise">make_promise() (AsIORunner method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.make_promise">(BaseRunner method)</a>
+</li>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.make_promise">(DaskRunner method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.make_xml_snapshot">make_xml_snapshot() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.manual_cast">manual_cast() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.manual_cast_snapshot">manual_cast_snapshot() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.manual_cast_snapshot_noise">manual_cast_snapshot_noise() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.manual_cast_str">manual_cast_str() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.mark_last_iteration_as_completed">mark_last_iteration_as_completed() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.mark_last_splitting_iteration_as_done">mark_last_splitting_iteration_as_done() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.mark_trajectory_as_completed">mark_trajectory_as_completed() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.min_max">min_max (SplittingIterations attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.min_vals">min_vals (SplittingIterations attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    module
+
+        <ul>
+          <li><a href="autoapi/pytams/index.html#module-pytams">pytams</a>
+</li>
+          <li><a href="autoapi/pytams/bin/index.html#module-pytams.bin">pytams.bin</a>
+</li>
+          <li><a href="autoapi/pytams/database/index.html#module-pytams.database">pytams.database</a>
+</li>
+          <li><a href="autoapi/pytams/fmodel/index.html#module-pytams.fmodel">pytams.fmodel</a>
+</li>
+          <li><a href="autoapi/pytams/sqldb/index.html#module-pytams.sqldb">pytams.sqldb</a>
+</li>
+          <li><a href="autoapi/pytams/tams/index.html#module-pytams.tams">pytams.tams</a>
+</li>
+          <li><a href="autoapi/pytams/taskrunner/index.html#module-pytams.taskrunner">pytams.taskrunner</a>
+</li>
+          <li><a href="autoapi/pytams/trajectory/index.html#module-pytams.trajectory">pytams.trajectory</a>
+</li>
+          <li><a href="autoapi/pytams/utils/index.html#module-pytams.utils">pytams.utils</a>
+</li>
+          <li><a href="autoapi/pytams/worker/index.html#module-pytams.worker">pytams.worker</a>
+</li>
+          <li><a href="autoapi/pytams/xmlutils/index.html#module-pytams.xmlutils">pytams.xmlutils</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.moving_avg">moving_avg() (in module pytams.utils)</a>
+</li>
+        <li><a href="autoapi/pytams/worker/index.html#pytams.worker.ms_worker">ms_worker() (in module pytams.worker)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.n_split_iter">n_split_iter() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.n_traj">n_traj() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.n_traj">(TAMS method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.n_workers">n_workers() (AsIORunner method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.BaseRunner.n_workers">(BaseRunner method)</a>
+</li>
+          <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.DaskRunner.n_workers">(DaskRunner method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.name">name() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.name">(ForwardModelBaseClass class method)</a>
+</li>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.name">(SQLFile method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.new_element">new_element() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot.noise">noise (Snapshot attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.noise_backlog">noise_backlog (Trajectory attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.oneliner_ndarray">oneliner_ndarray() (in module pytams.xmlutils)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.out_of_time">out_of_time() (TAMS method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.overwrite_traj">overwrite_traj() (Database method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/bin/index.html#pytams.bin.parse_cl_args">parse_cl_args() (in module pytams.bin)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/tams/index.html#pytams.tams.parse_cl_args">(in module pytams.tams)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.path">path() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.plot_min_max_span">plot_min_max_span() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.plot_score_functions">plot_score_functions() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.POD_cast_dict">POD_cast_dict (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.pool_file">pool_file() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/worker/index.html#pytams.worker.pool_worker">pool_worker() (in module pytams.worker)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.post_trajectory_branching_hook">post_trajectory_branching_hook() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.post_trajectory_restore_hook">post_trajectory_restore_hook() (ForwardModelBaseClass method)</a>
+</li>
+        <li>
+    pytams
+
+        <ul>
+          <li><a href="autoapi/pytams/index.html#module-pytams">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.bin
+
+        <ul>
+          <li><a href="autoapi/pytams/bin/index.html#module-pytams.bin">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.database
+
+        <ul>
+          <li><a href="autoapi/pytams/database/index.html#module-pytams.database">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    pytams.fmodel
+
+        <ul>
+          <li><a href="autoapi/pytams/fmodel/index.html#module-pytams.fmodel">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.sqldb
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#module-pytams.sqldb">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.tams
+
+        <ul>
+          <li><a href="autoapi/pytams/tams/index.html#module-pytams.tams">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.taskrunner
+
+        <ul>
+          <li><a href="autoapi/pytams/taskrunner/index.html#module-pytams.taskrunner">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.trajectory
+
+        <ul>
+          <li><a href="autoapi/pytams/trajectory/index.html#module-pytams.trajectory">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.utils
+
+        <ul>
+          <li><a href="autoapi/pytams/utils/index.html#module-pytams.utils">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.worker
+
+        <ul>
+          <li><a href="autoapi/pytams/worker/index.html#module-pytams.worker">module</a>
+</li>
+        </ul></li>
+        <li>
+    pytams.xmlutils
+
+        <ul>
+          <li><a href="autoapi/pytams/xmlutils/index.html#module-pytams.xmlutils">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.read_xml_snapshot">read_xml_snapshot() (in module pytams.xmlutils)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.release_all_trajectories">release_all_trajectories() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.release_trajectory">release_trajectory() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS.remaining_walltime">remaining_walltime() (TAMS method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.reset_initial_ensemble_stage">reset_initial_ensemble_stage() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.restore_from_checkfile">restore_from_checkfile() (Trajectory class method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.AsIORunner.run_tasks">run_tasks() (AsIORunner method)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.RunnerError">RunnerError</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.save_trajectory">save_trajectory() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot.score">score (Snapshot attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.score">score() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.score_max">score_max() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.serialize_metadata_json">serialize_metadata_json() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.set_checkfile">set_checkfile() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.set_current_state">set_current_state() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.set_current_time_and_step">set_current_time_and_step() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.set_init_ensemble_flag">set_init_ensemble_flag() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.set_noise">set_noise() (ForwardModelBaseClass method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.set_weight">set_weight() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/fmodel/index.html#pytams.fmodel.ForwardModelBaseClass.set_workdir">set_workdir() (ForwardModelBaseClass method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.set_workdir">(Trajectory method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.WorkerLoggerPlugin.setup">setup() (WorkerLoggerPlugin method)</a>
+</li>
+        <li><a href="autoapi/pytams/utils/index.html#pytams.utils.setup_logger">setup_logger() (in module pytams.utils)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.setup_noise">setup_noise() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot">Snapshot (class in pytams.trajectory)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.split_id">split_id (SplittingIterations attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations">SplittingIterations (class in pytams.sqldb)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile">SQLFile (class in pytams.sqldb)</a>
+</li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.STALL_TOL">STALL_TOL (in module pytams.tams)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot.state">state (Snapshot attribute)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.status">status (SplittingIterations attribute)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Trajectory.status">(Trajectory attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.step_size">step_size() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.store">store() (Trajectory method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.ArchivedTrajectory.t_metadata">t_metadata (ArchivedTrajectory attribute)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Trajectory.t_metadata">(Trajectory attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/tams/index.html#pytams.tams.TAMS">TAMS (class in pytams.tams)</a>
+</li>
+        <li><a href="autoapi/pytams/bin/index.html#pytams.bin.tams_alive">tams_alive() (in module pytams.bin)</a>
+</li>
+        <li><a href="autoapi/pytams/bin/index.html#pytams.bin.tams_template_model">tams_template_model() (in module pytams.bin)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Snapshot.time">time (Snapshot attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/worker/index.html#pytams.worker.traj_advance_with_exception">traj_advance_with_exception() (in module pytams.worker)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.ArchivedTrajectory.traj_file">traj_file (ArchivedTrajectory attribute)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Trajectory.traj_file">(Trajectory attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.traj_list">traj_list() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.traj_list_len">traj_list_len() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.Trajectory">Trajectory (class in pytams.sqldb)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory">(class in pytams.trajectory)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.unlock_trajectory">unlock_trajectory() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.Trajectory.update_metadata">update_metadata() (Trajectory method)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.update_splitting_data">update_splitting_data() (SQLFile method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.update_splitting_iteration_data">update_splitting_iteration_data() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.update_traj_list">update_traj_list() (Database method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.update_trajectories_weights">update_trajectories_weights() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.update_trajectory">update_trajectory() (Database method)</a>
+
+        <ul>
+          <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.update_trajectory">(SQLFile method)</a>
+</li>
+        </ul></li>
+        <li><a href="autoapi/pytams/worker/index.html#pytams.worker.update_trajectory_in_sql">update_trajectory_in_sql() (in module pytams.worker)</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SQLFile.update_trajectory_weight">update_trajectory_weight() (SQLFile method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.valid_statuses">valid_statuses (in module pytams.sqldb)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="W" class="genindex-section">
+  <h2>W</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/trajectory/index.html#pytams.trajectory.WallTimeLimitError">WallTimeLimitError</a>
+</li>
+        <li><a href="autoapi/pytams/sqldb/index.html#pytams.sqldb.SplittingIterations.weight">weight (SplittingIterations attribute)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/database/index.html#pytams.database.Database.weights">weights() (Database method)</a>
+</li>
+        <li><a href="autoapi/pytams/worker/index.html#pytams.worker.worker_async">worker_async() (in module pytams.worker)</a>
+</li>
+        <li><a href="autoapi/pytams/taskrunner/index.html#pytams.taskrunner.WorkerLoggerPlugin">WorkerLoggerPlugin (class in pytams.taskrunner)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="X" class="genindex-section">
+  <h2>X</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.xml_to_dict">xml_to_dict() (in module pytams.xmlutils)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="autoapi/pytams/xmlutils/index.html#pytams.xmlutils.XMLUtilsError">XMLUtilsError</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2023, Netherlands eScience Center
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=8d563738"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>
