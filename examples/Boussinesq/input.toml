@@ -22,7 +22,7 @@ score_time_scale = 0.5
 
 [runner]
 type = "asyncio"
-nworker_init=5
+nworker_init=2
 nworker_iter=2
 
 [database]
