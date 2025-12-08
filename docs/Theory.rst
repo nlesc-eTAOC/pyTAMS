@@ -151,7 +151,7 @@ TAMS algorithm
 
 The idea behind (T)AMS is to iterate over a small ensemble of size :math:`N` of Markov chain trajectories (i.e. much
 smaller than the number of trajectories needed for a reliable sampling of the rare transition event
-with Monte Carlo), discarding trajectories that are going away from :math:`\mathcal{B}`, while
+with Monte Carlo), discarding trajectories that drift away from :math:`\mathcal{B}`, while
 cloning/branching trajectories that are going towards :math:`\mathcal{B}`. This effectively biases the ensemble
 toward the rare transition event.
 
@@ -242,17 +242,17 @@ An overview of the algorithm is provided hereafter:
 
    <blockquote>
 
-1.   Simulate :math:`N` independent trajectories of the dynamical system between [0, :math:`T_a`] 
+1.   Simulate :math:`N` independent trajectories of the dynamical system between [0, :math:`T_a`]
 2.   Set :math:`j = 0` and :math:`w[0] = 1`
 3.   while :math:`j < J`:
-4.   |nbsp| compute :math:`\mathcal{Q}_i` for all :math:`i` in [1, :math:`N`] and sort
-5.   |nbsp| select the :math:`l_j` smallest trajectories   
-6.   |nbsp| for :math:`i` in [1, :math:`l_j`]:
+4.   |nbsp| compute :math:`\mathcal{Q}_{tr}` for all :math:`tr \in [1, N]` and sort
+5.   |nbsp| select the :math:`l_j` smallest trajectories
+6.   |nbsp| for :math:`i \ in [1, l_j]`:
 7.   |nbsp2| select a trajectory :math:`\mathcal{T}_{rep}` at random in the :math:`N-l_j` remaining trajectories
-8.   |nbsp2| branch from :math:`\mathcal{T}_{rep}` at time :math:`t_b` and advance :math:`\mathcal{T}_{i}` until it reaches :math:`\mathcal{B}` or :math:`T_a`   
-9.   |nbsp| set :math:`w[j] = (1 - l_j/N) \times w[j-1]`   
-10.  |nbsp| set :math:`j = j+1`   
-11.  |nbsp| if :math:`\mathcal{Q}_i > \xi_{max}` for all :math:`i` in [1, :math:`N`]:    
+8.   |nbsp2| branch from :math:`\mathcal{T}_{rep}` at time :math:`t_b` and advance :math:`\mathcal{T}_{i}` until it reaches :math:`\mathcal{B}` or :math:`T_a`
+9.   |nbsp| set :math:`w[j] = (1 - l_j/N) \times w[j-1]`
+10.  |nbsp| set :math:`j = j+1`
+11.  |nbsp| if :math:`\mathcal{Q}_{tr} > \xi_{b}` for all :math:`tr \in [1, N]`:
 12.  |nbsp2| break
 
 .. raw:: html

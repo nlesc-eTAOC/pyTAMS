@@ -83,8 +83,8 @@ data structures of the code:
   (``step_size``), but note that it needs not be the time step size of your dynamical system but rather the relevant
   step size for the stochastic forcing applied on the system. The trajectory object also enables sub-sampling the
   system state, only storing the state every n steps (``sparse_freq = n``). Internally, the trajectory object
-  will keep track of the noise increment to ensure consistent of the full history if needed (assuming your model is
-  deterministic for under a prescribed noise).
+  will keep track of the noise increment to ensure consistency of the full history if needed (assuming your model is
+  deterministic under a prescribed noise).
 
 - Runner parameters:
 

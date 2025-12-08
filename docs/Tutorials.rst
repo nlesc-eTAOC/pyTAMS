@@ -20,7 +20,7 @@ of the model warrants it.
 
 In this first tutorial, our aim is to implement the 1D double well model
 already presented at the end of the :ref:`Theory Section <ssec:theory_1ddw>`. This model
-is not already available in `pyTAMS` and will be written from scratch.
+is not provided out-of-the-box in `pyTAMS` and will be written from scratch.
 
 Background
 ~~~~~~~~~~
@@ -80,8 +80,8 @@ To make it easier to start this process from scratch, `pyTAMS` provides a helper
     tams_init_model -n doublewell1D
 
 
-A local ``doublewell1D.py`` file in created, with a skeleton a your new ``doublewell1D``
-class, inheriting from `pyTAMS` required ABC and providing the minimal set of methods (functions)
+A local ``doublewell1D.py`` file is created, with a skeleton of your new ``doublewell1D``
+class, inheriting from the `pyTAMS` required ABC and providing the minimal set of methods (functions)
 that are required to run TAMS:
 
 .. code-block:: python
@@ -155,7 +155,7 @@ update the model state, defining the drift function as another method of the cla
             x: the model state
 
         Returns:
-            The double well potential at the provided state
+            The double well drift at the provided state
         """
         return x - x**3
 
@@ -295,7 +295,7 @@ assemble a small script to run TAMS (e.g. in ``tams_dw1D.py``):
 
         # Run TAMS and report
         probability = tams.compute_probability()
-        print(f" TAMS converged with a transition probability: {probability}")
+        print(f"TAMS converged with a transition probability: {probability}")
 
         # Show the envolpe of the ensemble over the course
         # of the algorithm
@@ -381,8 +381,8 @@ This is all for this tutorial. We have covered the following points:
 
 To go further, modify the ``tams_dw1D.py`` script to run TAMS :math:`K` times and
 provide a better estimate of the transition probability :math:`\overline{P}_K`, as well as
-its relative error. What happens when :math:`\epsilon` is reduced ? Can you trigger saving
-the TAMS database to disk ?
+its relative error. What happens when :math:`\epsilon` is reduced? Can you trigger saving
+the TAMS database to disk?
 
 Bi-channel problem
 ------------------
@@ -655,7 +655,7 @@ In a new Python file ((e.g. ``Pk_estimator.py``):
       plt.tight_layout()
       plt.show()
 
-Running the script above in the bi-channel folder should produce the graph shown in Fig.:numref:`fig-PK_BiChannel`_.
+Running the script above in the bi-channel folder should produce the graph shown in Fig. :numref:`fig-PK_BiChannel`.
 Over the course of 200 runs, the estimator varies significantly and even with :math:`K = 200` the value of :math:`P_K`
 continues to change. Of interest is the shaded area, showing the 90% confidence interval, which gives an indication of
 the transition probability estimator quality.
