@@ -136,4 +136,4 @@ jobs:
           cd examples/Boussinesq
           sed -i "s#epsilon = 0.01#epsilon = 0.06#g" input.toml
           sed -i "s#end_time = 20.0#end_time = 10.0#g" input.toml
-          python TAMS_2DBoussinesq.py
+          python tams_boussinesq2d.py
