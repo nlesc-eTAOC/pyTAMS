@@ -544,8 +544,20 @@ class Trajectory:
 
         return rest_traj
 
-    def store(self, traj_file: Path | None = None) -> None:
-        """Store the trajectory data to an XML chkfile."""
+    def store(self, traj_file: Path | None = None, write_metadata_json: bool = False) -> None:
+        """Store the trajectory data to an XML chkfile.
+
+        The default behavior is to store the trajectory into the
+        file specified by the attribute self._checkFile unless a
+        different path is provided.
+        The metadata are not writen to file by default, as the TAMS database
+        handle metadata in an SQL file. It can be triggered when using trajectories
+        in stand-alone.
+
+        Args:
+            traj_file: an optional path file to store the trajectory to
+            write_metadata_json: an optional boolean to also write the metadata json dict
+        """
         root = ET.Element(self.idstr())
         root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
         snaps_xml = ET.SubElement(root, "snapshots")
@@ -566,6 +578,16 @@ class Trajectory:
             tree.write(traj_file.as_posix())
         else:
             tree.write(self._checkFile.as_posix())
+
+        # Separately dumps the metadata if requested
+        if write_metadata_json:
+            json_path = (
+                traj_file.parent / Path(traj_file.stem + ".json")
+                if traj_file is not None
+                else self._checkFile.parent / Path(self._checkFile.stem + ".json")
+            )
+            with json_path.open("w") as f:
+                f.write(self.serialize_metadata_json())
 
     def set_weight(self, weight: float) -> None:
         """Set the trajectory weight.
