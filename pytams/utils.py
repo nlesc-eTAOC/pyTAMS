@@ -45,6 +45,7 @@ def setup_logger(params: dict[Any, Any]) -> None:
     root_logger.setLevel(log_level)
 
     # Remove all existing handlers to prevent duplication
+    # Definitely a brute-force appraoch
     root_logger.handlers.clear()
 
     # Query log file
@@ -52,14 +53,10 @@ def setup_logger(params: dict[Any, Any]) -> None:
 
     # Set console handler: warning+ if logfile provided
     # full log otherwise
+    target_console_level = logging.WARNING if log_file else log_level
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-
-    if log_file:
-        console_handler.setLevel(logging.WARNING)
-    else:
-        console_handler.setLevel(log_level)
-
+    console_handler.setLevel(target_console_level)
     root_logger.addHandler(console_handler)
 
     # Add file handler to root logger
