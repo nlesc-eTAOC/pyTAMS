@@ -11,6 +11,27 @@ from pytams.fmodel import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
 
+def loadnc(statefile: Path, state_field: str):
+    """Load data from NetCDF file."""
+    dset = netCDF4.Dataset(statefile, mode="r")
+    dset.set_auto_mask(False)
+    try:
+        state_arrays = dset[state_field][:, :, :]
+    except:
+        err_msg = f"Unable to locate {state_field} in netCFD file {statefile}"
+        print(err_msg)
+    dset.close()
+
+    return state_arrays
+
+def getncfields(statefile: Path) -> list[str]:
+    """Load data from NetCDF file."""
+    dset = netCDF4.Dataset(statefile, mode="r")
+    flist = [k for k in dset.variables.keys()]
+    dset.close()
+
+    return flist
+
 
 class Boussinesq2D(ForwardModelBaseClass):
     """A forward model for the 2D Boussinesq model.
@@ -63,12 +84,13 @@ class Boussinesq2D(ForwardModelBaseClass):
         self._score_builder = None
         self._score_method = subparms.get("score_method", "default")
         self._time_dep_score = subparms.get("score_time_dep", False)
+        self._moving_on_state = subparms.get("moving_on_state", False)
         if self._score_method == "PODdecomp":
             self._pod_data_file = subparms.get("pod_data_file", None)
             self._score_pod_d0 = subparms.get("pod_d0", None)
             self._score_pod_ndim = subparms.get("pod_ndim", 8)
-        elif self._score_method == "BaarsJCP":
-            self._edge_state_file = subparms.get("edge_state_file", None)
+
+        self._edge_state_file = subparms.get("edge_state_file", None)
 
         if self._time_dep_score:
             self._score_tfinal = params.get("trajectory", {}).get("end_time", 0.001)
@@ -269,14 +291,62 @@ class Boussinesq2D(ForwardModelBaseClass):
 
     def _initialize_score_function(self) -> None:
         """Initialize the data for the score function."""
+        # Dealing with non-autonomous forcing:
+        # we consider that the ON state moves over time, let's
+        # reload it periodically
+        self._step_on_state = -1
+        self._on_state_file = "stateON.nc"
+        if self._moving_on_state:
+            if Path(self._on_state_file).exists():
+                self._on_state_dict = {}
+                for f in getncfields(Path(self._on_state_file)):
+                    fidx = int(f[-6:])
+                    self._on_state_dict[fidx] = loadnc(Path(self._on_state_file), f)
+                self._on_old = self._on_state_dict[0]
+                self._on_new = self._on_state_dict[49]
+                self._on = self._on_old
+            else:
+                wrn_msg = f"Moving A state activated but the state file {self._on_state_file} not found!"
+                _logger.warning(wrn_msg)
+
         if self._score_method == "default":
             self._psi_north_on = np.mean(self._on[3, 28:34, 34:46], axis=(0, 1))
             self._psi_north_off = np.mean(self._off[3, 28:34, 34:46], axis=(0, 1))
         elif self._score_method == "BaarsJCP":
-            edge_state = np.load(self._edge_state_file, allow_pickle=True)
+            self._edge_state = np.load(self._edge_state_file, allow_pickle=True)
             self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3, :, :] - self._off[1:3, :, :]) ** 2))
             self._score_eta = (
-                np.sqrt(np.sum((edge_state[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+                np.sqrt(np.sum((self._edge_state[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
+            )
+
+
+    def _update_on_state_data(self, step:int) -> None:
+        """Load a new ON state from file."""
+        # Return if we are not using a moving ON state
+        if not self._moving_on_state:
+            return
+
+        # If OLD and NEW state are still good
+        # do the interpolation
+        if step < (self._step_on_state + 50):
+            fnew = (step - self._step_on_state) / 50.0
+            fold = 1.0 - fnew
+            self._on = fnew * self._on_new + fold * self._on_old
+        # Otherwise, update old and new
+        else:
+            self._step_on_state = step
+            self._on_old = self._on_new
+            self._on_new = self._on_state_dict[step]
+            self._on = self._on_old
+
+        # Update score-formulation specific data
+        if self._score_method == "default":
+            self._psi_north_on = np.mean(self._on[3, 28:34, 34:46], axis=(0, 1))
+            self._psi_north_off = np.mean(self._off[3, 28:34, 34:46], axis=(0, 1))
+        elif self._score_method == "BaarsJCP":
+            self._on_to_off_l2norm = np.sqrt(np.sum((self._on[1:3, :, :] - self._off[1:3, :, :]) ** 2))
+            self._score_eta = (
+                np.sqrt(np.sum((self._edge_state[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm
             )
 
     def score(self) -> float:
@@ -302,6 +372,9 @@ class Boussinesq2D(ForwardModelBaseClass):
             err_msg = "Model state is empty while calling score"
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
+
+        # Update the ON state
+        self._update_on_state_data(self._step)
 
         xi_zero = None
 
@@ -353,9 +426,31 @@ class Boussinesq2D(ForwardModelBaseClass):
         # Compute an exponential decay near the time horizon of the
         # simulation final time if requested
         if self._time_dep_score:
-            return xi_zero * (1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale) * (1.0 - xi_zero))
+            if self._time < self._stop_noise_time:
+                return  xi_zero * (1.0 - np.exp((self._time - self._stop_noise_time)
+                                   / self._score_tscale) * max(0.0, 0.5 - xi_zero)/0.5)
 
         return xi_zero
+
+    def _trajectory_branching_hook(self) -> None:
+        """Model-specific post trajectory branching hook."""
+        # Set the moving on state
+        if not self._moving_on_state:
+            return
+
+        lkeys = list(self._on_state_dict.keys())
+        for k in range(len(lkeys)-1):
+            if (self._step >= lkeys[k] and
+                    self._step < lkeys[k+1]):
+                self._step_on_state = lkeys[k]
+                if self._step_on_state == 0:
+                    self._step_on_state = -1
+                self._on_old = self._on_state_dict[lkeys[k]]
+                self._on_new = self._on_state_dict[lkeys[k+1]]
+                fnew = (self._step - self._step_on_state) / 50.0
+                fold = 1.0 - fnew
+                self._on = fnew * self._on_new + fold * self._on_old
+                break
 
     def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.
