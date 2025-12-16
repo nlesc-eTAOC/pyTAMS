@@ -390,7 +390,10 @@ class Boussinesq2D(ForwardModelBaseClass):
                     self._M + 1, self._N + 1, self._pod_data_file, self._score_pod_ndim, self._score_pod_d0
                 )
 
-            xi_zero = self._score_builder.get_score(self._state_arrays)
+            if self._moving_on_state:
+                xi_zero = self._score_builder.get_score(self._state_arrays, self._on)
+            else:
+                xi_zero = self._score_builder.get_score(self._state_arrays)
 
         if self._score_method == "BaarsJCP":
             da = np.sqrt(np.sum((self._state_arrays[1:3, :, :] - self._on[1:3, :, :]) ** 2)) / self._on_to_off_l2norm

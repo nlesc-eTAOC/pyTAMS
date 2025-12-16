@@ -249,11 +249,13 @@ class PODScore:
 
         self._curvature = curvature
 
-    def get_score(self, model_state: npt.NDArray[np.number]) -> float:
+    def get_score(self, model_state: npt.NDArray[np.number],
+                  a_state: npt.NDArray[np.number] | None = None) -> float:
         """Compute the score function of the given model state.
 
         Args:
             model_state: The model state as a numpy array (fix typing)
+            a_state: the A state when dealing with moving A (non-autonomous)
 
         Returns:
             The score function associated with the input state
@@ -270,9 +272,27 @@ class PODScore:
 
         field_pod = project_in_pod_space(self._n_active_modes, field, self._phi_pod, self._weights)
 
-        return compute_score_function(
-            field_pod, self._psi_pod[:, : self._n_active_modes], self._curv_abs, self._curvature, d0=self._d0
-        )
+        if a_state is not None:
+            if not self._d0:
+                err_msg = "Using curvature in score function while providing a_state is not possible"
+                _logger.exception(err_msg)
+                raise RuntimeError(err_msg)
+            # Update the curvilinear abscissa
+            A_score = self.get_score(a_state)
+            valid_range = np.where(self._curv_abs > A_score)[0]
+            cropped_curv_abs = self._curv_abs[valid_range]
+            cropped_curv_abs = (cropped_curv_abs - A_score) / (1.0 - A_score)
+            l_curv_abs = np.zeros(self._curv_abs.shape[0])
+            l_curv_abs[valid_range] = cropped_curv_abs
+            return compute_score_function(
+                field_pod, self._psi_pod[:, : self._n_active_modes], l_curv_abs, self._curvature, d0=self._d0
+            )
+        else:
+            return compute_score_function(
+                field_pod, self._psi_pod[:, : self._n_active_modes], self._curv_abs, self._curvature, d0=self._d0
+            )
+
+
 
     def project_in_podspace(self, model_state: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
         """Compute projection of the model state in the POD space.
