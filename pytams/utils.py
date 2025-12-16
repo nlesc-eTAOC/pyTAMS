@@ -13,15 +13,18 @@ import numpy.typing as npt
 
 _logger = logging.getLogger(__name__)
 
+
 def is_windows_os() -> bool:
     """Indicates Windows platform."""
     system = sys.platform.lower()
     return system.startswith("win")
 
+
 def is_mac_os() -> bool:
     """Indicates MacOS platform."""
     system = sys.platform.lower()
     return system.startswith("dar")
+
 
 def setup_logger(params: dict[Any, Any]) -> None:
     """Setup the logger parameters.
@@ -30,30 +33,41 @@ def setup_logger(params: dict[Any, Any]) -> None:
         params: a dictionary of parameters
     """
     # Set logging level
-    log_level_str = params["tams"].get("loglevel", "INFO")
-    if log_level_str.upper() == "DEBUG":
-        log_level = logging.DEBUG
-    elif log_level_str.upper() == "INFO":
-        log_level = logging.INFO
-    elif log_level_str.upper() == "WARNING":
-        log_level = logging.WARNING
-    elif log_level_str.upper() == "ERROR":
-        log_level = logging.ERROR
+    log_level_str = params["tams"].get("loglevel", "INFO").upper()
+    log_level = getattr(logging, log_level_str, logging.INFO)
 
+    # Set formatter
     log_format = "[%(levelname)s] %(asctime)s - %(message)s"
+    formatter = logging.Formatter(log_format)
 
     # Set root logger
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-    )
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    # Remove all existing handlers to prevent duplication
+    root_logger.handlers.clear()
+
+    # Query log file
+    log_file = params["tams"].get("logfile")
+
+    # Set console handler: warning+ if logfile provided
+    # full log otherwise
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    if log_file:
+        console_handler.setLevel(logging.WARNING)
+    else:
+        console_handler.setLevel(log_level)
+
+    root_logger.addHandler(console_handler)
 
     # Add file handler to root logger
-    if params["tams"].get("logfile", None):
-        log_file = logging.FileHandler(params["tams"]["logfile"])
-        log_file.setLevel(log_level)
-        log_file.setFormatter(logging.Formatter(log_format))
-        logging.getLogger("").addHandler(log_file)
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(logging.Formatter(log_format))
+        logging.getLogger("").addHandler(file_handler)
 
 
 def get_min_scored(maxes: npt.NDArray[Any], nworkers: int) -> tuple[list[int], npt.NDArray[Any]]:
