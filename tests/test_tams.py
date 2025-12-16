@@ -73,6 +73,8 @@ def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture)
             f,
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     _ = tams.compute_probability()
     assert "Stopping after the initial ensemble stage !" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
@@ -303,6 +305,8 @@ def test_doublewell_deterministic_tams_with_diags(caplog: pytest.LogCaptureFixtu
             f,
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     _ = tams.compute_probability()
     assert "Attempting to overwrite the plot file" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
@@ -449,6 +453,8 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
             f,
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     _ = tams.compute_probability()
     assert "Unfinished splitting iteration detected" in caplog.text
     Path("input.toml").unlink(missing_ok=True)

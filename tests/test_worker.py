@@ -1,6 +1,7 @@
 """Tests for the pytams.worker functions."""
 
 import datetime
+import logging
 from math import isclose
 from pathlib import Path
 import pytest
@@ -49,6 +50,8 @@ def test_run_pool_worker_outoftime(caplog: pytest.LogCaptureFixture):
         "model": {"slow_factor": 0.03},
     }
     setup_logger(parameters)
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     t_test = Trajectory(1, 1.0, fmodel, parameters)
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=0.1)
     _ = pool_worker(t_test, enddate)
@@ -62,7 +65,6 @@ def test_run_pool_worker_advanceerror():
         "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 0.75},
         "tams": {"loglevel": "DEBUG"},
     }
-    setup_logger(parameters)
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     t_test = Trajectory(1, 1.0, fmodel, parameters)
     with pytest.raises(RuntimeError):
@@ -110,6 +112,8 @@ def test_run_ms_worker_model_outoftime(caplog: pytest.LogCaptureFixture):
         "model": {"slow_factor": 0.003},
     }
     setup_logger(parameters)
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     t_test = Trajectory(1, 0.5, fmodel, parameters)
     t_test.advance()
     rst_test = Trajectory(2, 0.5, fmodel, parameters)
@@ -127,6 +131,8 @@ def test_run_ms_worker_outoftime(caplog: pytest.LogCaptureFixture):
         "model": {"slow_factor": 0.003},
     }
     setup_logger(parameters)
+    # Re-attach pytest handler for testing purposes
+    logging.getLogger().addHandler(caplog.handler)
     t_test = Trajectory(1, 0.5, fmodel, parameters)
     t_test.advance()
     rst_test = Trajectory(2, 0.5, fmodel, parameters)
@@ -143,7 +149,6 @@ def test_run_ms_worker_advanceerror():
         "tams": {"loglevel": "DEBUG"},
     }
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
-    setup_logger(parameters)
     t_test = Trajectory(1, 0.5, fmodel, parameters)
     t_test.advance(0.01)
     rst_test = Trajectory(5, 0.5, fmodel, parameters)
