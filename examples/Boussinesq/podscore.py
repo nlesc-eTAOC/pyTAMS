@@ -138,7 +138,7 @@ class PODScore:
         try:
             ntimes = nc_pod_in.dimensions["time"].size
             self._ntimes = ntimes
-        except AttributeError:
+        except KeyError:
             wrn_msg = "POD database does not contains a transition path ! Only projection is available."
             _logger.warning(wrn_msg)
 
@@ -304,7 +304,7 @@ class PODScore:
             A numpy array with the projection of the state in the POD space
         """
         # Map Boussinesq model field order to POD database order
-        field_map = np.array([3, 1, 2])
+        field_map = np.array([3, 1, 2, 0])
         field = np.zeros((self._nfield, self._lat, self._depth))
         field[:, :, :] = model_state[field_map[: self._nfield], :, :] / self._scaling_field[:, None, None]
 
@@ -329,3 +329,19 @@ class PODScore:
             )
 
         return refdata
+
+    def get_state_from_pod_coord(self, psi_pod_in : npt.NDArray[np.number]) -> npt.NDArray[np.number]:
+        """Return the model state from a coordinate in POD space
+
+        Return:
+            the model state
+        """
+        data = np.zeros((self._nfield, self._lat, self._depth))
+        data[:, :, :] = (
+            np.sum(
+                self._phi_pod[:, : self._n_active_modes, :, :]
+                * psi_pod_in[None, : self._n_active_modes, None, None],
+                axis=(1),
+            )
+            * self._scaling_field[:, None, None]
+        )
