@@ -567,6 +567,30 @@ class SQLFile:
         finally:
             session.close()
 
+    def check_new_min_of_maxes(self, newmin: float) -> None:
+        """Compare the incoming min to the last entry.
+
+        When running TAMS, at each new iteration the ensemble minimum
+        of maximum should be strictly above the previous iteration's one.
+
+        Args:
+            newmin: the new minimum of maximums
+        """
+        session = self._Session()
+        try:
+            last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+            if last_split:
+                old_min = cast("list[float]", json.loads(last_split.min_max))[0]
+                if newmin <= old_min:
+                    wrn_msg = f"New iteration has minimum level {newmin} lower than old one {old_min}"
+                    _logger.warning(wrn_msg)
+        except SQLAlchemyError:
+            session.rollback()
+            _logger.exception("Failed to query k_split !")
+            raise
+        finally:
+            session.close()
+
     def get_iteration_count(self) -> int:
         """Get the number of splitting iteration stored.
 

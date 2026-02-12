@@ -713,6 +713,10 @@ class Database:
             _logger.exception(err_msg)
             raise ValueError(err_msg)
 
+        # Check that the new min of maxes is larger than
+        # at the previous step
+        self._pool_db.check_new_min_of_maxes(min_max[0])
+
         self._pool_db.add_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
 
     def update_splitting_iteration_data(
