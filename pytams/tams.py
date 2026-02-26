@@ -384,7 +384,7 @@ class TAMS:
                     task = [
                         self._tdb.get_traj(ancestor_idx[i]),
                         self._tdb.get_traj(min_idx_list[i]),
-                        min_vals[i],
+                        np.max(min_vals),
                         new_traj_weight,
                         self._endDate,
                         self._tdb.pool_file(),

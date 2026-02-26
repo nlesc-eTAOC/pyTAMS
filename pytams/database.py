@@ -96,7 +96,7 @@ class Database:
             self._save_to_disk = True
             self._restart = params.get("database", {}).get("restart", False)
             self._format = params.get("database", {}).get("format", "XML")
-            if self._format not in ["XML"]:
+            if self._format != "XML":
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
@@ -712,6 +712,10 @@ class Database:
                     incompatible with the last entry of the database {self.k_split()} !"
             _logger.exception(err_msg)
             raise ValueError(err_msg)
+
+        # Check that the new min of maxes is larger than
+        # at the previous step
+        self._pool_db.check_new_min_of_maxes(min_max[0])
 
         self._pool_db.add_splitting_data(ksplit, bias, new_weight, discarded_ids, ancestor_ids, min_vals, min_max)
 

@@ -121,6 +121,7 @@ ignore = [
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
     "B027", # Empty default in ABC.
     "COM812", # Trailing comma missing
+    "FURB110",
 ]
 pydocstyle.convention = "google"
 fixable = ["A", "B", "C", "D", "E", "F", "I"]
