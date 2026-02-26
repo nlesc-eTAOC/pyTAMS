@@ -251,7 +251,7 @@ class SQLFile:
             db_id = traj_id + 1
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
-                if traj.status in ["locked"]:
+                if traj.status == "locked":
                     traj.status = "completed"
                     session.commit()
                 else:
@@ -283,7 +283,7 @@ class SQLFile:
             db_id = traj_id + 1
             traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
             if traj:
-                if traj.status in ["locked"]:
+                if traj.status == "locked":
                     traj.status = "idle"
                     session.commit()
                 else:

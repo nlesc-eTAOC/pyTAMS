@@ -96,7 +96,7 @@ class Database:
             self._save_to_disk = True
             self._restart = params.get("database", {}).get("restart", False)
             self._format = params.get("database", {}).get("format", "XML")
-            if self._format not in ["XML"]:
+            if self._format != "XML":
                 err_msg = f"Unsupported TAMS database format: {self._format} !"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
