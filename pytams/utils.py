@@ -198,6 +198,10 @@ def import_forward_model(file: str, abc_cls: ABCMeta) -> type[ABCMeta]:
 
     mod = importlib.util.module_from_spec(spec)
 
+    # Need to add the module path so that TAMS's worker
+    # can find the class.
+    sys.path.append(Path(file).parent.as_posix())
+
     # Append module to system modules
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
