@@ -37,3 +37,15 @@ def test_tams_run():
     tams_run(a_args=["-m", "./tests/dwmodel.py",
                      "-i", "input.toml"])
     Path("input.toml").unlink(missing_ok=True)
+
+def test_tams_run_fail_two_fmodel():
+    """Test TAMS run."""
+    with pytest.raises(RuntimeError):
+        tams_run(a_args=["-m", "./tests/models.py",
+                         "-i", "input.toml"])
+
+def test_tams_run_fail_nofmodel():
+    """Test TAMS run."""
+    with pytest.raises(RuntimeError):
+        tams_run(a_args=["-m", "./tests/test_xmlutils.py",
+                         "-i", "input.toml"])
