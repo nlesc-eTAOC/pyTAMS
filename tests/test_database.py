@@ -6,7 +6,7 @@ import pytest
 import toml
 from pytams.database import Database
 from pytams.tams import TAMS
-from tests.models import DoubleWellModel
+from tests.dwmodel import DoubleWellModel
 
 
 def test_failed_db_init_no_ntraj():

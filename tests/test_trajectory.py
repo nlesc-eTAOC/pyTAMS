@@ -7,7 +7,7 @@ from pytams.fmodel import ForwardModelBaseClass
 from pytams.trajectory import Snapshot
 from pytams.trajectory import Trajectory
 from pytams.utils import moving_avg
-from tests.models import DoubleWellModel
+from tests.dwmodel import DoubleWellModel
 from tests.models import SimpleFModel
 
 
@@ -230,6 +230,7 @@ def test_sparse_dw_traj_with_restore():
     assert rst_test.score_max() > 0.95
     assert rst_test.is_converged()
     chkfile.unlink(missing_ok=True)
+    Path("test.json").unlink(missing_ok=True)
 
 
 def test_sparse_dw_traj_with_branching():

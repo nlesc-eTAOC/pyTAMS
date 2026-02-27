@@ -10,7 +10,7 @@ from pytams.trajectory import Trajectory
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker
 from pytams.worker import pool_worker
-from tests.models import DoubleWellModel
+from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
 

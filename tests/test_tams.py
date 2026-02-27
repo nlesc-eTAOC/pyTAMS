@@ -8,7 +8,7 @@ import toml
 from pytams.database import Database
 from pytams.tams import TAMS
 from pytams.utils import is_mac_os
-from tests.models import DoubleWellModel
+from tests.dwmodel import DoubleWellModel
 from tests.models import SimpleFModel
 
 
