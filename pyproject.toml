@@ -71,6 +71,7 @@ exec = [
 [project.scripts]
 tams_init_model = "pytams.bin:tams_template_model"
 tams_check = "pytams.bin:tams_alive"
+tams_run = "pytams.bin:tams_run"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
