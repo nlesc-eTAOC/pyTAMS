@@ -1,6 +1,7 @@
 """A set of utility functions for TAMS."""
 
 import ast
+import importlib
 import inspect
 import logging
 import sys
@@ -169,6 +170,56 @@ def get_module_local_import(module_name: str) -> list[str]:
             )
         )
     ]
+
+
+def import_forward_model(file: str, abc_cls: ABCMeta) -> type[ABCMeta]:
+    """Import forward model class from file and return it.
+
+    Args:
+        file: python module file to look into
+        abc_cls: parent class of which we are looking for a subclass
+
+    Return:
+        A subclass of abc_cls
+
+    Raises:
+        RuntimeError: if not subclass found or multiple ones
+    """
+    module = Path(file).stem
+    spec = importlib.util.spec_from_file_location(module, file)
+    if spec is None:
+        err_msg = f"Could not get spec from Python's module in {file}"
+        _logger.exception(err_msg)
+        raise RuntimeError(err_msg)
+    if spec.loader is None:
+        err_msg = f"{spec.name} module is missing loader !"
+        _logger.exception(err_msg)
+        raise RuntimeError(err_msg)
+
+    mod = importlib.util.module_from_spec(spec)
+
+    # Append module to system modules
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+
+    fmodel_class = None
+    for obj in vars(mod).values():
+        if inspect.isclass(obj) and issubclass(obj, abc_cls) and obj is not abc_cls:
+            if fmodel_class is not None and fmodel_class is not obj:
+                err_msg = (
+                    f"pyTAMS can only define one {abc_cls.__name__} subclass: "
+                    f"both {fmodel_class.__name__} and {obj.__name__} found in {file}!"
+                )
+                _logger.exception(err_msg)
+                raise RuntimeError(err_msg)
+            fmodel_class = obj
+
+    if fmodel_class is None:
+        err_msg = f"pyTAMS could not locate subclass of {abc_cls.__name__} in {module}"
+        _logger.exception(err_msg)
+        raise RuntimeError(err_msg)
+
+    return fmodel_class
 
 
 def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None:
