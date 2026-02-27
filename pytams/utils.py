@@ -1,7 +1,7 @@
 """A set of utility functions for TAMS."""
 
 import ast
-import importlib
+import importlib.util
 import inspect
 import logging
 import sys
