@@ -9,6 +9,7 @@ from pytams.database import Database
 from pytams.tams import TAMS
 from pytams.utils import is_mac_os
 from tests.dwmodel import DoubleWellModel
+from tests.models import FailingFModel
 from tests.models import SimpleFModel
 
 
@@ -57,6 +58,24 @@ def test_simple_model_tams():
     transition_proba = tams.compute_probability()
     assert transition_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
+
+
+def test_failing_model_tams():
+    """Test TAMS with simple model."""
+    fmodel = FailingFModel
+    with Path("input.toml").open("w") as f:
+        toml.dump(
+            {
+                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "runner": {"type": "asyncio"},
+                "trajectory": {"end_time": 0.1, "step_size": 0.005, "targetscore": 0.75},
+            },
+            f,
+        )
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    Path("input.toml").unlink(missing_ok=True)
+    with pytest.raises(RuntimeError):
+        _ = tams.compute_probability()
 
 
 def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture):
@@ -130,6 +149,7 @@ def test_simple_model_tams_with_db():
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
+
 def test_simple_model_tams_with_db_access():
     """Test TAMS with simple model and access to the database."""
     fmodel = SimpleFModel
@@ -151,6 +171,7 @@ def test_simple_model_tams_with_db_access():
     del tdb
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
+
 
 def test_simple_model_tams_slurm_fail():
     """Test TAMS with simple model with Slurm dask backend."""

@@ -83,10 +83,21 @@ class AsIORunner(BaseRunner):
     """A task runner class based on asyncIO.
 
     An runner that relies on asyncio to schedule
-    a tasks concurrently in worker processes.
+    tasks concurrently in worker processes.
     Tasks are added to an internal queue from
     which worker can take them and put the results
     back into result queue.
+
+    Attributes:
+        _params: a copy of the parameters dict
+        _queue: an asyncio.Queue() to place the tasks in
+        _rqueue: an asyncio.Queue() where the results are returned
+        _n_workers: the number of workers in the runner
+        _sync_worker: the synchrone worker function
+        _async_worker: the asynchrone worker function
+        _loop: the event loop associated with the workers
+        _executor: an executor for the worker to work in
+        _workers: a list of worker tasks
     """
 
     def __init__(
@@ -140,7 +151,14 @@ class AsIORunner(BaseRunner):
         asyncio.run(self.add_task(task))
 
     async def run_tasks(self) -> list[Any]:
-        """Create worker tasks and run."""
+        """Create worker tasks and run.
+
+        Initialize the executor and setup the workers (tasks) if not
+        already done.
+        The join() task is created seperately and awaited with the others in
+        order to catch any exception coming from the workers as they are generated
+        and stop everything as soon as one task fails.
+        """
         if not self._workers:
             self._executor = concurrent.futures.ProcessPoolExecutor(
                 max_workers=self._n_workers, initializer=setup_logger, initargs=(self._params,)
@@ -150,9 +168,29 @@ class AsIORunner(BaseRunner):
                 for _ in range(self._n_workers)
             ]
 
-        # Wait until all tasks are processed
-        await self._queue.join()
+        # Create a separate task for the join()
+        # and check the tasks status as they are completed
+        join_task = asyncio.create_task(self._queue.join())
+        done, _ = await asyncio.wait([join_task, *self._workers], return_when=asyncio.FIRST_COMPLETED)
 
+        # If a task raise an exception, cancel all other tasks
+        # and re-raise.
+        for task in done:
+            if task != join_task and task.exception():
+                excep = task.exception()
+                for t in self._workers:
+                    if not t.done():
+                        t.cancel()
+
+                join_task.cancel()
+
+                if excep is None:
+                    err_msg = "Caught an 'odd' exception in tasks !"
+                    raise RunnerError(err_msg)
+
+                raise excep
+
+        # Keep assembling the results list
         res = []
         while not self._rqueue.empty():
             res.append(await self._rqueue.get())
