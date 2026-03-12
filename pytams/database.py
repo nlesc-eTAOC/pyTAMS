@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import datetime
 import logging
-import shutil
 import sys
 import xml.etree.ElementTree as ET
 from importlib.metadata import version
@@ -60,7 +59,7 @@ class Database(Generic[T_Noise, T_State]):
 
     def __init__(
         self,
-        fmodel_t: type[ForwardModelBaseClass],
+        fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
         params: dict[Any, Any],
         ntraj: int = -1,
         nsplititer: int = -1,
@@ -116,8 +115,8 @@ class Database(Generic[T_Noise, T_State]):
         # Trajectory ensembles: one for active trajectories and one for
         # archived (discarded) members.
         # In-memory container
-        self._trajs_db: list[Trajectory] = []
-        self._archived_trajs_db: list[Trajectory] = []
+        self._trajs_db: list[Trajectory[T_Noise, T_State]] = []
+        self._archived_trajs_db: list[Trajectory[T_Noise, T_State]] = []
 
         # Algorithm data
         self._init_ensemble_done = False
@@ -129,7 +128,7 @@ class Database(Generic[T_Noise, T_State]):
         self._init_metadata()
 
     @classmethod
-    def load(cls, a_path: Path, read_only: bool = True) -> Database:
+    def load(cls, a_path: Path, read_only: bool = True) -> Database[Any, Any]:
         """Instantiate a TAMS database from disk.
 
         Args:
@@ -272,7 +271,7 @@ class Database(Generic[T_Noise, T_State]):
                     copy_exists = path_rnd.exists()
                 warn_msg = f"Database {self._name} already present. It will be copied to {path_rnd.name}"
                 _logger.warning(warn_msg)
-                shutil.move(self._name, path_rnd.absolute())
+                self._abs_path.rename(path_rnd.absolute())
 
             Path(self._name).mkdir()
 
@@ -357,7 +356,7 @@ class Database(Generic[T_Noise, T_State]):
             )
             self.append_traj(t, True)
 
-    def save_trajectory(self, traj: Trajectory) -> None:
+    def save_trajectory(self, traj: Trajectory[T_Noise, T_State]) -> None:
         """Save a trajectory to disk in the database.
 
         Args:
@@ -409,13 +408,15 @@ class Database(Generic[T_Noise, T_State]):
                     False,
                 )
             else:
-                t = Trajectory.init_from_metadata(
-                    metadata_str,
-                    fmodel_t=self._fmodel_t,
-                    parameters=self._parameters,
-                    workdir=workdir,
+                self.append_traj(
+                    Trajectory.init_from_metadata(
+                        metadata_str,
+                        fmodel_t=self._fmodel_t,
+                        parameters=self._parameters,
+                        workdir=workdir,
+                    ),
+                    False,
                 )
-                self.append_traj(t, False)
 
         if n_traj_restored > 0:
             inf_msg = f"{n_traj_restored} active trajectories loaded"
@@ -471,7 +472,7 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._name
 
-    def append_traj(self, a_traj: Trajectory, update_db: bool) -> None:
+    def append_traj(self, a_traj: Trajectory[T_Noise, T_State], update_db: bool) -> None:
         """Append a Trajectory to the internal list.
 
         Args:
@@ -491,7 +492,7 @@ class Database(Generic[T_Noise, T_State]):
 
         self._trajs_db.append(a_traj)
 
-    def append_archived_traj(self, a_traj: Trajectory, update_db: bool) -> None:
+    def append_archived_traj(self, a_traj: Trajectory[T_Noise, T_State], update_db: bool) -> None:
         """Append an archived Trajectory to the internal list.
 
         Args:
@@ -506,7 +507,7 @@ class Database(Generic[T_Noise, T_State]):
 
         self._archived_trajs_db.append(a_traj)
 
-    def traj_list(self) -> list[Trajectory]:
+    def traj_list(self) -> list[Trajectory[T_Noise, T_State]]:
         """Access to the trajectory list.
 
         Return:
@@ -514,7 +515,7 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._trajs_db
 
-    def get_traj(self, idx: int) -> Trajectory:
+    def get_traj(self, idx: int) -> Trajectory[T_Noise, T_State]:
         """Access to a given trajectory.
 
         Args:
@@ -532,7 +533,7 @@ class Database(Generic[T_Noise, T_State]):
             raise ValueError(err_msg)
         return self._trajs_db[idx]
 
-    def overwrite_traj(self, idx: int, traj: Trajectory) -> None:
+    def overwrite_traj(self, idx: int, traj: Trajectory[T_Noise, T_State]) -> None:
         """Deep copy a trajectory into internal list.
 
         Args:
@@ -595,7 +596,7 @@ class Database(Generic[T_Noise, T_State]):
 
         return len(self._archived_trajs_db)
 
-    def update_traj_list(self, a_traj_list: list[Trajectory]) -> None:
+    def update_traj_list(self, a_traj_list: list[Trajectory[T_Noise, T_State]]) -> None:
         """Overwrite the trajectory list.
 
         Args:
@@ -603,7 +604,7 @@ class Database(Generic[T_Noise, T_State]):
         """
         self._trajs_db = a_traj_list
 
-    def archive_trajectory(self, traj: Trajectory) -> None:
+    def archive_trajectory(self, traj: Trajectory[T_Noise, T_State]) -> None:
         """Archive a trajectory about to be discarded.
 
         Args:
@@ -654,7 +655,7 @@ class Database(Generic[T_Noise, T_State]):
         else:
             self._pool_db.release_trajectory(tid)
 
-    def update_trajectory(self, traj_id: int, traj: Trajectory) -> None:
+    def update_trajectory(self, traj_id: int, traj: Trajectory[T_Noise, T_State]) -> None:
         """Update a trajectory file in the DB.
 
         Args:
@@ -1027,7 +1028,7 @@ class Database(Generic[T_Noise, T_State]):
 
         return active_list_index
 
-    def get_trajectory_active_at_k(self, k_in: int) -> list[Trajectory]:
+    def get_trajectory_active_at_k(self, k_in: int) -> list[Trajectory[T_Noise, T_State]]:
         """Return the list of trajectory active at a given splitting iteration.
 
         To explore the ensemble evolution during splitting iterations, it is
