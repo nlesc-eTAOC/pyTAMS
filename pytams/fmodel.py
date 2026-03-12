@@ -1,16 +1,24 @@
 """A base class for the stochastic forward model."""
 
-from abc import ABCMeta
+import copy
+from abc import ABC
 from abc import abstractmethod
 from logging import getLogger
 from pathlib import Path
 from typing import Any
+from typing import Generic
+from typing import TypeVar
+from typing import cast
 from typing import final
 
 _logger = getLogger(__name__)
 
+# Define Generics for Noise and State
+T_Noise = TypeVar("T_Noise")
+T_State = TypeVar("T_State")
 
-class ForwardModelBaseClass(metaclass=ABCMeta):
+
+class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
     """A base class for the stochastic forward model.
 
     pyTAMS relies on a separation of the stochastic model,
@@ -33,6 +41,10 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         _workdir: the working directory
     """
 
+    _noise: T_Noise
+    _step: int = 0
+    _time: float = 0.0
+
     @final
     def __init__(self, a_id: int, params: dict[Any, Any], workdir: Path | None = None):
         """Base class __init__ method.
@@ -53,24 +65,21 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
         # Initialize common tooling
         self._id = a_id
-        self._noise: Any = None
         self._step: int = 0
         self._time: float = 0.0
         self._workdir: Path = Path.cwd() if workdir is None else workdir
 
         # Add the deterministic parameter to the model dictionary
-        # for consistency
-        if params.get("model"):
-            params["model"]["deterministic"] = params.get("tams", {}).get("deterministic", False)
-        else:
-            params["model"] = {"deterministic": params.get("tams", {}).get("deterministic", False)}
+        lparams = copy.deepcopy(params)
+        tams_conf = lparams.get("tams", {})
+        model_conf = lparams.setdefault("model", {})
+        model_conf["deterministic"] = tams_conf.get("deterministic", False)
 
         # Call the concrete class init method
-        self._init_model(a_id, params)
+        self._init_model(a_id, lparams)
 
-        # Generate the first noise increment
-        # to at least get the proper type.
-        self._noise = self.make_noise()
+        # Initialize property with type casting for mypy.
+        self._noise = cast("T_Noise", None)
 
     @final
     def advance(self, dt: float, need_end_state: bool) -> float:
@@ -101,13 +110,17 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
 
         return actual_dt
 
-    @final
-    def get_noise(self) -> Any:
+    @final  # type: ignore[misc]
+    @property
+    def noise(self) -> T_Noise:
         """Return the model's latest noise increment."""
+        if self._noise is None:
+            self._noise = self.make_noise()
         return self._noise
 
-    @final
-    def set_noise(self, a_noise: Any) -> None:
+    @noise.setter
+    @final  # type: ignore[misc]
+    def noise(self, a_noise: T_Noise) -> None:
         """Set the model's next noise increment."""
         self._noise = a_noise
 
@@ -135,7 +148,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
+    def _advance(self, step: int, time: float, dt: float, noise: T_Noise, need_end_state: bool) -> float:
         """Concrete class advance function.
 
         This is the model-specific advance function.
@@ -151,14 +164,14 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def get_current_state(self) -> Any:
+    def get_current_state(self) -> T_State:
         """Return the current state of the model.
 
         Note that the return type is left to the concrete model definition.
         """
 
     @abstractmethod
-    def set_current_state(self, state: Any) -> None:
+    def set_current_state(self, state: T_State) -> None:
         """Set the current state of the model.
 
         Args:
@@ -176,7 +189,7 @@ class ForwardModelBaseClass(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def make_noise(self) -> Any:
+    def make_noise(self) -> T_Noise:
         """Return the model's latest noise increment.
 
         Note that the noise type is left to the concrete model definition.
