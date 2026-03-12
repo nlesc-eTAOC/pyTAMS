@@ -342,9 +342,9 @@ class Trajectory:
         # make a new noise increment
         if self._fmodel:
             if self.noise_backlog:
-                self._fmodel.set_noise(self.noise_backlog.pop())
+                self._fmodel.noise = self.noise_backlog.pop()
             else:
-                self._fmodel.set_noise(self._fmodel.make_noise())
+                self._fmodel.noise = self._fmodel.make_noise()
 
     def _append_snapshot(self, score: float | None = None) -> None:
         """Append the current snapshot to the trajectory list."""
@@ -355,7 +355,7 @@ class Trajectory:
                 Snapshot(
                     time=self._t_cur,
                     score=score if score else self._fmodel.score(),
-                    noise=self._fmodel.get_noise(),
+                    noise=self._fmodel.noise,
                     state=self._fmodel.get_current_state() if need_state else None,
                 ),
             )
