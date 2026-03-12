@@ -101,7 +101,7 @@ class TAMS:
         self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
 
         # Database
-        self._tdb = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
+        self._tdb: Database[Any, Any] = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
         self._tdb.load_data()
 
         # Time management uses UTC date
