@@ -1,5 +1,6 @@
 """Tests for the pytams.trajectory class."""
 
+from dataclasses import FrozenInstanceError
 from math import isclose
 from pathlib import Path
 import pytest
@@ -22,6 +23,19 @@ def test_init_snapshot_nostate():
     """Test initialization of a stateless snapshot."""
     snap = Snapshot(time=0.1, score=0.1, noise="Noisy")
     assert not snap.has_state
+
+
+def test_init_snapshot_negtime():
+    """Test initialization with a negative time."""
+    with pytest.raises(ValueError):
+        _ = Snapshot(time=-0.1, score=0.1, noise="Noisy")
+
+
+def test_modifying_snap():
+    """Test modifying a snapshot."""
+    snap = Snapshot(time=0.1, score=0.1, noise="Noisy", state="State")
+    with pytest.raises(FrozenInstanceError):
+        snap.state = "OtherState"
 
 
 def test_init_missing_basic_inputs():
