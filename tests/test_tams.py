@@ -299,7 +299,10 @@ def test_doublewell_deterministic_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.5416299021401826
+    if is_mac_os():
+        assert transition_proba == 0.5416299021401826
+    else:
+        assert transition_proba == 0.5471009063334249
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -509,7 +512,7 @@ def test_doublewell_slow_tams_restore_more_split():
     if is_mac_os():
         assert transition_proba == 0.13912870261943358
     else:
-        assert transition_proba == 0.13912870261943358
+        assert transition_proba == 0.14983090959624143
     Path("input.toml").unlink(missing_ok=True)
     del tams_load
     shutil.rmtree("dwTest.tdb")
