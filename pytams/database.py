@@ -11,6 +11,8 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
+from typing import TypeVar
 import cloudpickle
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,8 +30,11 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
+T_Noise = TypeVar("T_Noise")
+T_State = TypeVar("T_State")
 
-class Database:
+
+class Database(Generic[T_Noise, T_State]):
     """A database class for TAMS.
 
     The database class for TAMS is a container for
@@ -343,7 +348,7 @@ class Database:
         """Initialize the requested number of trajectories."""
         for n in range(self._ntraj):
             workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
-            t = Trajectory(
+            t: Trajectory[T_Noise, T_State] = Trajectory(
                 traj_id=n,
                 weight=1.0 / float(self._ntraj),
                 fmodel_t=self._fmodel_t,

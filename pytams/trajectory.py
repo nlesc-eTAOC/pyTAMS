@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import Generic
+from typing import TypeVar
 from typing import cast
 import numpy as np
 import numpy.typing as npt
@@ -19,6 +21,9 @@ if TYPE_CHECKING:
     from pytams.fmodel import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
+
+T_Noise = TypeVar("T_Noise")
+T_State = TypeVar("T_State")
 
 
 class WallTimeLimitError(Exception):
@@ -50,7 +55,7 @@ def get_index_from_id(identity: str) -> tuple[int, int]:
     return int(identity[-10:-5]), int(identity[-4:])
 
 
-class Trajectory:
+class Trajectory(Generic[T_Noise, T_State]):
     """A class defining a stochastic trajectory.
 
     The trajectory class is a container for time-ordered snapshots.
@@ -137,7 +142,7 @@ class Trajectory:
 
         # When using sparse state or for other reasons, the noise for the next few
         # steps might be already available. This backlog is used to store them.
-        self.noise_backlog: list[Any] = []
+        self.noise_backlog: list[T_Noise] = []
 
         # Keep track of the branching history during TAMS
         # iterations
@@ -340,7 +345,7 @@ class Trajectory:
         """Initialize a trajectory from serialized metadata."""
         metadata = cls.deserialize_metadata(metadata_json)
 
-        traj = Trajectory(
+        traj: Trajectory[T_Noise, T_State] = Trajectory(
             traj_id=metadata["id"],
             weight=metadata["weight"],
             fmodel_t=fmodel_t,
@@ -376,7 +381,9 @@ class Trajectory:
             _logger.exception(err_msg)
             raise FileNotFoundError
 
-        rest_traj = Trajectory.init_from_metadata(metadata_json, fmodel_t, parameters, workdir, frozen)
+        rest_traj: Trajectory[T_Noise, T_State] = Trajectory.init_from_metadata(
+            metadata_json, fmodel_t, parameters, workdir, frozen
+        )
 
         # Read in trajectory data
         tree = ET.parse(checkfile.absolute())
@@ -443,7 +450,7 @@ class Trajectory:
             tid, nb = get_index_from_id(rst_traj.idstr())
             new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
             fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-            rest_traj = Trajectory(
+            rest_traj: Trajectory[T_Noise, T_State] = Trajectory(
                 traj_id=rst_traj.id(),
                 weight=new_weight,
                 fmodel_t=fmodel_t,
@@ -619,26 +626,20 @@ class Trajectory:
 
     def get_time_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory time instants."""
-        times = np.zeros(len(self._snaps))
-        for k in range(len(self._snaps)):
-            times[k] = self._snaps[k].time
-        return times
+        return np.array([snap.time for snap in self._snaps], dtype=np.float64)
 
     def get_score_array(self) -> npt.NDArray[np.number]:
         """Return the trajectory scores."""
-        scores = np.zeros(len(self._snaps))
-        for k in range(len(self._snaps)):
-            scores[k] = self._snaps[k].score
-        return scores
+        return np.array([snap.score for snap in self._snaps], dtype=np.float64)
 
     def get_noise_array(self) -> npt.NDArray[Any]:
         """Return the trajectory noises."""
-        noises = np.zeros(len(self._snaps), dtype=type(self._snaps[0].noise))
-        for k in range(len(self._snaps)):
-            noises[k] = self._snaps[k].noise
-        return noises
+        if not self._snaps:
+            return np.array([])
 
-    def get_state_list(self) -> list[tuple[int, Any]]:
+        return np.array([snap.noise for snap in self._snaps])
+
+    def get_state_list(self) -> list[tuple[int, T_State | None]]:
         """Return a list of states and associated indices.
 
         Returns:
@@ -658,7 +659,7 @@ class Trajectory:
         """Return the number of compute steps taken."""
         return self._computed_steps
 
-    def get_last_state(self) -> Any | None:
+    def get_last_state(self) -> T_State | None:
         """Return the last state in the trajectory."""
         for snap in reversed(self._snaps):
             if snap.has_state:
@@ -668,9 +669,9 @@ class Trajectory:
 
     def get_last_state_id(self) -> int | None:
         """Return the id of the last state in the trajectory."""
-        for s in reversed(range(len(self._snaps))):
-            if self._snaps[s].has_state:
-                return s
+        for idx, snap in reversed(list(enumerate(self._snaps))):
+            if snap.has_state:
+                return idx
 
         return None
 
