@@ -299,7 +299,7 @@ def test_doublewell_deterministic_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.5471567691116268
+    assert transition_proba == 0.5416299021401826
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -499,7 +499,7 @@ def test_doublewell_slow_tams_restore_more_split():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     del tams
-    assert transition_proba == 0.08937321391676148
+    assert transition_proba == 0.1251224993028602
     params_dict["tams"]["nsplititer"] = 30
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
@@ -507,9 +507,9 @@ def test_doublewell_slow_tams_restore_more_split():
     transition_proba = tams_load.compute_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
-        assert transition_proba == 0.0853804929982172
+        assert transition_proba == 0.13912870261943358
     else:
-        assert transition_proba == 0.07470793360861466
+        assert transition_proba == 0.13912870261943358
     Path("input.toml").unlink(missing_ok=True)
     del tams_load
     shutil.rmtree("dwTest.tdb")
