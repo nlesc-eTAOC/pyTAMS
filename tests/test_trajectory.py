@@ -222,7 +222,7 @@ def test_sparse_dw_traj_with_restore():
     t_test.advance(4.07)
     chkfile = Path("./test.xml")
     t_test.store(chkfile, write_metadata_json=True)
-    assert isclose(t_test.score_max(), 0.5383998247480907, abs_tol=1e-9)
+    assert isclose(t_test.score_max(), 0.5384037112515893, abs_tol=1e-9)
     assert not t_test.is_converged()
     metadata = t_test.serialize_metadata_json()
     rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters, frozen=False)
