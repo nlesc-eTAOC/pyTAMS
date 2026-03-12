@@ -4,7 +4,7 @@ from math import isclose
 from pathlib import Path
 import pytest
 from pytams.fmodel import ForwardModelBaseClass
-from pytams.trajectory import Snapshot
+from pytams.snapshot import Snapshot
 from pytams.trajectory import Trajectory
 from pytams.utils import moving_avg
 from tests.dwmodel import DoubleWellModel
@@ -13,15 +13,15 @@ from tests.models import SimpleFModel
 
 def test_init_snapshot():
     """Test initialization of a snapshot."""
-    snap = Snapshot(0.1, 0.1, "Noisy", "State")
+    snap = Snapshot(time=0.1, score=0.1, noise="Noisy", state="State")
     assert snap.time == 0.1
-    assert snap.has_state()
+    assert snap.has_state
 
 
 def test_init_snapshot_nostate():
     """Test initialization of a stateless snapshot."""
-    snap = Snapshot(0.1, 0.1, "Noisy")
-    assert not snap.has_state()
+    snap = Snapshot(time=0.1, score=0.1, noise="Noisy")
+    assert not snap.has_state
 
 
 def test_init_missing_basic_inputs():
@@ -86,7 +86,7 @@ def test_branch_simple_model_traj():
     """Test branching a trajectory with simple model."""
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.0002, "targetscore": 0.45}}
-    t_ancestor = Trajectory(1 ,0.5, fmodel, parameters)
+    t_ancestor = Trajectory(1, 0.5, fmodel, parameters)
     t_ancestor.advance()
     assert t_ancestor.get_computed_steps_count() == 201
     t_branched = Trajectory(2, 0.5, fmodel, parameters)

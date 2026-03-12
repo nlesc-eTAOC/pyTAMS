@@ -4,13 +4,13 @@ import logging
 import shutil
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 import numpy as np
 import numpy.typing as npt
+from pytams.snapshot import Snapshot
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
 from pytams.xmlutils import read_xml_snapshot
@@ -48,38 +48,6 @@ def get_index_from_id(identity: str) -> tuple[int, int]:
         trajectory index and number of branching
     """
     return int(identity[-10:-5]), int(identity[-4:])
-
-
-@dataclass
-class Snapshot:
-    """A dataclass defining a snapshot.
-
-    Gathering what defines a snapshot into an object.
-    The time and score are of float type, but the
-    actual type of the noise and state are completely
-    determined by the forward model.
-    A snapshot is allowed to have a state or not to
-    accommodate memory savings.
-
-    Attributes:
-        time : snapshot time
-        score : score function value
-        noise : noise used to reach this snapshot
-        state : model state
-    """
-
-    time: float
-    score: float
-    noise: Any
-    state: Any | None = None
-
-    def has_state(self) -> bool:
-        """Check if snapshot has state.
-
-        Returns:
-            bool : True if state is not None
-        """
-        return self.state is not None
 
 
 class Trajectory:
@@ -417,14 +385,14 @@ class Trajectory:
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
-                rest_traj._snaps.append(Snapshot(time, score, noise, state))
+                rest_traj._snaps.append(Snapshot(time=time, score=score, noise=noise, state=state))
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
         if rest_traj._fmodel:
             # Remove snapshots from the list until a state is available
             for k in range(len(rest_traj._snaps) - 1, -1, -1):
-                if not rest_traj._snaps[k].has_state():
+                if not rest_traj._snaps[k].has_state:
                     # Append the noise history to the backlog
                     rest_traj.noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
@@ -493,7 +461,7 @@ class Trajectory:
         last_snap_with_state = 0
         while from_traj._snaps[high_score_idx].score <= score:
             high_score_idx += 1
-            if from_traj._snaps[high_score_idx].has_state():
+            if from_traj._snaps[high_score_idx].has_state:
                 last_snap_with_state = high_score_idx
 
         # Init empty trajectory
@@ -676,7 +644,7 @@ class Trajectory:
         Returns:
             A list of tuples with index and states
         """
-        return [(k, self._snaps[k].state) for k in range(len(self._snaps)) if self._snaps[k].has_state()]
+        return [(k, self._snaps[k].state) for k in range(len(self._snaps)) if self._snaps[k].has_state]
 
     def get_length(self) -> int:
         """Return the trajectory length."""
@@ -693,7 +661,7 @@ class Trajectory:
     def get_last_state(self) -> Any | None:
         """Return the last state in the trajectory."""
         for snap in reversed(self._snaps):
-            if snap.has_state():
+            if snap.has_state:
                 return snap.state
 
         return None
@@ -701,7 +669,7 @@ class Trajectory:
     def get_last_state_id(self) -> int | None:
         """Return the id of the last state in the trajectory."""
         for s in reversed(range(len(self._snaps))):
-            if self._snaps[s].has_state():
+            if self._snaps[s].has_state:
                 return s
 
         return None
