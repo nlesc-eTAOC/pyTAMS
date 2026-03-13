@@ -121,7 +121,7 @@ def test_store_and_restore_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    metadata = t_test.serialize_metadata_json()
+    metadata = t_test.get_metadata()
     rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters)
     assert isclose(rst_test.score_max(), 0.2, abs_tol=1e-9)
     rst_test.advance()
@@ -140,7 +140,7 @@ def test_store_and_restore_frozen_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    metadata = t_test.serialize_metadata_json()
+    metadata = t_test.get_metadata()
     rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters, frozen=True)
     assert isclose(rst_test.score_max(), 0.2, abs_tol=1e-9)
     with pytest.raises(RuntimeError):
@@ -206,7 +206,7 @@ def test_store_and_restart_sparse_simple_traj():
     chkfile = Path("./test.xml")
     t_test.store(chkfile)
     assert chkfile.exists() is True
-    metadata = t_test.serialize_metadata_json()
+    metadata = t_test.get_metadata()
     rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters)
     rst_test.advance()
     assert rst_test.is_converged() is True
@@ -238,7 +238,7 @@ def test_sparse_dw_traj_with_restore():
     t_test.store(chkfile, write_metadata_json=True)
     assert isclose(t_test.score_max(), 0.5384037112515893, abs_tol=1e-9)
     assert not t_test.is_converged()
-    metadata = t_test.serialize_metadata_json()
+    metadata = t_test.get_metadata()
     rst_test = Trajectory.restore_from_checkfile(chkfile, metadata, fmodel, parameters, frozen=False)
     rst_test.advance()
     assert rst_test.score_max() > 0.95

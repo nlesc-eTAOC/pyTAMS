@@ -32,11 +32,11 @@ def test_run_pool_worker_with_sql():
     parameters = {"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}}
     poolfile = SQLFile("./test.db")
     t_test = Trajectory(0, 1.0, fmodel, parameters)
-    poolfile.add_trajectory("dummy.xml", t_test.serialize_metadata_json())
+    poolfile.add_trajectory("dummy.xml", t_test.get_metadata())
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     _ = pool_worker(t_test, enddate, "./test.db")
-    _, metadata_str = poolfile.fetch_trajectory(0)
-    assert Trajectory.deserialize_metadata(metadata_str)["ended"]
+    _, metadata = poolfile.fetch_trajectory(0)
+    assert metadata["ended"]
     del poolfile
     Path("./test.db").unlink()
 
@@ -93,12 +93,12 @@ def test_run_ms_worker_with_sql():
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = Trajectory(0, 0.5, fmodel, parameters)
     t_test.advance()
-    poolfile.add_trajectory("dummy.xml", t_test.serialize_metadata_json())
+    poolfile.add_trajectory("dummy.xml", t_test.get_metadata())
     rst_test = Trajectory(1, 0.5, fmodel, parameters)
-    poolfile.add_trajectory("dummy.xml", rst_test.serialize_metadata_json())
+    poolfile.add_trajectory("dummy.xml", rst_test.get_metadata())
     _ = ms_worker(t_test, rst_test, 0.049, 1.0, enddate, "./test.db")
-    _, metadata_str = poolfile.fetch_trajectory(1)
-    assert Trajectory.deserialize_metadata(metadata_str)["ended"]
+    _, metadata = poolfile.fetch_trajectory(1)
+    assert metadata["ended"]
     del poolfile
     Path("./test.db").unlink()
 
