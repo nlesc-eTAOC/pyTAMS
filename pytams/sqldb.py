@@ -4,16 +4,27 @@ from __future__ import annotations
 import gc
 import json
 import logging
+from contextlib import contextmanager
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING
+from typing import Any
 import numpy as np
 import numpy.typing as npt
+from sqlalchemy import JSON
 from sqlalchemy import create_engine
+from sqlalchemy import delete
+from sqlalchemy import func
+from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import sessionmaker
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 _logger = logging.getLogger(__name__)
 
@@ -29,7 +40,7 @@ class Trajectory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     traj_file: Mapped[str] = mapped_column(nullable=False)
-    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
+    t_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     status: Mapped[str] = mapped_column(default="idle", nullable=False)
 
 
@@ -40,7 +51,7 @@ class ArchivedTrajectory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     traj_file: Mapped[str] = mapped_column(nullable=False)
-    t_metadata: Mapped[str] = mapped_column(default="", nullable=False)
+    t_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
 
 class SplittingIterations(Base):
@@ -51,11 +62,12 @@ class SplittingIterations(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     split_id: Mapped[int] = mapped_column(nullable=False)
     bias: Mapped[int] = mapped_column(nullable=False)
-    weight: Mapped[str] = mapped_column(nullable=False)
-    discarded_traj_ids: Mapped[str] = mapped_column(nullable=False)
-    ancestor_traj_ids: Mapped[str] = mapped_column(nullable=False)
-    min_vals: Mapped[str] = mapped_column(nullable=False)
-    min_max: Mapped[str] = mapped_column(nullable=False)
+    weight: Mapped[float] = mapped_column(nullable=False)
+
+    discarded_traj_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False)
+    ancestor_traj_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False)
+    min_vals: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    min_max: Mapped[list[float]] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(default="locked", nullable=False)
 
 
@@ -96,7 +108,7 @@ class SQLFile:
                 if ro_mode
                 else create_engine(f"sqlite:///{file_path}", echo=False)
             )
-        self._Session = sessionmaker(bind=self._engine)
+        self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
         self._init_db()
 
     def _init_db(self) -> None:
@@ -112,6 +124,19 @@ class SQLFile:
             _logger.exception(err_msg)
             raise
 
+    @contextmanager
+    def session_scope(self) -> Generator[Session, None, None]:
+        """Provide a transactional scope around a series of operations."""
+        session = self._Session()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
     def name(self) -> str:
         """Access the DB file name.
 
@@ -120,54 +145,40 @@ class SQLFile:
         """
         return self._file_name
 
-    def add_trajectory(self, traj_file: str, metadata: str) -> None:
+    def add_trajectory(self, traj_file: str, metadata: dict) -> None:
         """Add a new trajectory to the DB.
 
         Args:
             traj_file : The trajectory file of that trajectory
-            metadata: a json representation of the traj metadata
+            metadata: a dict with the metadata
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
             new_traj = Trajectory(traj_file=traj_file, t_metadata=metadata)
             session.add(new_traj)
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to add trajectory")
-            raise
-        finally:
-            session.close()
 
-    def update_trajectory(self, traj_id: int, traj_file: str, metadata: str) -> None:
+    def update_trajectory(self, traj_id: int, traj_file: str, metadata: dict) -> None:
         """Update a given trajectory data in the DB.
 
         Args:
             traj_id : The trajectory id
             traj_file : The new trajectory file of that trajectory
-            metadata: a json representation of the traj metadata
+            metadata: a dict with the trajectory metadata
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
-            traj.traj_file = mapped_column(traj_file)
-            traj.t_metadata = metadata
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            err_msg = f"Failed to update trajectory {traj_id}"
-            _logger.exception(err_msg)
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
+            if traj:
+                traj.traj_file = traj_file
+                traj.t_metadata = metadata
+            else:
+                err_msg = f"Trajectory {traj_id} not found !"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
 
     def update_trajectory_weight(self, traj_id: int, weight: float) -> None:
         """Update a given trajectory weight in the DB.
@@ -179,22 +190,16 @@ class SQLFile:
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one()
-            metadata_d = json.loads(traj.t_metadata)
-            metadata_d["weight"] = str(weight)
-            traj.t_metadata = mapped_column(json.dumps(metadata_d))
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            err_msg = f"Failed to update trajectory {traj_id} weight"
-            _logger.exception(err_msg)
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
+            if traj is None:
+                err_msg = f"Trajectory {traj_id} not found !"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
+
+            metadata_d = dict(traj.t_metadata)
+            metadata_d["weight"] = weight
+            traj.t_metadata = metadata_d
 
     def lock_trajectory(self, traj_id: int, allow_completed_lock: bool = False) -> bool:
         """Set the status of a trajectory to "locked" if possible.
@@ -210,30 +215,20 @@ class SQLFile:
             ValueError if the trajectory with the given id does not exist
             SQLAlchemyError if the DB could not be accessed
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).with_for_update().one_or_none()
+        with self.session_scope() as session:
+            stmt = select(Trajectory).filter(Trajectory.id == traj_id + 1).with_for_update()
+            traj = session.execute(stmt).scalar_one_or_none()
 
             if traj:
                 allowed_status = ["idle", "completed"] if allow_completed_lock else ["idle"]
                 if traj.status in allowed_status:
                     traj.status = "locked"
-                    session.commit()
                     return True
                 return False
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
             raise ValueError(err_msg)
-
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to lock trajectory")
-            raise
-        finally:
-            session.close()
 
     def mark_trajectory_as_completed(self, traj_id: int) -> None:
         """Set the status of a trajectory to "completed" if possible.
@@ -245,15 +240,11 @@ class SQLFile:
             ValueError if the trajectory with the given id does not exist
             SQLAlchemyError if the DB could not be accessed
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+        with self.session_scope() as session:
+            traj = session.execute(select(Trajectory).filter(Trajectory.id == traj_id + 1)).scalar_one_or_none()
             if traj:
                 if traj.status == "locked":
                     traj.status = "completed"
-                    session.commit()
                 else:
                     warn_msg = f"Attempting to mark completed Trajectory {traj_id} already in status {traj.status}."
                     _logger.warning(warn_msg)
@@ -261,12 +252,6 @@ class SQLFile:
                 err_msg = f"Trajectory {traj_id} does not exist"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to mark trajectory as completed")
-            raise
-        finally:
-            session.close()
 
     def release_trajectory(self, traj_id: int) -> None:
         """Set the status of a trajectory to "idle" if possible.
@@ -277,15 +262,11 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+        with self.session_scope() as session:
+            traj = session.execute(select(Trajectory).filter(Trajectory.id == traj_id + 1)).scalar_one_or_none()
             if traj:
                 if traj.status == "locked":
                     traj.status = "idle"
-                    session.commit()
                 else:
                     warn_msg = f"Attempting to release Trajectory {traj_id} already in status {traj.status}."
                     _logger.warning(warn_msg)
@@ -293,12 +274,6 @@ class SQLFile:
                 err_msg = f"Trajectory {traj_id} does not exist"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to release trajectory")
-            raise
-        finally:
-            session.close()
 
     def get_trajectory_count(self) -> int:
         """Get the number of trajectories in the DB.
@@ -306,17 +281,10 @@ class SQLFile:
         Returns:
             The number of trajectories
         """
-        session = self._Session()
-        try:
-            return session.query(Trajectory).count()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to count the number of trajectories")
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            return session.scalar(select(func.count(Trajectory.id))) or 0
 
-    def fetch_trajectory(self, traj_id: int) -> tuple[str, str]:
+    def fetch_trajectory(self, traj_id: int) -> tuple[str, dict]:
         """Get the trajectory file of a trajectory.
 
         Args:
@@ -328,57 +296,32 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = traj_id + 1
-            traj = session.query(Trajectory).filter(Trajectory.id == db_id).one_or_none()
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
             if traj:
-                tfile: str = traj.traj_file
-                metadata_str: str = traj.t_metadata
-                return tfile, metadata_str
+                return traj.traj_file, traj.t_metadata
 
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
             raise ValueError(err_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to fetch trajectory")
-            raise
-        finally:
-            session.close()
 
     def release_all_trajectories(self) -> None:
         """Release all trajectories in the DB."""
-        session = self._Session()
-        try:
-            session.query(Trajectory).update({"status": "idle"})
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to release all trajectories")
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            session.execute(update(Trajectory).values(status="idle"))
 
-    def archive_trajectory(self, traj_file: str, metadata: str) -> None:
+    def archive_trajectory(self, traj_file: str, metadata: dict) -> None:
         """Add a new trajectory to the archive container.
 
         Args:
             traj_file : The trajectory file of that trajectory
-            metadata: a json representation of the traj metadata
+            metadata: a dict with the traj metadata
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
             new_traj = ArchivedTrajectory(traj_file=traj_file, t_metadata=metadata)
             session.add(new_traj)
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to archive trajectory")
-        finally:
-            session.close()
 
-    def fetch_archived_trajectory(self, traj_id: int) -> tuple[str, str]:
+    def fetch_archived_trajectory(self, traj_id: int) -> tuple[str, dict]:
         """Get the trajectory file of a trajectory in the archive.
 
         Args:
@@ -390,25 +333,15 @@ class SQLFile:
         Raises:
             ValueError if the trajectory with the given id does not exist
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
+        with self.session_scope() as session:
             db_id = traj_id + 1
-            traj = session.query(ArchivedTrajectory).filter(ArchivedTrajectory.id == db_id).one_or_none()
+            traj = session.get(ArchivedTrajectory, db_id)
             if traj:
-                tfile: str = traj.traj_file
-                metadata_str: str = traj.t_metadata
-                return tfile, metadata_str
+                return traj.traj_file, traj.t_metadata
 
-            err_msg = f"Trajectory {traj_id} does not exist"
+            err_msg = f"Archived Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
             raise ValueError(err_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to fetch archived trajectory")
-            raise
-        finally:
-            session.close()
 
     def get_archived_trajectory_count(self) -> int:
         """Get the number of trajectories in the archive.
@@ -416,15 +349,8 @@ class SQLFile:
         Returns:
             The number of trajectories
         """
-        session = self._Session()
-        try:
-            return session.query(ArchivedTrajectory).count()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to count the number of archived trajectories")
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            return session.scalar(select(func.count(ArchivedTrajectory.id))) or 0
 
     def clear_archived_trajectories(self) -> int:
         """Delete the content of the archived traj table.
@@ -432,18 +358,10 @@ class SQLFile:
         Returns:
             The number of entries deleted
         """
-        session = self._Session()
-        try:
-            ndelete = session.query(ArchivedTrajectory).delete()
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to clear archived trajectories")
-            raise
-        else:
-            return ndelete
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            stmt = delete(ArchivedTrajectory)
+            result = session.execute(stmt)
+            return result.rowcount
 
     def add_splitting_data(
         self,
@@ -466,25 +384,17 @@ class SQLFile:
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
             new_split = SplittingIterations(
                 split_id=k,
                 bias=bias,
-                weight=str(weight),
-                discarded_traj_ids=json.dumps(discarded_ids),
-                ancestor_traj_ids=json.dumps(ancestor_ids),
-                min_vals=json.dumps(min_vals),
-                min_max=json.dumps(min_max),
+                weight=weight,
+                discarded_traj_ids=discarded_ids,
+                ancestor_traj_ids=ancestor_ids,
+                min_vals=min_vals,
+                min_max=min_max,
             )
             session.add(new_split)
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to add splitting data")
-            raise
-        finally:
-            session.close()
 
     def update_splitting_data(
         self,
@@ -507,24 +417,17 @@ class SQLFile:
             min_vals : The list of minimum values
             min_max : The score minimum and maximum values
         """
-        session = self._Session()
-        try:
-            dset = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+        with self.session_scope() as session:
+            stmt = select(SplittingIterations).order_by(SplittingIterations.id.desc())
+            dset = session.execute(stmt).scalars().first()
             if dset:
                 dset.split_id = k
                 dset.bias = bias
-                dset.weight = str(weight)
-                dset.discarded_traj_ids = json.dumps(discarded_ids)
-                dset.ancestor_traj_ids = json.dumps(ancestor_ids)
-                dset.min_vals = json.dumps(min_vals)
-                dset.min_max = json.dumps(min_max)
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to update the last splitting data")
-            raise
-        finally:
-            session.close()
+                dset.weight = weight
+                dset.discarded_traj_ids = discarded_ids
+                dset.ancestor_traj_ids = ancestor_ids
+                dset.min_vals = min_vals
+                dset.min_max = min_max
 
     def mark_last_iteration_as_completed(self) -> None:
         """Mark the last splitting iteration as complete.
@@ -534,18 +437,11 @@ class SQLFile:
         "completed" otherwise the iteration is considered incomplete, i.e.
         interrupted by some error or wall clock limit.
         """
-        session = self._Session()
-        try:
-            iteration = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+        with self.session_scope() as session:
+            stmt = select(SplittingIterations).order_by(SplittingIterations.id.desc())
+            iteration = session.execute(stmt).scalars().first()
             if iteration:
                 iteration.status = "completed"
-                session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to mark splitting iteration as completed")
-            raise
-        finally:
-            session.close()
 
     def get_k_split(self) -> int:
         """Get the current splitting iteration counter.
@@ -553,19 +449,11 @@ class SQLFile:
         Returns:
             The ksplit from the last entry in the SplittingIterations table
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
             last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
             if last_split:
                 return last_split.split_id + last_split.bias
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to query k_split !")
-            raise
-        else:
             return 0
-        finally:
-            session.close()
 
     def check_new_min_of_maxes(self, newmin: float) -> None:
         """Compare the incoming min to the last entry.
@@ -576,20 +464,13 @@ class SQLFile:
         Args:
             newmin: the new minimum of maximums
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
             last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
             if last_split:
-                old_min = cast("list[float]", json.loads(last_split.min_max))[0]
+                old_min = last_split.min_max[0]
                 if newmin <= old_min:
                     wrn_msg = f"New iteration has minimum level {newmin} lower than old one {old_min}"
                     _logger.warning(wrn_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to query k_split !")
-            raise
-        finally:
-            session.close()
 
     def get_iteration_count(self) -> int:
         """Get the number of splitting iteration stored.
@@ -597,15 +478,8 @@ class SQLFile:
         Returns:
             The length of the SplittingIterations table
         """
-        session = self._Session()
-        try:
-            return session.query(SplittingIterations).count()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to count the number of splitting iteration stored")
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            return session.scalar(select(func.count(SplittingIterations.id))) or 0
 
     def fetch_splitting_data(
         self, k_id: int
@@ -621,32 +495,23 @@ class SQLFile:
         Raises:
             ValueError if the splitting iteration with the given id does not exist
         """
-        session = self._Session()
-        try:
-            # SQL indexing starts at 1, adjust ID
-            db_id = k_id + 1
-            split = session.query(SplittingIterations).filter(SplittingIterations.id == db_id).one_or_none()
+        with self.session_scope() as session:
+            split = session.get(SplittingIterations, k_id + 1)
             if split:
                 return (
-                    int(split.split_id),
-                    int(split.bias),
-                    float(split.weight),
-                    cast("list[int]", json.loads(split.discarded_traj_ids)),
-                    cast("list[int]", json.loads(split.ancestor_traj_ids)),
-                    cast("list[float]", json.loads(split.min_vals)),
-                    cast("list[float]", json.loads(split.min_max)),
+                    split.split_id,
+                    split.bias,
+                    split.weight,
+                    split.discarded_traj_ids,
+                    split.ancestor_traj_ids,
+                    split.min_vals,
+                    split.min_max,
                     split.status,
                 )
 
             err_msg = f"Splitting iteration {k_id} does not exist"
             _logger.error(err_msg)
             raise ValueError(err_msg)
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to fetch splitting iteration data")
-            raise
-        finally:
-            session.close()
 
     def get_ongoing(self) -> list[int] | None:
         """Get the list of ongoing trajectories if any.
@@ -654,19 +519,12 @@ class SQLFile:
         Returns:
             Either a list trajectories or None if nothing was left to do
         """
-        session = self._Session()
-        try:
-            last_split = session.query(SplittingIterations).order_by(SplittingIterations.id.desc()).first()
+        with self.session_scope() as session:
+            stmt = select(SplittingIterations).order_by(SplittingIterations.id.desc())
+            last_split = session.execute(stmt).scalars().first()
             if last_split and last_split.status == "locked":
-                return cast("list[int]", json.loads(last_split.discarded_traj_ids))
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to query the list of ongoing trajectories !")
-            raise
-        else:
+                return last_split.discarded_traj_ids
             return None
-        finally:
-            session.close()
 
     def get_weights(self) -> npt.NDArray[np.number]:
         """Read the weights from the database.
@@ -674,18 +532,9 @@ class SQLFile:
         Returns:
             the weight for each splitting iteration as a numpy array
         """
-        session = self._Session()
-        try:
-            return np.array(
-                [r[0] for r in session.query(SplittingIterations).with_entities(SplittingIterations.weight).all()],
-                dtype="float32",
-            )
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to access the weights !")
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            weights = session.execute(select(SplittingIterations.weight)).scalars().all()
+            return np.array(weights, dtype="float32")
 
     def get_biases(self) -> npt.NDArray[np.number]:
         """Read the biases from the database.
@@ -693,18 +542,9 @@ class SQLFile:
         Returns:
             the bias for each splitting iteration as a numpy array
         """
-        session = self._Session()
-        try:
-            return np.array(
-                [r[0] for r in session.query(SplittingIterations).with_entities(SplittingIterations.bias).all()],
-                dtype="int",
-            )
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to access the biases !")
-            raise
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            biases = session.execute(select(SplittingIterations.bias)).scalars().all()
+            return np.array(biases, dtype="int")
 
     def get_minmax(self) -> npt.NDArray[np.number]:
         """Read the min/max from the database.
@@ -712,23 +552,16 @@ class SQLFile:
         Returns:
             the 2D Numpy array with k_index, min, max
         """
-        session = self._Session()
-        try:
+        with self.session_scope() as session:
+            stmt = select(
+                SplittingIterations.split_id,
+                SplittingIterations.min_max,
+            )
+            results = session.execute(stmt).all()
             return np.array(
-                [
-                    [r[0], json.loads(r[1])[0], json.loads(r[1])[1]]
-                    for r in session.query(SplittingIterations)
-                    .with_entities(SplittingIterations.split_id, SplittingIterations.min_max)
-                    .all()
-                ],
+                [[float(r.split_id), float(r.min_max[0]), float(r.min_max[1])] for r in results],
                 dtype="float32",
             )
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to access the biases !")
-            raise
-        finally:
-            session.close()
 
     def clear_splitting_data(self) -> int:
         """Delete the content of the splitting data table.
@@ -736,18 +569,10 @@ class SQLFile:
         Returns:
             The number of entries deleted
         """
-        session = self._Session()
-        try:
-            ndelete = session.query(SplittingIterations).delete()
-            session.commit()
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to clear splitting iterations data.")
-            raise
-        else:
-            return ndelete
-        finally:
-            session.close()
+        with self.session_scope() as session:
+            stmt = delete(SplittingIterations)
+            result = session.execute(stmt)
+            return result.rowcount
 
     def dump_file_json(self, json_file: str | None = None) -> None:
         """Dump the content of the trajectory table to a json file.
@@ -755,36 +580,30 @@ class SQLFile:
         Args:
             json_file: an optional file name (or path) to dump the data to
         """
-        db_data = {}
-        session = self._Session()
-        try:
+        db_data: dict[str, Any] = {}
+        with self.session_scope() as session:
             db_data["trajectories"] = {
                 traj.id - 1: {"file": traj.traj_file, "status": traj.status, "metadata": traj.t_metadata}
-                for traj in session.query(Trajectory).all()
+                for traj in session.execute(select(Trajectory)).scalars().all()
             }
             db_data["archived_trajectories"] = {
                 traj.id - 1: {"file": traj.traj_file, "metadata": traj.t_metadata}
-                for traj in session.query(ArchivedTrajectory).all()
+                for traj in session.execute(select(ArchivedTrajectory)).scalars().all()
             }
+            splits = session.execute(select(SplittingIterations)).scalars().all()
             db_data["splitting_data"] = {
-                split.id: {
-                    "k": str(split.split_id),
-                    "bias": str(split.bias),
-                    "weight": split.weight,
-                    "min_max_start": json.loads(split.min_max),
-                    "discarded_ids": json.loads(split.discarded_traj_ids),
-                    "ancestor_ids": json.loads(split.ancestor_traj_ids),
-                    "min_vals": json.loads(split.min_vals),
-                    "status": split.status,
+                s.id: {
+                    "k": s.split_id,
+                    "bias": s.bias,
+                    "weight": s.weight,
+                    "min_max_start": s.min_max,
+                    "discarded_ids": s.discarded_traj_ids,
+                    "ancestor_ids": s.ancestor_traj_ids,
+                    "min_vals": s.min_vals,
+                    "status": s.status,
                 }
-                for split in session.query(SplittingIterations).all()
+                for s in splits
             }
-        except SQLAlchemyError:
-            session.rollback()
-            _logger.exception("Failed to query the content of the DB")
-            raise
-        finally:
-            session.close()
 
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
