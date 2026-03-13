@@ -8,9 +8,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
+from typing import cast
 import numpy as np
 import numpy.typing as npt
 from sqlalchemy import JSON
+from sqlalchemy import CursorResult
 from sqlalchemy import create_engine
 from sqlalchemy import delete
 from sqlalchemy import func
@@ -390,7 +392,7 @@ class SQLFile:
         with self.session_scope() as session:
             stmt = delete(ArchivedTrajectory)
             result = session.execute(stmt)
-            return result.rowcount
+            return int(cast("CursorResult", result).rowcount or 0)
 
     def add_splitting_data(
         self,
@@ -601,7 +603,7 @@ class SQLFile:
         with self.session_scope() as session:
             stmt = delete(SplittingIterations)
             result = session.execute(stmt)
-            return result.rowcount
+            return int(cast("CursorResult", result).rowcount or 0)
 
     def dump_file_json(self, json_file: str | None = None) -> None:
         """Dump the content of the trajectory table to a json file.
