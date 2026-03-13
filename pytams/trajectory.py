@@ -336,15 +336,13 @@ class Trajectory(Generic[T_Noise, T_State]):
     @classmethod
     def init_from_metadata(
         cls,
-        metadata_json: str,
-        fmodel_t: type[ForwardModelBaseClass],
+        metadata: dict[str, Any],
+        fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
         parameters: dict[Any, Any],
         workdir: Path | None = None,
         frozen: bool = False,
     ) -> Trajectory:
         """Initialize a trajectory from serialized metadata."""
-        metadata = cls.deserialize_metadata(metadata_json)
-
         traj: Trajectory[T_Noise, T_State] = Trajectory(
             traj_id=metadata["id"],
             weight=metadata["weight"],
@@ -369,8 +367,8 @@ class Trajectory(Generic[T_Noise, T_State]):
     def restore_from_checkfile(
         cls,
         checkfile: Path,
-        metadata_json: str,
-        fmodel_t: type[ForwardModelBaseClass],
+        metadata: dict[str, Any],
+        fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
         parameters: dict[Any, Any],
         workdir: Path | None = None,
         frozen: bool = False,
@@ -382,7 +380,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             raise FileNotFoundError
 
         rest_traj: Trajectory[T_Noise, T_State] = Trajectory.init_from_metadata(
-            metadata_json, fmodel_t, parameters, workdir, frozen
+            metadata, fmodel_t, parameters, workdir, frozen
         )
 
         # Read in trajectory data
@@ -675,6 +673,26 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         return None
 
+    def get_metadata(self) -> dict:
+        """Return a dict with traj metadata.
+
+        Returns:
+            The trajectory metadata in a dict.
+        """
+        return {
+            "id": self.id(),
+            "weight": float(self._weight),
+            "t_end": self._t_end,
+            "t_cur": self._t_cur,
+            "dt": self._dt,
+            "ended": bool(self._has_ended),
+            "converged": bool(self._has_converged),
+            "score_max": float(self._score_max),
+            "length": self.get_length(),
+            "nstep_compute": self._computed_steps,
+            "branching_history": self._branching_history,
+        }
+
     def serialize_metadata_json(self) -> str:
         """Return a json string with metadata.
 
@@ -682,19 +700,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             A json string with the trajectory metadata
         """
         return json.dumps(
-            {
-                "id": self.id(),
-                "weight": self._weight,
-                "t_end": self._t_end,
-                "t_cur": self._t_cur,
-                "dt": self._dt,
-                "ended": bool(self._has_ended),
-                "converged": bool(self._has_converged),
-                "score_max": self._score_max,
-                "length": self.get_length(),
-                "nstep_compute": self._computed_steps,
-                "branching_history": self._branching_history,
-            },
+            self.get_metadata(),
             default=str,
         )
 

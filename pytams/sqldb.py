@@ -284,6 +284,35 @@ class SQLFile:
         with self.session_scope() as session:
             return session.scalar(select(func.count(Trajectory.id))) or 0
 
+    def get_ended_trajectory_count(self) -> int:
+        """Return the number of trajectories that have 'ended' in their metadata."""
+        with self.session_scope() as session:
+            stmt = select(func.count(Trajectory.id)).where(Trajectory.t_metadata["ended"].as_boolean())
+            return session.scalar(stmt) or 0
+
+    def get_converged_trajectory_count(self) -> int:
+        """Return the number of trajectories that have 'converged' in their metadata."""
+        with self.session_scope() as session:
+            stmt = select(func.count(Trajectory.id)).where(Trajectory.t_metadata["converged"].as_boolean())
+            return session.scalar(stmt) or 0
+
+    def get_total_computed_steps(self) -> int:
+        """Sum the 'nstep_compute' field across all active and archived trajectories."""
+        with self.session_scope() as session:
+            # Create a subquery for active trajectories
+            active_steps = select(Trajectory.t_metadata["nstep_compute"].as_integer().label("steps"))
+
+            # Create a subquery for archived trajectories
+            archived_steps = select(ArchivedTrajectory.t_metadata["nstep_compute"].as_integer().label("steps"))
+
+            # Combine them using union_all
+            combined = active_steps.union_all(archived_steps).subquery()
+
+            # Select the sum of the combined column
+            total_sum = session.scalar(select(func.sum(combined.c.steps)))
+
+            return int(total_sum) if total_sum else 0
+
     def fetch_trajectory(self, traj_id: int) -> tuple[str, dict]:
         """Get the trajectory file of a trajectory.
 

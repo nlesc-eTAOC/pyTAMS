@@ -27,7 +27,7 @@ def update_trajectory_in_sql(traj: Trajectory, sqldb: SQLFile | None = None, db_
         checkfile_str = (
             traj.get_checkfile().relative_to(Path(db_path)).as_posix() if db_path else traj.get_checkfile().as_posix()
         )
-        sqldb.update_trajectory(traj.id(), checkfile_str, traj.serialize_metadata_json())
+        sqldb.update_trajectory(traj.id(), checkfile_str, traj.get_metadata())
 
 
 def traj_advance_with_exception(

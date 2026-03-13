@@ -391,7 +391,7 @@ class Database(Generic[T_Noise, T_State]):
 
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
-            checkpath, metadata_str = self._pool_db.fetch_trajectory(n)
+            checkpath, metadata = self._pool_db.fetch_trajectory(n)
             traj_checkfile = Path(self._abs_path) / checkpath
             workdir = Path(self._abs_path / f"trajectories/{traj_checkfile.stem}")
             if traj_checkfile.exists():
@@ -399,7 +399,7 @@ class Database(Generic[T_Noise, T_State]):
                 self.append_traj(
                     Trajectory.restore_from_checkfile(
                         traj_checkfile,
-                        metadata_str,
+                        metadata,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -410,7 +410,7 @@ class Database(Generic[T_Noise, T_State]):
             else:
                 self.append_traj(
                     Trajectory.init_from_metadata(
-                        metadata_str,
+                        metadata,
                         fmodel_t=self._fmodel_t,
                         parameters=self._parameters,
                         workdir=workdir,
@@ -488,7 +488,7 @@ class Database(Generic[T_Noise, T_State]):
         else:
             checkfile_str = f"{a_traj.idstr()}.xml"
         if update_db:
-            self._pool_db.add_trajectory(checkfile_str, a_traj.serialize_metadata_json())
+            self._pool_db.add_trajectory(checkfile_str, a_traj.get_metadata())
 
         self._trajs_db.append(a_traj)
 
@@ -503,7 +503,7 @@ class Database(Generic[T_Noise, T_State]):
         checkfile = Path(self._abs_path) / checkfile_str
         a_traj.set_checkfile(checkfile)
         if update_db:
-            self._pool_db.archive_trajectory(checkfile_str, a_traj.serialize_metadata_json())
+            self._pool_db.archive_trajectory(checkfile_str, a_traj.get_metadata())
 
         self._archived_trajs_db.append(a_traj)
 
@@ -623,7 +623,7 @@ class Database(Generic[T_Noise, T_State]):
             if self._save_to_disk
             else traj.get_checkfile().as_posix()
         )
-        self._pool_db.archive_trajectory(checkfile_str, traj.serialize_metadata_json())
+        self._pool_db.archive_trajectory(checkfile_str, traj.get_metadata())
 
     def lock_trajectory(self, tid: int, allow_completed_lock: bool = False) -> bool:
         """Lock a trajectory in the SQL DB.
@@ -666,7 +666,7 @@ class Database(Generic[T_Noise, T_State]):
             SQLAlchemyError if the DB could not be accessed
         """
         checkfile_str = traj.get_checkfile().relative_to(self._abs_path).as_posix()
-        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.serialize_metadata_json())
+        self._pool_db.update_trajectory(traj_id, checkfile_str, traj.get_metadata())
 
     def update_trajectories_weights(self) -> None:
         """Update the weights of all the trajectories.
@@ -675,9 +675,9 @@ class Database(Generic[T_Noise, T_State]):
         """
         tweight = self.weights()[-1] / self.n_traj()
         for t in self._trajs_db:
-            t.set_weight(tweight)
+            t.set_weight(float(tweight))
             if self._save_to_disk:
-                self._pool_db.update_trajectory_weight(t.id(), tweight)
+                self._pool_db.update_trajectory_weight(t.id(), float(tweight))
 
     def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
@@ -841,21 +841,11 @@ class Database(Generic[T_Noise, T_State]):
 
     def count_ended_traj(self) -> int:
         """Return the number of trajectories that ended."""
-        count = 0
-        for i in range(self._pool_db.get_trajectory_count()):
-            _, metadata = self._pool_db.fetch_trajectory(i)
-            if Trajectory.deserialize_metadata(metadata)["ended"]:
-                count += 1
-        return count
+        return self._pool_db.get_ended_trajectory_count()
 
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
-        count = 0
-        for i in range(self._pool_db.get_trajectory_count()):
-            _, metadata = self._pool_db.fetch_trajectory(i)
-            if Trajectory.deserialize_metadata(metadata)["converged"]:
-                count += 1
-        return count
+        return self._pool_db.get_converged_trajectory_count()
 
     def count_computed_steps(self) -> int:
         """Return the total number of steps taken.
@@ -863,16 +853,7 @@ class Database(Generic[T_Noise, T_State]):
         This total count includes both the active and
         discarded trajectories.
         """
-        count = 0
-        for i in range(self._pool_db.get_trajectory_count()):
-            _, metadata = self._pool_db.fetch_trajectory(i)
-            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
-
-        for i in range(self._pool_db.get_archived_trajectory_count()):
-            _, metadata = self._pool_db.fetch_archived_trajectory(i)
-            count = count + Trajectory.deserialize_metadata(metadata)["nstep_compute"]
-
-        return count
+        return self._pool_db.get_total_computed_steps()
 
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
