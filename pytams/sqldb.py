@@ -322,7 +322,7 @@ class SQLFile:
             traj_id : The trajectory id
 
         Return:
-            The trajectory file
+            A tuple with trajectory file as a str and the trajectory metadata as dict
 
         Raises:
             ValueError if the trajectory with the given id does not exist
@@ -359,7 +359,7 @@ class SQLFile:
             traj_id : The trajectory id
 
         Return:
-            The trajectory file
+            A tuple with trajectory file as a str and the trajectory metadata as dict
 
         Raises:
             ValueError if the trajectory with the given id does not exist
