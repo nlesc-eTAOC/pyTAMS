@@ -550,6 +550,16 @@ class Database(Generic[T_Noise, T_State]):
             raise ValueError(err_msg)
         self._trajs_db[idx] = copy.deepcopy(traj)
 
+    def _check_for_diag_request(self) -> bool:
+        """Check if any diagnostics are requested in the parameters.
+
+        Returns:
+            A boolean indicating if diagnostics are requested
+        """
+        diag_list = self._parameters.get("tams", {}).get("diagnostics", [])
+        # Return True only if the list exists and has at least one entry
+        return isinstance(diag_list, list) and len(diag_list) > 0
+
     def header_file(self) -> str:
         """Helper returning the DB header file.
 
@@ -680,10 +690,11 @@ class Database(Generic[T_Noise, T_State]):
             if self._save_to_disk:
                 self._pool_db.update_trajectory_weight(t.id(), float(tweight))
 
-        ddb_path = self._abs_path / "./diagDB.db"
-        ddb = DiagDB(ddb_path.absolute().as_posix())
-        ddb.update_all_active_weights(tweight)
-        ddb.close()
+        if self._check_for_diag_request():
+            ddb_path = self._abs_path / "./diagDB.db" if self._save_to_disk else Path("./diagDB.db")
+            ddb = DiagDB(ddb_path.absolute().as_posix())
+            ddb.update_all_active_weights(tweight)
+            ddb.close()
 
     def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
