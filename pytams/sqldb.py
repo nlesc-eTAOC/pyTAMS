@@ -565,7 +565,7 @@ class SQLFile:
         """
         with self.session_scope() as session:
             weights = session.execute(select(SplittingIterations.weight)).scalars().all()
-            return np.array(weights, dtype="float32")
+            return np.array(weights, dtype="float64")
 
     def get_biases(self) -> npt.NDArray[np.number]:
         """Read the biases from the database.
@@ -591,7 +591,7 @@ class SQLFile:
             results = session.execute(stmt).all()
             return np.array(
                 [[float(r.split_id), float(r.min_max[0]), float(r.min_max[1])] for r in results],
-                dtype="float32",
+                dtype="float64",
             )
 
     def clear_splitting_data(self) -> int:
