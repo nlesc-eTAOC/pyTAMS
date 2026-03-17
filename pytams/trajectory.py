@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 import json
 import logging
 import shutil
@@ -12,6 +13,9 @@ from typing import TypeVar
 from typing import cast
 import numpy as np
 import numpy.typing as npt
+from pytams.diagdb import DiagDB
+from pytams.diagnostic import DiagnosticPlugin
+from pytams.diagnostic import diagnosticfactory
 from pytams.snapshot import Snapshot
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
@@ -63,7 +67,7 @@ class Trajectory(Generic[T_Noise, T_State]):
     a list of the model snapshots. Note that the class uses a plain list of snapshots
     and not a more computationally efficient data structure such as a numpy array
     for convenience. It is assumed that the computational cost of running TAMS
-    reside in the forward model and the overhead of the trajectory class is negligible.
+    resides in the forward model and the overhead of the trajectory class is negligible.
 
     It also provide the forward model with the necessary context to advance in time,
     method to move forward in time, methods to save/load the trajectory to/from disk
@@ -87,11 +91,16 @@ class Trajectory(Generic[T_Noise, T_State]):
         _dt : the stochastic time step size
     """
 
+    # Maximum number of Trajectory objects and history length
+    # These are used in assembling the unique ID for each trajectory
+    max_ntraj = 10000
+    max_nbranch = 9999
+
     def __init__(
         self,
         traj_id: int,
         weight: float,
-        fmodel_t: type[ForwardModelBaseClass] | None,
+        fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]] | None,
         parameters: dict[Any, Any],
         workdir: Path | None = None,
         frozen: bool = False,
@@ -138,7 +147,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         self._convergedVal: float = traj_params.get("targetscore", 0.95)
 
         # List of snapshots
-        self._snaps: list[Snapshot] = []
+        self._snaps: list[Snapshot[T_Noise, T_State]] = []
 
         # When using sparse state or for other reasons, the noise for the next few
         # steps might be already available. This backlog is used to store them.
@@ -161,7 +170,17 @@ class Trajectory(Generic[T_Noise, T_State]):
         if frozen or fmodel_t is None:
             self._fmodel = None
         else:
-            self._fmodel = fmodel_t(self._tid * 10000 + self.get_nbranching(), parameters, self._workdir)
+            self._fmodel = fmodel_t(
+                self._tid * (self.max_nbranch + 1) + self.get_nbranching(), parameters, self._workdir
+            )
+
+        # Diagnostics
+        # They are initialize upon the first call so that
+        # the diagnostic database access is not pickled in the task
+        self._has_diagnostics = self._check_for_diag_request()
+        self._diagplugins: list[DiagnosticPlugin] = []
+        self._ddb: DiagDB | None = None
+        self._initialized_diags = False
 
     def set_checkfile(self, path: Path) -> None:
         """Setter of the trajectory checkFile.
@@ -192,12 +211,25 @@ class Trajectory(Generic[T_Noise, T_State]):
         return self._workdir
 
     def id(self) -> int:
-        """Return trajectory Id.
+        """Return trajectory index.
+
+        This is the index of the trajectory in the ensemble.
 
         Returns:
             the trajectory id
         """
         return self._tid
+
+    def unique_id(self) -> int:
+        """Return trajectory unique Id.
+
+        Combining the index and the number of branching events.
+        This makes a unique ID.
+
+        Returns:
+            the trajectory unique id
+        """
+        return self._tid * (self.max_nbranch + 1) + self.get_nbranching()
 
     def idstr(self) -> str:
         """Return trajectory Id as a padded string.
@@ -242,6 +274,15 @@ class Trajectory(Generic[T_Noise, T_State]):
             # Do a single step and keep track of remaining walltime
             _ = self._one_step()
 
+            # Initialize diagnostic now, access to diagdb
+            # no longer needs to be pickled at this point
+            if not self._initialized_diags:
+                self._setup_diagnostics()
+
+            # Perform any diagnostic requested
+            for plugin in self._diagplugins:
+                plugin.update(self._snaps[-2], self._snaps[-1])
+
             remaining_time = walltime - time.monotonic() + start_time
 
         if self._t_cur >= self._t_end or self._has_converged:
@@ -249,6 +290,13 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         if self._has_ended:
             self._fmodel.clear()
+
+        # Clear the diagnostic
+        if self._ddb is not None and self._initialized_diags:
+            self._ddb.close()
+            self._ddb = None
+            self._diagplugins = []
+            self._initialized_diags = False
 
         if remaining_time < 0.05 * walltime:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
@@ -308,6 +356,54 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         return score
 
+    def _check_for_diag_request(self) -> bool:
+        """Check if any diagnostics are requested in the parameters.
+
+        Returns:
+            A boolean indicating if diagnostics are requested
+        """
+        diag_list = self._parameters_full.get("tams", {}).get("diagnostics", [])
+        # Return True only if the list exists and has at least one entry
+        return isinstance(diag_list, list) and len(diag_list) > 0
+
+    def _setup_diagnostics(self) -> None:
+        """Setup the diagnostic."""
+        if self._fmodel is not None:
+            if self._workdir == Path.cwd():
+                self._ddb = DiagDB("./diagDB.db")
+            else:
+                db_path = self._workdir.parents[1] / "./diagDB.db"
+                self._ddb = DiagDB(db_path.absolute().as_posix())
+            self._diagplugins = diagnosticfactory(
+                self._parameters_full,
+                self.unique_id(),
+                self._weight,
+                self._workdir,
+                self._fmodel.diagnostic_hook,
+                self._ddb,
+            )
+            self._initialized_diags = True
+
+    def _branch_diagnostics(
+        self, ancestor_id: int, discarded_id: int, child_id: int, child_weight: float, score_threshold: float
+    ) -> None:
+        """Duplicate diagnostics entry while branching.
+
+        Args:
+            ancestor_id: the ID of the ancestor traj to duplicate
+            discarded_id: the ID of the discarded traj
+            child_id: the ID of the child traj
+            child_weight: the weight of the child traj
+            score_threshold: the score threshold up to which duplication is needed
+        """
+        if self._workdir == Path.cwd():
+            ddb = DiagDB("./diagDB.db")
+        else:
+            db_path = self._workdir.parents[1] / "./diagDB.db"
+            ddb = DiagDB(db_path.absolute().as_posix())
+        ddb.duplicate_diagnostic_history(ancestor_id, discarded_id, child_id, child_weight, score_threshold)
+        ddb.close()
+
     def setup_noise(self) -> None:
         """Prepare the noise for the next step."""
         # Set the noise for the next model step
@@ -325,7 +421,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         if self._fmodel:
             need_state = (self._sparse_state_beg + self._step) % self._sparse_state_int == 0 or self._step == 0
             self._snaps.append(
-                Snapshot(
+                Snapshot[T_Noise, T_State](
                     time=self._t_cur,
                     score=score if score else self._fmodel.score(),
                     noise=self._fmodel.noise,
@@ -341,7 +437,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         parameters: dict[Any, Any],
         workdir: Path | None = None,
         frozen: bool = False,
-    ) -> Trajectory:
+    ) -> Trajectory[T_Noise, T_State]:
         """Initialize a trajectory from serialized metadata."""
         traj: Trajectory[T_Noise, T_State] = Trajectory(
             traj_id=metadata["id"],
@@ -372,7 +468,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         parameters: dict[Any, Any],
         workdir: Path | None = None,
         frozen: bool = False,
-    ) -> Trajectory:
+    ) -> Trajectory[T_Noise, T_State]:
         """Return a trajectory restored from an XML chkfile."""
         if not checkfile.exists():
             err_msg = f"Trajectory {checkfile} does not exist."
@@ -390,7 +486,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         if snapshots is not None:
             for snap in snapshots:
                 time, score, noise, state = read_xml_snapshot(snap)
-                rest_traj._snaps.append(Snapshot(time=time, score=score, noise=noise, state=state))
+                rest_traj._snaps.append(Snapshot[T_Noise, T_State](time=time, score=score, noise=noise, state=state))
 
         # If the trajectory is frozen, that is all we need. Otherwise
         # handle sparse state, noise backlog and necessary fmodel initialization
@@ -412,7 +508,9 @@ class Trajectory(Generic[T_Noise, T_State]):
 
             # Ensure everything is set to start the time stepping loop
             rest_traj.setup_noise()
-            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
+            # mypy is not that bright, need explicit check here
+            if rest_traj._snaps[-1].state is not None:
+                rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
 
             # Enable the model to perform tweaks
             # after a trajectory restore
@@ -423,8 +521,8 @@ class Trajectory(Generic[T_Noise, T_State]):
     @classmethod
     def branch_from_trajectory(
         cls,
-        from_traj: Trajectory,
-        rst_traj: Trajectory,
+        from_traj: Trajectory[T_Noise, T_State],
+        rst_traj: Trajectory[T_Noise, T_State],
         score: float,
         new_weight: float,
     ) -> Trajectory:
@@ -443,79 +541,137 @@ class Trajectory(Generic[T_Noise, T_State]):
             score: a threshold score
             new_weight: the weight of the child trajectory
         """
-        # Check for empty trajectory
-        if len(from_traj._snaps) == 0:
-            tid, nb = get_index_from_id(rst_traj.idstr())
-            new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
-            fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-            rest_traj: Trajectory[T_Noise, T_State] = Trajectory(
-                traj_id=rst_traj.id(),
-                weight=new_weight,
-                fmodel_t=fmodel_t,
-                parameters=from_traj._parameters_full,
-                workdir=new_workdir,
-            )
-            rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
+        # Initialize the new trajectory object (handles path and ID logic)
+        rest_traj = cls._init_branched_trajectory(from_traj, rst_traj, new_weight)
+
+        # Return empty the empty trajectory immediately
+        if not from_traj._snaps:
             return rest_traj
 
-        # To ensure that TAMS converges, branching occurs on
-        # the first snapshot with a score *strictly* above the target
-        # Traverse the trajectory until a snapshot with a score >
-        # the target is encountered
-        high_score_idx = 0
-        last_snap_with_state = 0
-        while from_traj._snaps[high_score_idx].score <= score:
-            high_score_idx += 1
-            if from_traj._snaps[high_score_idx].has_state:
-                last_snap_with_state = high_score_idx
+        # locate the branching points
+        high_score_idx, last_snap_with_state = cls._find_branch_indices(from_traj, score)
 
-        # Init empty trajectory
+        # Transfer the data from the ancestor to the child
+        cls._transfer_data(from_traj, rest_traj, high_score_idx, last_snap_with_state)
+
+        # Finalize branching
+        cls._finalize_branch(from_traj.unique_id(), rst_traj.unique_id(), rest_traj, new_weight)
+
+        return rest_traj
+
+    @classmethod
+    def _init_branched_trajectory(
+        cls, from_traj: Trajectory[T_Noise, T_State], rst_traj: Trajectory[T_Noise, T_State], weight: float
+    ) -> Trajectory[T_Noise, T_State]:
+        """Initialize a new trajectory for branching.
+
+        Args:
+            from_traj: an already existing trajectory to restart from
+            rst_traj: the trajectory being restarted
+            weight: the weight of the child trajectory
+        """
         tid, nb = get_index_from_id(rst_traj.idstr())
-        new_workdir = Path(rst_traj.get_workdir().parents[0] / form_trajectory_id(tid, nb + 1))
+        new_name = form_trajectory_id(tid, nb + 1)
+        new_workdir = Path(rst_traj.get_workdir().parents[0] / new_name)
         fmodel_t = type(from_traj._fmodel) if from_traj._fmodel else None
-        rest_traj = Trajectory(
+
+        new_traj: Trajectory[T_Noise, T_State] = Trajectory(
             traj_id=rst_traj.id(),
-            weight=new_weight,
+            weight=weight,
             fmodel_t=fmodel_t,
             parameters=from_traj._parameters_full,
             workdir=new_workdir,
         )
-        rest_traj._branching_history = rst_traj._branching_history
-        rest_traj._branching_history.append(from_traj.id())
-        rest_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / f"{rest_traj.idstr()}.xml"))
 
-        # If ancestor already have a backlog,
-        # prepend it if the state id matches
-        if last_snap_with_state == from_traj.get_last_state_id() and len(from_traj.noise_backlog) > 0:
-            rest_traj.noise_backlog = rest_traj.noise_backlog + list(reversed(from_traj.noise_backlog))
+        xml_name = f"{new_traj.idstr()}.xml"
+        new_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / xml_name))
 
-        # Append snapshots, up to high_score_idx + 1 to
-        # ensure > behavior
-        for k in range(high_score_idx + 1):
-            if k < last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
-            elif k == last_snap_with_state:
-                rest_traj._snaps.append(from_traj._snaps[k])
-                rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
-            else:
-                rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
+        # Copy history if not empty
+        if from_traj._snaps:
+            new_traj._branching_history = copy.deepcopy(rst_traj._branching_history)
+            new_traj._branching_history.append(from_traj.id())
 
-        # Reverse the backlog to ensure correct order
+        return new_traj
+
+    @staticmethod
+    def _find_branch_indices(from_traj: Trajectory[T_Noise, T_State], score_threshold: float) -> tuple[int, int]:
+        """Finds the split index and the last index containing a state.
+
+        To ensure that TAMS converges, branching occurs on
+        the first snapshot with a score *strictly* above the target.
+
+        Args:
+            from_traj: the ancestor trajectory
+            score_threshold: the score threshold up to which we must copy
+
+        Returns:
+            a tuple with the index of the first snapshot above threshold and
+            the index of the last snapshot with a state (equal or below high_score_idx).
+        """
+        high_score_idx = 0
+        last_state_idx = 0
+        for i, snap in enumerate(from_traj._snaps):
+            if snap.has_state:
+                last_state_idx = i
+            if snap.score > score_threshold:
+                high_score_idx = i
+                break
+        return high_score_idx, last_state_idx
+
+    @staticmethod
+    def _transfer_data(
+        from_traj: Trajectory[T_Noise, T_State], rest_traj: Trajectory[T_Noise, T_State], high_idx: int, state_idx: int
+    ) -> None:
+        """Transfer data from the ancestor to the child.
+
+        Args:
+            from_traj: the ancestor trajectory
+            rest_traj: the child trajectory
+            high_idx: the highest index of the snapshot to transfer
+            state_idx: the highest index of the snapshot with noise to transfer
+        """
+        # Prepend existing backlog if states align
+        if state_idx == from_traj.get_last_state_id() and from_traj.noise_backlog:
+            rest_traj.noise_backlog.extend(reversed(from_traj.noise_backlog))
+
+        # Separate snapshots from noise backlog
+        # Everything up to the last state is a full snapshot
+        rest_traj._snaps = from_traj._snaps[: state_idx + 1]
+
+        # Everything between last state and high_score_idx becomes noise backlog
+        for k in range(state_idx, high_idx + 1):
+            rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
+
         rest_traj.noise_backlog.reverse()
 
-        # Update trajectory metadata
+    @staticmethod
+    def _finalize_branch(
+        ancestor_id: int, discarded_id: int, rest_traj: Trajectory[T_Noise, T_State], weight: float
+    ) -> None:
+        """Finalizes metadata, model state, and diagnostics.
+
+        Args:
+            ancestor_id: the unique ID of the ancestor traj
+            discarded_id: the unique ID of the discarded traj
+            rest_traj: the child trajectory
+            weight: the weight of the new child trajectory
+        """
         rest_traj._t_cur = rest_traj._snaps[-1].time
         rest_traj._step = len(rest_traj._snaps) - 1
+
         if rest_traj._fmodel:
             rest_traj.setup_noise()
-            rest_traj._fmodel.set_current_state(rest_traj._snaps[-1].state)
+            last_snap = rest_traj._snaps[-1]
+            if last_snap.state is not None:
+                rest_traj._fmodel.set_current_state(last_snap.state)
+
             rest_traj.update_metadata()
+            rest_traj._fmodel.post_trajectory_branching_hook(rest_traj._step, rest_traj._t_cur)
 
-            # Enable the model to perform tweaks
-            # after a trajectory restart
-            rest_traj._fmodel.post_trajectory_branching_hook(len(rest_traj._snaps) - 1, rest_traj._t_cur)
-
-        return rest_traj
+        if rest_traj._has_diagnostics:
+            rest_traj._branch_diagnostics(
+                ancestor_id, discarded_id, rest_traj.unique_id(), weight, rest_traj._score_max
+            )
 
     def store(self, traj_file: Path | None = None, write_metadata_json: bool = False) -> None:
         """Store the trajectory data to an XML chkfile.
@@ -651,6 +807,10 @@ class Trajectory(Generic[T_Noise, T_State]):
 
     def get_nbranching(self) -> int:
         """Return the number of branching events."""
+        if len(self._branching_history) > self.max_nbranch:
+            err_msg = f"Branching history size exceeds maximum of {self.max_nbranch}!"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
         return len(self._branching_history)
 
     def get_computed_steps_count(self) -> int:

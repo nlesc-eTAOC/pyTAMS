@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import toml
+from pytams.diagdb import DiagDB
 from pytams.sqldb import SQLFile
 from pytams.trajectory import Trajectory
 from pytams.trajectory import form_trajectory_id
@@ -349,7 +350,7 @@ class Database(Generic[T_Noise, T_State]):
             workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
             t: Trajectory[T_Noise, T_State] = Trajectory(
                 traj_id=n,
-                weight=1.0 / float(self._ntraj),
+                weight=1.0,
                 fmodel_t=self._fmodel_t,
                 parameters=self._parameters,
                 workdir=workdir,
@@ -673,11 +674,16 @@ class Database(Generic[T_Noise, T_State]):
 
         Using the the current splitting iteration weight.
         """
-        tweight = self.weights()[-1] / self.n_traj()
+        tweight = self.weights()[-1]
         for t in self._trajs_db:
             t.set_weight(float(tweight))
             if self._save_to_disk:
                 self._pool_db.update_trajectory_weight(t.id(), float(tweight))
+
+        ddb_path = self._abs_path / "./diagDB.db"
+        ddb = DiagDB(ddb_path.absolute().as_posix())
+        ddb.update_all_active_weights(tweight)
+        ddb.close()
 
     def weights(self) -> npt.NDArray[np.number]:
         """Splitting iterations weights."""
@@ -708,7 +714,7 @@ class Database(Generic[T_Noise, T_State]):
         # Compute the weight of the ensemble at the current iteration
         # Insert 1.0 at the front of the weight array
         weights = np.insert(self._pool_db.get_weights(), 0, 1.0)
-        new_weight = weights[-1] * (1.0 - bias / self._ntraj)
+        new_weight = weights[-1] * (1.0 - float(bias) / float(self._ntraj))
 
         # Check the splitting iteration index. If the incoming split is not
         # equal to the one in the database, something is wrong.
@@ -846,6 +852,10 @@ class Database(Generic[T_Noise, T_State]):
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
         return self._pool_db.get_converged_trajectory_count()
+
+    def all_converged(self) -> bool:
+        """Check if all the trajectory converged."""
+        return self.count_converged_traj() == self.n_traj()
 
     def count_computed_steps(self) -> int:
         """Return the total number of steps taken.
