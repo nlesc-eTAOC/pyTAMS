@@ -3,35 +3,35 @@ from pathlib import Path
 import numpy as np
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from pytams.sqldb import SQLFile
+from pytams.trajdb import TrajDB
 
 
 def test_createdb():
-    """Initialize a SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Initialize a TrajDB."""
+    poolfile = TrajDB("test.db")
     assert poolfile.name() == "test.db"
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_createdb_inmemory():
-    """Initialize a SQLFile in memory."""
-    poolfile = SQLFile("", in_memory=True)
+    """Initialize a TrajDB in memory."""
+    poolfile = TrajDB("", in_memory=True)
     assert poolfile.name() == ""
 
 def test_createdb_read_only():
-    """Initialize a read only SQLFile."""
+    """Initialize a read only TrajDB."""
     with pytest.raises(SQLAlchemyError):
-        _ = SQLFile("testRO.db", ro_mode=True)
+        _ = TrajDB("testRO.db", ro_mode=True)
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_createdb_fail():
-    """Fail to initialize a SQLFile."""
+    """Fail to initialize a TrajDB."""
     with pytest.raises(SQLAlchemyError):
-        _ = SQLFile("/test.db")
+        _ = TrajDB("/test.db")
 
 def test_add_traj_to_db():
-    """Add a trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Add a trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
     del poolfile
@@ -39,16 +39,16 @@ def test_add_traj_to_db():
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_add_traj_to_ro_db():
-    """Try add a trajectory to an RO SQLFile."""
-    poolfile = SQLFile("test.db") # First create the DB
-    poolfile = SQLFile("test.db", ro_mode=True) # Open in RO
+    """Try add a trajectory to an RO TrajDB."""
+    poolfile = TrajDB("test.db") # First create the DB
+    poolfile = TrajDB("test.db", ro_mode=True) # Open in RO
     with pytest.raises(SQLAlchemyError):
         poolfile.add_trajectory("test.xml","")
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_update_to_db():
-    """Add and update a trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Add and update a trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.fetch_trajectory(0)[0] == "test.xml"
     poolfile.update_trajectory(0, "UpdatedTest.xml", "")
@@ -58,8 +58,8 @@ def test_add_traj_and_update_to_db():
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_try_update_traj_to_db():
-    """Try update missing trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Try update missing trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     with pytest.raises(ValueError):
         poolfile.update_trajectory(0, "UpdatedTest.xml", "dummy")
     del poolfile
@@ -67,8 +67,8 @@ def test_try_update_traj_to_db():
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_try_update_weight_to_db():
-    """Try updating weight to missing trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Try updating weight to missing trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(ValueError):
         poolfile.update_trajectory_weight(3, 1.0)
@@ -77,14 +77,14 @@ def test_try_update_weight_to_db():
 
 def test_add_traj_to_db_inmemory():
     """Add a trajectory to SQL database in memory."""
-    poolfile = SQLFile("", in_memory=True)
+    poolfile = TrajDB("", in_memory=True)
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_add_traj_to_missing_db():
-    """Add a trajectory to a deleted SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Add a trajectory to a deleted TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
     Path("./test.db").unlink(missing_ok=True)
@@ -92,27 +92,27 @@ def test_add_traj_to_missing_db():
         poolfile.add_trajectory("test2.xml","")
 
 def test_archive_traj_to_db():
-    """Archive a trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Archive a trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_add_traj_and_fetch():
-    """Add a trajectory and fetch from SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Add a trajectory and fetch from TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     poolfile.add_trajectory("test_2.xml","")
     assert poolfile.get_trajectory_count() == 2
-    traj, metadata = poolfile.fetch_trajectory(0)
+    traj, _ = poolfile.fetch_trajectory(0)
     assert traj == "test.xml"
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_fetch_unknown_traj():
     """Fetch an unknown trajectory."""
-    poolfile = SQLFile("test.db")
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     assert poolfile.get_trajectory_count() == 1
     with pytest.raises(ValueError):
@@ -121,18 +121,18 @@ def test_fetch_unknown_traj():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_archive_and_fetch_traj_to_db():
-    """Archive a trajectory to SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Archive a trajectory to TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
-    traj, metadata = poolfile.fetch_archived_trajectory(0)
+    traj, _ = poolfile.fetch_archived_trajectory(0)
     assert traj == "test.xml"
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_fetch_unknown_archived_traj():
     """Fetch an unknown archived trajectory."""
-    poolfile = SQLFile("test.db")
+    poolfile = TrajDB("test.db")
     poolfile.archive_trajectory("test.xml","")
     assert poolfile.get_archived_trajectory_count() == 1
     with pytest.raises(ValueError):
@@ -141,8 +141,8 @@ def test_fetch_unknown_archived_traj():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_trajectory():
-    """Lock a trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock a trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     status = poolfile.lock_trajectory(0)
     assert status
@@ -150,8 +150,8 @@ def test_lock_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_locked_trajectory():
-    """Lock an already locked trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock an already locked trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     status = poolfile.lock_trajectory(0)
     status = poolfile.lock_trajectory(0)
@@ -160,8 +160,8 @@ def test_lock_locked_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_release_trajectory():
-    """Lock and release a trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock and release a trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     status = poolfile.lock_trajectory(0)
     poolfile.release_trajectory(0)
@@ -171,8 +171,8 @@ def test_lock_and_release_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_complete_trajectory():
-    """Lock and mark complete a trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock and mark complete a trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     _ = poolfile.lock_trajectory(0)
     poolfile.mark_trajectory_as_completed(0)
@@ -180,8 +180,8 @@ def test_lock_and_complete_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_complete_unknown_trajectory():
-    """Lock and try to mark a trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock and try to mark a trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     _ = poolfile.lock_trajectory(0)
     with pytest.raises(ValueError):
@@ -190,8 +190,8 @@ def test_lock_and_complete_unknown_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_and_release_multiple_trajectory():
-    """Lock and release several trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock and release several trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     for i in range(10):
         poolfile.add_trajectory(f"test{i}.xml","")
         status = poolfile.lock_trajectory(0)
@@ -204,8 +204,8 @@ def test_lock_and_release_multiple_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 def test_lock_unknown_trajectory():
-    """Lock an unknown trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock an unknown trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(ValueError):
         _ = poolfile.lock_trajectory(1)
@@ -214,16 +214,16 @@ def test_lock_unknown_trajectory():
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_lock_in_missing_db():
-    """Lock a trajectory in a missing SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Lock a trajectory in a missing TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     Path("./test.db").unlink(missing_ok=True)
     with pytest.raises(SQLAlchemyError):
         _ = poolfile.lock_trajectory(0)
 
 def test_release_unknown_trajectory():
-    """Release an unknown trajectory in the SQLFile."""
-    poolfile = SQLFile("test.db")
+    """Release an unknown trajectory in the TrajDB."""
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     with pytest.raises(ValueError):
         poolfile.release_trajectory(1)
@@ -232,7 +232,7 @@ def test_release_unknown_trajectory():
 
 def test_splitting_data_add():
     """Adding splitting data to the database."""
-    poolfile = SQLFile("test.db")
+    poolfile = TrajDB("test.db")
     for i in range(10):
         poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
@@ -241,7 +241,7 @@ def test_splitting_data_add():
 
 def test_splitting_data_add_and_ongoing():
     """Adding splitting data to the database."""
-    poolfile = SQLFile("", in_memory=True)
+    poolfile = TrajDB("", in_memory=True)
     poolfile.mark_last_iteration_as_completed()
     for i in range(10):
         poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
@@ -252,7 +252,7 @@ def test_splitting_data_add_and_ongoing():
 
 def test_splitting_data_add_and_query():
     """Adding splitting data to the database."""
-    poolfile = SQLFile("", in_memory=True)
+    poolfile = TrajDB("", in_memory=True)
     for i in range(1,2):
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
         poolfile.mark_last_iteration_as_completed()
@@ -260,7 +260,7 @@ def test_splitting_data_add_and_query():
 
 def test_splitting_data_add_update_and_query():
     """Adding splitting data to the database."""
-    poolfile = SQLFile("", in_memory=True)
+    poolfile = TrajDB("", in_memory=True)
     poolfile.add_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.0])
     poolfile.update_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.3])
     poolfile.mark_last_iteration_as_completed()
@@ -269,19 +269,19 @@ def test_splitting_data_add_update_and_query():
 @pytest.mark.usefixtures("skip_on_windows")
 def test_splitting_data_query_fail():
     """Adding splitting data to the database."""
-    poolfile = SQLFile("test.db")
+    poolfile = TrajDB("test.db")
     for i in range(1):
         poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
     assert poolfile.get_k_split() == 1
 
-    poolfile = SQLFile("test.db", ro_mode=True)
+    poolfile = TrajDB("test.db", ro_mode=True)
     with pytest.raises(SQLAlchemyError):
         poolfile.mark_last_iteration_as_completed()
     Path("./test.db").unlink(missing_ok=True)
 
 def test_dump_json():
     """Dump the content of the DB to a json file."""
-    poolfile = SQLFile("test.db")
+    poolfile = TrajDB("test.db")
     poolfile.add_trajectory("test.xml","")
     poolfile.archive_trajectory("test_arch.xml","")
     poolfile.dump_file_json()

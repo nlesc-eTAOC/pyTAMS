@@ -18,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 import toml
 from pytams.diagdb import DiagDB
-from pytams.sqldb import SQLFile
+from pytams.trajdb import TrajDB
 from pytams.trajectory import Trajectory
 from pytams.trajectory import form_trajectory_id
 from pytams.utils import get_module_local_import
@@ -194,17 +194,17 @@ class Database(Generic[T_Noise, T_State]):
                 if self._parameters != stored_params:
                     self._update_run_params(stored_params)
 
-            # Initialize the SQL pool file
+            # Initialize the TrajDB file
             if self._read_only:
-                self._pool_db = SQLFile(self.pool_file(), ro_mode=True)
+                self._pool_db = TrajDB(self.pool_file(), ro_mode=True)
             else:
-                self._pool_db = SQLFile(self.pool_file())
+                self._pool_db = TrajDB(self.pool_file())
 
         # Initialize in-memory database metadata
         # Overwrite default read-only mode
         else:
             self._read_only = False
-            self._pool_db = SQLFile(self.pool_file())
+            self._pool_db = TrajDB(self.pool_file())
 
         # Check minimal parameters
         if self._ntraj == -1 or self._nsplititer == -1:
@@ -576,7 +576,7 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._sql_name
 
-    def get_pool_db(self) -> SQLFile:
+    def get_pool_db(self) -> TrajDB:
         """Get the pool SQL database handle."""
         return self._pool_db
 

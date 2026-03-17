@@ -4,9 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import pickle
-from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 import numpy as np
@@ -14,28 +12,22 @@ from sqlalchemy import Boolean
 from sqlalchemy import CursorResult
 from sqlalchemy import Float
 from sqlalchemy import LargeBinary
-from sqlalchemy import create_engine
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import sessionmaker
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
+from pytams.sqlmanager import BaseSQLManager
 
 _logger = logging.getLogger(__name__)
 
 
-class Base(DeclarativeBase):
+class DiagBase(DeclarativeBase):
     """A base class for the tables."""
 
 
-class DiagnosticEntry(Base):
+class DiagnosticEntry(DiagBase):
     """Table for recording model data at specific score levels."""
 
     __tablename__ = "diagnostics"
@@ -50,11 +42,11 @@ class DiagnosticEntry(Base):
     diaglabel: Mapped[str] = mapped_column(nullable=False)
 
 
-class DiagDB:
-    """An SQL to keep track of the diagnostics.
+class DiagDB(BaseSQLManager):
+    """A database to keep track of the diagnostics data.
 
-    Attributes:
-        _file_name : The file name
+    Diagnostic entries are agregated in single table. Each entry
+    is associated to a trajectory and its weight in the ensemble.
     """
 
     def __init__(self, file_name: str, in_memory: bool = False, ro_mode: bool = False) -> None:
@@ -65,54 +57,7 @@ class DiagDB:
             in_memory: a bool to trigger in-memory creation
             ro_mode: a bool to trigger read-only access to the database
         """
-        self._file_name = "" if in_memory else file_name
-
-        # URI mode requires absolute path
-        file_path = Path(file_name).absolute().as_posix()
-        if in_memory:
-            self._engine = create_engine("sqlite:///:memory:", echo=False)
-        else:
-            self._engine = (
-                create_engine(f"sqlite:///file:{file_path}?mode=ro&uri=true", echo=False)
-                if ro_mode
-                else create_engine(f"sqlite:///{file_path}", echo=False)
-            )
-        self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
-        self._init_db()
-
-    def _init_db(self) -> None:
-        """Initialize the tables of the file.
-
-        Raises:
-            RuntimeError : If a connection to the DB could not be acquired
-        """
-        try:
-            Base.metadata.create_all(self._engine)
-        except SQLAlchemyError:
-            err_msg = "Failed to initialize DB schema"
-            _logger.exception(err_msg)
-            raise
-
-    @contextmanager
-    def session_scope(self) -> Generator[Session, None, None]:
-        """Provide a transactional scope around a series of operations."""
-        session = self._Session()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-    def name(self) -> str:
-        """Access the DB file name.
-
-        Returns:
-            the database name, empty string if in-memory
-        """
-        return self._file_name
+        super().__init__(file_name, DiagBase.metadata, in_memory, ro_mode)
 
     def add_diagnostic_entry(
         self,
@@ -123,7 +68,19 @@ class DiagDB:
         weight: float,
         ldata: bytes,
     ) -> None:
-        """Atomic insert of a diagnostic snapshot."""
+        """Atomic insert of a diagnostic snapshot.
+
+        The data schema assumes that any new addition to the database is
+        made on an active trajectory.
+
+        Args:
+            diaglabel: the label of the diagnostic inserting the entry
+            traj_id: the ID of the traj adding the entry
+            level: the score level of the entry
+            time: the trajectory time at which the diagnostic was triggered
+            weight: the weight of the trajectory
+            ldata: the actual model data stored in the database
+        """
         with self.session_scope() as session:
             entry = DiagnosticEntry(
                 diaglabel=diaglabel,
@@ -137,7 +94,15 @@ class DiagDB:
             session.add(entry)
 
     def get_highest_recorded_level(self, traj_id: int, label: str) -> float:
-        """Return the maximum level already recorded for this traj/label."""
+        """Return the maximum level already recorded for this traj/label.
+
+        Args:
+            traj_id: the ID of a trajectory
+            label: the label of the diagnostic targeter
+
+        Returns:
+            the highest value of level_crossed
+        """
         with self.session_scope() as session:
             # Assuming your DiagnosticEntry model has these columns
             stmt = (
@@ -160,6 +125,16 @@ class DiagDB:
 
         Copies all entries where level_crossed <= threshold.
         Returns the number of entries duplicated.
+
+        The entries belonging to the discarded trajectory are set
+        to inactive.
+
+        Args:
+            ancestor_id: the ID of the ancestor to copy data from
+            discarded_id: the ID of the discarded trajectory (during TAMS iterations)
+            new_id: the ID of the new child trajectory
+            new_weight: the weight of the new child trajectory
+            threshold: the score threshold up to which copy must be performed
         """
         with self.session_scope() as session:
             # Set the discarded trajectory to inactive

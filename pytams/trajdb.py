@@ -1,41 +1,32 @@
 """A class for the TAMS data as an SQL database using SQLAlchemy."""
 
 from __future__ import annotations
-import gc
 import json
 import logging
-from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 import numpy as np
 import numpy.typing as npt
 from sqlalchemy import JSON
 from sqlalchemy import CursorResult
-from sqlalchemy import create_engine
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
-from sqlalchemy.orm import sessionmaker
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
+from pytams.sqlmanager import BaseSQLManager
 
 _logger = logging.getLogger(__name__)
 
 
-class Base(DeclarativeBase):
+class TrajBase(DeclarativeBase):
     """A base class for the tables."""
 
 
-class Trajectory(Base):
+class Trajectory(TrajBase):
     """A table storing the active trajectories."""
 
     __tablename__ = "trajectories"
@@ -46,7 +37,7 @@ class Trajectory(Base):
     status: Mapped[str] = mapped_column(default="idle", nullable=False)
 
 
-class ArchivedTrajectory(Base):
+class ArchivedTrajectory(TrajBase):
     """A table storing the archived trajectories."""
 
     __tablename__ = "archived_trajectories"
@@ -56,7 +47,7 @@ class ArchivedTrajectory(Base):
     t_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
 
-class SplittingIterations(Base):
+class SplittingIterations(TrajBase):
     """A table storing the splitting iterations."""
 
     __tablename__ = "splitting_iterations"
@@ -76,8 +67,8 @@ class SplittingIterations(Base):
 valid_statuses = ["locked", "idle", "completed"]
 
 
-class SQLFile:
-    """An SQL file.
+class TrajDB(BaseSQLManager):
+    """A database holding TAMS trajectory/iterations repertoire.
 
     Allows atomic access to an SQL database from all
     the workers.
@@ -98,54 +89,7 @@ class SQLFile:
             in_memory: a bool to trigger in-memory creation
             ro_mode: a bool to trigger read-only access to the database
         """
-        self._file_name = "" if in_memory else file_name
-
-        # URI mode requires absolute path
-        file_path = Path(file_name).absolute().as_posix()
-        if in_memory:
-            self._engine = create_engine("sqlite:///:memory:", echo=False)
-        else:
-            self._engine = (
-                create_engine(f"sqlite:///file:{file_path}?mode=ro&uri=true", echo=False)
-                if ro_mode
-                else create_engine(f"sqlite:///{file_path}", echo=False)
-            )
-        self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
-        self._init_db()
-
-    def _init_db(self) -> None:
-        """Initialize the tables of the file.
-
-        Raises:
-            RuntimeError : If a connection to the DB could not be acquired
-        """
-        try:
-            Base.metadata.create_all(self._engine)
-        except SQLAlchemyError:
-            err_msg = "Failed to initialize DB schema"
-            _logger.exception(err_msg)
-            raise
-
-    @contextmanager
-    def session_scope(self) -> Generator[Session, None, None]:
-        """Provide a transactional scope around a series of operations."""
-        session = self._Session()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-    def name(self) -> str:
-        """Access the DB file name.
-
-        Returns:
-            the database name, empty string if in-memory
-        """
-        return self._file_name
+        super().__init__(file_name, TrajBase.metadata, in_memory, ro_mode)
 
     def add_trajectory(self, traj_file: str, metadata: dict) -> None:
         """Add a new trajectory to the DB.
@@ -639,12 +583,3 @@ class SQLFile:
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
-
-    def __del__(self) -> None:
-        """Explicit delete function.
-
-        On windows, the SQL file is locked.
-        """
-        del self._Session
-        self._engine.dispose()
-        gc.collect()

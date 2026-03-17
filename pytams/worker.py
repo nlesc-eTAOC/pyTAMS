@@ -8,37 +8,37 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from pytams.sqldb import SQLFile
+from pytams.trajdb import TrajDB
 from pytams.trajectory import Trajectory
 from pytams.trajectory import WallTimeLimitError
 
 _logger = logging.getLogger(__name__)
 
 
-def update_trajectory_in_sql(traj: Trajectory, sqldb: SQLFile | None = None, db_path: str | None = None) -> None:
+def update_trajectory_in_sql(traj: Trajectory, trajdb: TrajDB | None = None, db_path: str | None = None) -> None:
     """Wrapper for update SQL trajectory info.
 
     Args:
-        sqldb: the SQL database to update
+        trajdb: the SQL database to update
         traj: the traj to get the information from
         db_path: an optional TAMS database path
     """
-    if sqldb:
+    if trajdb:
         checkfile_str = (
             traj.get_checkfile().relative_to(Path(db_path)).as_posix() if db_path else traj.get_checkfile().as_posix()
         )
-        sqldb.update_trajectory(traj.id(), checkfile_str, traj.get_metadata())
+        trajdb.update_trajectory(traj.id(), checkfile_str, traj.get_metadata())
 
 
 def traj_advance_with_exception(
-    traj: Trajectory, walltime: float, sqldb: SQLFile | None = None, db_path: str | None = None
+    traj: Trajectory, walltime: float, trajdb: TrajDB | None = None, db_path: str | None = None
 ) -> Trajectory:
     """Advance a trajectory with exception handling.
 
     Args:
         traj: a trajectory
         walltime: the time limit to advance the trajectory
-        sqldb: a handle to the SQL database
+        trajdb: a handle to the SQL database
         db_path: an optional path to the run database
 
     Returns:
@@ -58,12 +58,12 @@ def traj_advance_with_exception(
 
     finally:
         # Update the SQL database
-        if sqldb:
+        if trajdb:
             if traj.has_ended():
-                sqldb.mark_trajectory_as_completed(traj.id())
+                trajdb.mark_trajectory_as_completed(traj.id())
             else:
-                sqldb.release_trajectory(traj.id())
-            update_trajectory_in_sql(traj, sqldb, db_path)
+                trajdb.release_trajectory(traj.id())
+            update_trajectory_in_sql(traj, trajdb, db_path)
 
         # Trigger a checkfile dump if we are provided with
         # a database path
@@ -74,14 +74,14 @@ def traj_advance_with_exception(
 
 
 def pool_worker(
-    traj: Trajectory, end_date: datetime.date, sql_path: str | None = None, db_path: str | None = None
+    traj: Trajectory, end_date: datetime.date, trajdb_path: str | None = None, db_path: str | None = None
 ) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
         traj: a trajectory
         end_date: the time limit to advance the trajectory
-        sql_path: an optional path to the SQL database
+        trajdb_path: an optional path to the SQL database
         db_path: an optional path to the run database
 
     Returns:
@@ -95,17 +95,17 @@ def pool_worker(
 
     if wall_time > 0.0 and not traj.has_ended():
         # Try to lock the trajectory in the DB
-        sqldb = None
-        if sql_path:
-            sqldb = SQLFile(sql_path)
-            get_to_work = sqldb.lock_trajectory(traj.id(), allow_completed_lock=True)
+        trajdb = None
+        if trajdb_path:
+            trajdb = TrajDB(trajdb_path)
+            get_to_work = trajdb.lock_trajectory(traj.id(), allow_completed_lock=True)
             if not get_to_work:
                 return traj
 
         inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = traj_advance_with_exception(traj, wall_time, sqldb, db_path)
+        traj = traj_advance_with_exception(traj, wall_time, trajdb, db_path)
 
     return traj
 
@@ -116,7 +116,7 @@ def ms_worker(
     min_val: float,
     new_weight: float,
     end_date: datetime.date,
-    sql_path: str | None = None,
+    trajdb_path: str | None = None,
     db_path: str | None = None,
 ) -> Trajectory:
     """A worker to restart trajectories.
@@ -127,7 +127,7 @@ def ms_worker(
         min_val: the value of the score function to restart from
         new_weight: the weight of the new child trajectory
         end_date: the time limit to advance the trajectory
-        sql_path: a path to the SQL database
+        trajdb_path: a path to the SQL database
         db_path: an optional path to the run database
     """
     # Get wall time
@@ -136,14 +136,14 @@ def ms_worker(
     if timedelta:
         wall_time = timedelta.total_seconds()
 
-    sqldb = None
-    if sql_path:
-        sqldb = SQLFile(sql_path)
+    trajdb = None
+    if trajdb_path:
+        trajdb = TrajDB(trajdb_path)
 
     if wall_time > 0.0:
         # Try to lock the trajectory in the DB
-        if sqldb:
-            get_to_work = sqldb.lock_trajectory(rst_traj.id(), allow_completed_lock=True)
+        if trajdb:
+            get_to_work = trajdb.lock_trajectory(rst_traj.id(), allow_completed_lock=True)
             if not get_to_work:
                 err_msg = f"Unable to lock trajectory {rst_traj.id()} for branching"
                 _logger.error(err_msg)
@@ -156,9 +156,9 @@ def ms_worker(
 
         # The branched trajectory has a new checkfile
         # Update the database to point to the latest one.
-        update_trajectory_in_sql(traj, sqldb, db_path)
+        update_trajectory_in_sql(traj, trajdb, db_path)
 
-        return traj_advance_with_exception(traj, wall_time, sqldb, db_path)
+        return traj_advance_with_exception(traj, wall_time, trajdb, db_path)
 
     traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
 
@@ -167,7 +167,7 @@ def ms_worker(
 
     # The branched trajectory has a new checkfile, even if haven't advanced yet
     # Update the database to point to the latest one.
-    update_trajectory_in_sql(traj, sqldb, db_path)
+    update_trajectory_in_sql(traj, trajdb, db_path)
 
     return traj
 

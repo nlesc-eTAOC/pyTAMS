@@ -5,7 +5,7 @@ import logging
 from math import isclose
 from pathlib import Path
 import pytest
-from pytams.sqldb import SQLFile
+from pytams.trajdb import TrajDB
 from pytams.trajectory import Trajectory
 from pytams.utils import setup_logger
 from pytams.worker import ms_worker
@@ -30,7 +30,7 @@ def test_run_pool_worker_with_sql():
     """Advance trajectory through pool_worker with SQL."""
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}}
-    poolfile = SQLFile("./test.db")
+    poolfile = TrajDB("./test.db")
     t_test = Trajectory(0, 1.0, fmodel, parameters)
     poolfile.add_trajectory("dummy.xml", t_test.get_metadata())
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
@@ -89,7 +89,7 @@ def test_run_ms_worker_with_sql():
     """Branch and advance trajectory through ms_worker."""
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}}
-    poolfile = SQLFile("./test.db")
+    poolfile = TrajDB("./test.db")
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = Trajectory(0, 0.5, fmodel, parameters)
     t_test.advance()
