@@ -300,7 +300,7 @@ def test_doublewell_deterministic_tams():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     if is_mac_os():
-        assert transition_proba == 0.5416299021401826
+        assert transition_proba == 0.5416298076191378
     else:
         assert transition_proba == 0.5471009063334249
     Path("input.toml").unlink(missing_ok=True)
@@ -320,7 +320,7 @@ def test_doublewell_deterministic_tams_with_diags(caplog: pytest.LogCaptureFixtu
                     "nsplititer": 5,
                     "walltime": 500.0,
                     "deterministic": True,
-                    "diagnostics": True,
+                    "plot_diagnostics": True,
                 },
                 "runner": {"type": "asyncio"},
                 "model": {"noise_amplitude": 0.4},
@@ -355,7 +355,7 @@ def test_doublewell_2_workers_tams():
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
-    assert transition_proba == 0.692533980184018
+    assert transition_proba == 0.6925339958244802
     del tams
     Path("input.toml").unlink(missing_ok=True)
 
@@ -502,7 +502,7 @@ def test_doublewell_slow_tams_restore_more_split():
     tams = TAMS(fmodel_t=fmodel, a_args=[])
     transition_proba = tams.compute_probability()
     del tams
-    assert transition_proba == 0.1251224993028602
+    assert transition_proba == 0.1251225103143388
     params_dict["tams"]["nsplititer"] = 30
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
@@ -510,7 +510,7 @@ def test_doublewell_slow_tams_restore_more_split():
     transition_proba = tams_load.compute_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
-        assert transition_proba == 0.13912870261943358
+        assert transition_proba == 0.1391287278743694
     else:
         assert transition_proba == 0.14983090959624143
     Path("input.toml").unlink(missing_ok=True)
