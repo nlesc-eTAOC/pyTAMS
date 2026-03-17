@@ -60,6 +60,26 @@ def test_simple_model_tams():
     Path("input.toml").unlink(missing_ok=True)
 
 
+def test_simple_model_tams_with_diags():
+    """Test TAMS with simple model."""
+    fmodel = SimpleFModel
+    with Path("input.toml").open("w") as f:
+        toml.dump(
+            {
+                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "diagnostics": ["testd"]},
+                "runner": {"type": "asyncio"},
+                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
+                "testd": {"n_levels": 11},
+            },
+            f,
+        )
+    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    transition_proba = tams.compute_probability()
+    assert transition_proba == 1.0
+    Path("input.toml").unlink(missing_ok=True)
+    Path("./diagDB.db").unlink(missing_ok=True)
+
+
 def test_failing_model_tams():
     """Test TAMS with simple model."""
     fmodel = FailingFModel
