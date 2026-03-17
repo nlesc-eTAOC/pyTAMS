@@ -2,6 +2,7 @@ import time
 from typing import Any
 import numpy as np
 from pytams.fmodel import ForwardModelBaseClass
+from pytams.snapshot import Snapshot
 
 
 class SimpleFModel(ForwardModelBaseClass):
@@ -32,6 +33,17 @@ class SimpleFModel(ForwardModelBaseClass):
     def score(self) -> float:
         """Override the template."""
         return min(self._state * 10.0, 1.0)
+
+    def diagnostic_hook(self,
+                        dlabel: str,
+                        tid: int,
+                        score_level: float,
+                        old_snap: Snapshot,
+                        new_snap: Snapshot,
+                        ) -> None:
+        """Override the template."""
+        return 42.0
+
 
     def make_noise(self) -> float:
         """Override the template."""
