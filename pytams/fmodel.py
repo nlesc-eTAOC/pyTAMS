@@ -10,6 +10,7 @@ from typing import Generic
 from typing import TypeVar
 from typing import cast
 from typing import final
+from pytams.snapshot import Snapshot
 
 _logger = getLogger(__name__)
 
@@ -227,6 +228,25 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
 
     def _trajectory_restore_hook(self) -> None:
         """Model-specific post trajectory restore hook."""
+
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot[T_Noise, T_State],
+        new_snap: Snapshot[T_Noise, T_State],
+    ) -> Any:
+        """Diagnostic hook.
+
+        Args:
+            dlabel: the label of the diagnostic calling the hook
+            tid: the ID of the trjaectory calling
+            score_level: the score level crossed and triggering the call
+            old_snap: the snapshot at the beginning of the step
+            new_snap: the snapshot at the end of the step
+        """
+        raise NotImplementedError
 
     def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.

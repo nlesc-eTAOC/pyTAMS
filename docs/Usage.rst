@@ -56,10 +56,11 @@ data structures of the code:
     nsplititer = 1000           # [REQ] Number of splitting iterations
     walltime = 200.0            # [OPT, DEF = 86400] Total walltime in seconds
     init_ensemble_only = false  # [OPT, DEF = false] Stop after the initial ensemble generation
-    diagnostics = false         # [OPT, DEF = false] Trigger diagnostics during the splitting iterations
+    plot_diagnostics = false    # [OPT, DEF = false] Trigger diagnostics during the splitting iterations
     deterministic = false       # [OPT, DEF = false] Fix the various random seeds for reproducibility
     loglevel = "WARNING"        # [OPT, DEF = "INFO"] Log level
     logfile = "logTAMS.txt"     # [OPT, DEF = None] A file to redirect the standard logging to
+    diagnostics = ["testdiag"]  # [OPT, DEF = None] A list of on-the-fly diagnostics
   
   At minima, running TAMS requires specifying the number of members in the ensemble :math:`N`
   (``ntrajectories`` in the snippet above) as well as the maximum number of (splitting) iterations :math:`J`
@@ -128,6 +129,20 @@ Dask cluster:
   queue = "genoa"               # [OPT, DEF = "regular"] Slurm job queue to submit the workers to
   ntasks_per_job = 64           # [OPT, DEF = 1] Number of tasks per Slurm job
   job_prologue = []             # [OPT, DEF = []] List of commands to be executed before the dask worker start
+
+If a ``diagnostics`` list is provided in the `tams` block, a block must be provided for each
+label provided. At the moment only score-based diagnostics are available: they trigger when
+the score function crosses levels defined in the block:
+
+.. code-block:: python
+  
+  [testdiag] 
+  score_min = 0.0 
+  score_max = 1.0 
+  n_levels = 21 
+
+The data sampled by the diagnostic will be stored in an SQL database located either in the
+run folder or in the TAMS database if one is requested.
 
 Finally, note that the entire TOML file content is passed as a dictionary to the forward model
 initializer. The user can then simply add an `[model]` dictionary to the TOML file to define

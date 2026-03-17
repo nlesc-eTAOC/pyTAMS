@@ -97,7 +97,7 @@ class TAMS:
         n_traj: int = tams_subdict.get("ntrajectories")
         n_split_iter: int = tams_subdict.get("nsplititer")
         self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
-        self._plot_diags = tams_subdict.get("diagnostics", False)
+        self._plot_diags = tams_subdict.get("plot_diagnostics", False)
         self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
 
         # Database
@@ -368,10 +368,13 @@ class TAMS:
                 # Query the current iteration weight
                 # to compute the individual weight of each trajectory in the ensemble
                 # at the end of the splitting iteration
-                new_traj_weight = self._tdb.weights()[-1] / float(self._tdb.n_traj())
+                new_traj_weight = self._tdb.weights()[-1]
 
                 # Exit the loop if needed
                 if early_exit:
+                    # If TAMS converged, final update of the weights.
+                    if self._tdb.all_converged():
+                        self._tdb.update_trajectories_weights()
                     break
 
                 # Assemble a list of promises
@@ -403,7 +406,7 @@ class TAMS:
                 for t in restarted_trajs:
                     self._tdb.overwrite_traj(t.id(), t)
 
-                # Update the weights of all trajectories with the current
+                # Update the weights of all trajectories in the ensemble with the current
                 # iteration weight
                 self._tdb.update_trajectories_weights()
 
