@@ -276,7 +276,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
             # Initialize diagnostic now, access to diagdb
             # no longer needs to be pickled at this point
-            if not self._initialized_diags:
+            if not self._initialized_diags and self._has_diagnostics:
                 self._setup_diagnostics()
 
             # Perform any diagnostic requested
