@@ -40,6 +40,7 @@ def test_init_diagnostic():
     params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score"}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._label == "testd"
+    dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
@@ -60,6 +61,7 @@ def test_init_diagnostic_with_levels():
     params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score", "n_levels": 3}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._levels[1] == 0.5
+    dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
@@ -72,6 +74,7 @@ def test_diagnostic_crossed():
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     levels = dplugin[0].get_crossed_levels(s_new)
     assert len(levels) == 2
+    dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
@@ -87,5 +90,6 @@ def test_diagnostic_update():
     dplugin[0].update(s_old, s_new)
     data = ddb.get_diagnostic_data("testd")
     assert data[0.0] == [(42.0, 0.1)]
+    dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
