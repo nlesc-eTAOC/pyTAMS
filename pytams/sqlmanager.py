@@ -1,6 +1,7 @@
 """A base class for pyTAMS databases."""
 
 from __future__ import annotations
+import gc
 import logging
 from contextlib import contextmanager
 from pathlib import Path
@@ -79,3 +80,12 @@ class BaseSQLManager:
         """Dispose of the engine and clear connections."""
         if self._engine:
             self._engine.dispose()
+
+    def __del__(self) -> None:
+        """Explicit delete function.
+
+        On windows, the SQL file might be locked.
+        """
+        del self._Session
+        self.close()
+        gc.collect()
