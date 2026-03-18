@@ -14,6 +14,7 @@ def test_init_diagdb():
     ddb = DiagDB("diagDBtest.db")
     assert ddb.name() == "diagDBtest.db"
     Path("./diagDBtest.db").unlink(missing_ok=True)
+    del ddb
 
 
 def test_add_to_diagdb():
@@ -30,6 +31,7 @@ def test_add_to_diagdb():
     nb_update = ddb.update_all_active_weights(0.01)
     assert nb_update == 1
     Path("./diagDBtest.db").unlink(missing_ok=True)
+    del ddb
 
 
 def test_init_diagnostic():
@@ -39,6 +41,7 @@ def test_init_diagnostic():
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._label == "testd"
     Path("./diagDBtest.db").unlink(missing_ok=True)
+    del ddb
 
 
 def test_failed_init_diagnostic():
@@ -47,6 +50,7 @@ def test_failed_init_diagnostic():
     params_dict = {"tams": {"diagnostics": ["testd"]}}
     with pytest.raises(RuntimeError):
         _ = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
+    del ddb
 
 
 def test_init_diagnostic_with_levels():
@@ -55,6 +59,7 @@ def test_init_diagnostic_with_levels():
     params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score", "n_levels": 3}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._levels[1] == 0.5
+    del ddb
 
 
 def test_diagnostic_crossed():
@@ -65,6 +70,7 @@ def test_diagnostic_crossed():
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     levels = dplugin[0].get_crossed_levels(s_new)
     assert len(levels) == 2
+    del ddb
 
 
 def test_diagnostic_update():
@@ -78,3 +84,4 @@ def test_diagnostic_update():
     dplugin[0].update(s_old, s_new)
     data = ddb.get_diagnostic_data("testd")
     assert data[0.0] == [(42.0, 0.1)]
+    del ddb
