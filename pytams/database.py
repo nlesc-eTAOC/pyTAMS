@@ -200,6 +200,9 @@ class Database(Generic[T_Noise, T_State]):
             else:
                 self._pool_db = TrajDB(self.pool_file())
 
+            # Ping the diagnostic database
+            self.ping_diag_database()
+
         # Initialize in-memory database metadata
         # Overwrite default read-only mode
         else:
@@ -559,6 +562,17 @@ class Database(Generic[T_Noise, T_State]):
         diag_list = self._parameters.get("tams", {}).get("diagnostics", [])
         # Return True only if the list exists and has at least one entry
         return isinstance(diag_list, list) and len(diag_list) > 0
+
+    def ping_diag_database(self) -> None:
+        """Initialize the diagDB from the main process.
+
+        To avoid race condition in creating the DB from workers,
+        let it be initialized from the main process here.
+        """
+        if self._check_for_diag_request():
+            ddb_path = self._abs_path / "./diagDB.db" if self._save_to_disk else Path("./diagDB.db")
+            ddb = DiagDB(ddb_path.absolute().as_posix())
+            ddb.close()
 
     def header_file(self) -> str:
         """Helper returning the DB header file.
