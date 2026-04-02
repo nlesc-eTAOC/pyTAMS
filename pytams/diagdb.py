@@ -195,7 +195,7 @@ class DiagDB(BaseSQLManager):
             result = session.execute(stmt_update)
             return int(cast("CursorResult", result).rowcount or 0)
 
-    def get_diagnostic_data(self, label: str) -> dict[float, list[tuple[Any, float]]]:
+    def get_diagnostic_data(self, label: str) -> dict[float, list[tuple[Any, float, float, int]]]:
         """Retrieve all diagnostic snapshots for a specific label.
 
         Args:
@@ -203,28 +203,34 @@ class DiagDB(BaseSQLManager):
 
         Returns:
             A dictionary mapping each iso-level (float) to a list of tuples.
-            Each tuple contains (unpickled_data, trajectory_weight).
+            Each tuple contains (unpickled_data, trajectory_weight, time, tid).
         """
-        results_dict: dict[float, list[tuple[Any, float]]] = {}
+        results_dict: dict[float, list[tuple[Any, float, float, int]]] = {}
 
         with self.session_scope() as session:
             # Query entries for the specific label, ordered by level
             stmt = (
-                select(DiagnosticEntry.level_crossed, DiagnosticEntry.weight, DiagnosticEntry.model_data)
+                select(
+                    DiagnosticEntry.level_crossed,
+                    DiagnosticEntry.weight,
+                    DiagnosticEntry.time,
+                    DiagnosticEntry.traj_id,
+                    DiagnosticEntry.model_data,
+                )
                 .where(DiagnosticEntry.diaglabel == label)
                 .order_by(DiagnosticEntry.level_crossed.asc())
             )
 
             rows = session.execute(stmt).all()
 
-            for level, weight, blob in rows:
+            for level, weight, time, tid, blob in rows:
                 # Unpickle the model data
                 data = pickle.loads(blob)  # noqa: S301
 
                 if level not in results_dict:
                     results_dict[level] = []
 
-                results_dict[level].append((data, weight))
+                results_dict[level].append((data, weight, time, tid))
 
         return results_dict
 
