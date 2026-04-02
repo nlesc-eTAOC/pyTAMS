@@ -1,7 +1,6 @@
 """The main TAMS class."""
 
 import argparse
-import datetime
 import logging
 from pathlib import Path
 from typing import Any
@@ -9,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import toml
 from pytams.database import Database
+from pytams.sampling_strategy import SamplingStrategy
 from pytams.taskrunner import get_runner_type
 from pytams.utils import get_min_scored
 from pytams.utils import setup_logger
@@ -31,8 +31,8 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args() if a_args is None else parser.parse_args(a_args)
 
 
-class TAMS:
-    """A class implementing TAMS.
+class TAMS(SamplingStrategy):
+    """A strategy class implementing TAMS.
 
     The interface to TAMS, implementing the main steps of
     the algorithm.
@@ -57,7 +57,6 @@ class TAMS:
         _fmodel_t: the forward model type
         _parameters: the dictionary of parameters
         _wallTime: the walltime limit
-        _startDate: the date the algorithm started
         _plot_diags: whether or not to plot diagnostics during splitting iterations
         _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
         _tdb: the trajectory database (containing all trajectories)
@@ -96,22 +95,13 @@ class TAMS:
 
         n_traj: int = tams_subdict.get("ntrajectories")
         n_split_iter: int = tams_subdict.get("nsplititer")
-        self._wallTime: float = tams_subdict.get("walltime", 24.0 * 3600.0)
         self._plot_diags = tams_subdict.get("plot_diagnostics", False)
         self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
 
         # Database
-        self._tdb: Database[Any, Any] = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
-        self._tdb.load_data()
+        #self._tdb: Database[Any, Any] = Database(fmodel_t, self._parameters, n_traj, n_split_iter, read_only=False)
+        #self._tdb.load_data()
 
-        # Time management uses UTC date
-        # to make sure workers are always in sync
-        self._startDate: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
-        self._endDate: datetime.datetime = self._startDate + datetime.timedelta(seconds=self._wallTime)
-
-        # Initialize an empty trajectory ensemble
-        if self._tdb.is_empty():
-            self._tdb.init_active_ensemble()
 
     def n_traj(self) -> int:
         """Return the number of trajectory used for TAMS.
@@ -123,46 +113,6 @@ class TAMS:
             number of trajectory
         """
         return self._tdb.n_traj()
-
-    def elapsed_time(self) -> float:
-        """Return the elapsed wallclock time.
-
-        Since the initialization of the TAMS object [seconds].
-
-        Returns:
-           TAMS elapse time.
-
-        Raises:
-            ValueError: if the start date is not set
-        """
-        delta: datetime.timedelta = datetime.datetime.now(tz=datetime.timezone.utc) - self._startDate
-        if delta:
-            return delta.total_seconds()
-
-        err_msg = "TAMS start date is not set !"
-        _logger.exception(err_msg)
-        raise ValueError
-
-    def remaining_walltime(self) -> float:
-        """Return the remaining wallclock time.
-
-        [seconds]
-
-        Returns:
-           TAMS remaining wall time.
-        """
-        return self._wallTime - self.elapsed_time()
-
-    def out_of_time(self) -> bool:
-        """Return true if insufficient walltime remains.
-
-        Allows for 5% slack to allows time for workers to finish
-        their work (especially with Dask+Slurm backend).
-
-        Returns:
-           boolean indicating wall time availability.
-        """
-        return self.remaining_walltime() < 0.05 * self._wallTime
 
     def generate_trajectory_ensemble(self) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -184,7 +134,7 @@ class TAMS:
             self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_init", 1)
         ) as runner:
             for t in self._tdb.traj_list():
-                task = [t, self._endDate, self._tdb.pool_file(), self._tdb.path()]
+                task = [t, self._end_date, self._tdb.pool_file(), self._tdb.path()]
                 runner.make_promise(task)
 
             try:
@@ -262,7 +212,7 @@ class TAMS:
             ) as runner:
                 for i in ongoing_list:
                     t = self._tdb.get_traj(i)
-                    task = [t, self._endDate, self._tdb.pool_file(), self._tdb.path()]
+                    task = [t, self._end_date, self._tdb.pool_file(), self._tdb.path()]
                     runner.make_promise(task)
 
                 try:
@@ -389,7 +339,7 @@ class TAMS:
                         self._tdb.get_traj(min_idx_list[i]),
                         np.max(min_vals),
                         new_traj_weight,
-                        self._endDate,
+                        self._end_date,
                         self._tdb.pool_file(),
                         self._tdb.path(),
                     ]
@@ -480,6 +430,22 @@ class TAMS:
         self._tdb.info()
 
         return transition_probability
+
+    def execute_sampling(self,
+                         database: Database) -> None:
+        """Shallow wrapper to enable sampler."""
+        self._tdb = database
+        self._tdb.load_data()
+
+        # Initialize an empty trajectory ensemble
+        if self._tdb.is_empty():
+            self._tdb.init_active_ensemble()
+
+        self.compute_probability()
+
+    def db_type(self) -> type[Database]:
+        """Return the type of database of the TAMS sampling strategy."""
+        return Database
 
     def get_database(self) -> Database:
         """Accessor to database.
