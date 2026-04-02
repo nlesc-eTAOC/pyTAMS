@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError
 from math import isclose
 from pathlib import Path
 import pytest
+from pytams.diagnostic import DiagnosticAnalyst
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.snapshot import Snapshot
 from pytams.trajectory import Trajectory
@@ -94,6 +95,27 @@ def test_simple_model_traj():
     assert t_test.is_converged() is False
     t_test.advance()
     assert t_test.is_converged() is True
+
+
+def test_simple_model_traj_with_diag():
+    """Test trajectory with simple model."""
+    fmodel = SimpleFModel
+    parameters = {
+        "trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25},
+        "tams": {"diagnostics": ["testd"]},
+        "testd": {"score_min": 0.0, "score_max": 0.25, "n_levels": 11},
+    }
+    t_test_1 = Trajectory(1, 0.5, fmodel, parameters)
+    t_test_1.advance()
+    t_test_2 = Trajectory(2, 0.5, fmodel, parameters)
+    t_test_2.advance()
+    analyst = DiagnosticAnalyst("./diagDB.db")
+    _ = analyst.get_diagnostic_data("testd")
+    dstat = analyst.compute_weighted_stats("testd")
+    assert dstat[0.0]["mean"] == 42.0
+    _ = analyst.get_conditional_means("testd")
+    analyst = None
+    Path("./diagDB.db").unlink(missing_ok=True)
 
 
 def test_branch_simple_model_traj():
