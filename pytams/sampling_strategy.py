@@ -47,6 +47,6 @@ class SamplingStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def db_type(self) -> type[Database]:
-        """Return the database type."""
+    def initialize_db(self) -> Database:
+        """Return an initialized database."""
         raise NotImplementedError

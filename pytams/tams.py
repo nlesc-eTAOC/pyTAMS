@@ -443,9 +443,12 @@ class TAMS(SamplingStrategy):
 
         self.compute_probability()
 
-    def db_type(self) -> type[Database]:
-        """Return the type of database of the TAMS sampling strategy."""
-        return Database
+    def initialize_db(self) -> type[Database]:
+        """Return an initialized database of the TAMS sampling strategy."""
+        return Database(fmodel_t=self._fmodel_t,
+                        params=self._parameters,
+                        ntraj=self._parameters["tams"]["ntrajectories"],
+                        nsplititer=self._parameters["tams"]["nsplititer"])
 
     def get_database(self) -> Database:
         """Accessor to database.

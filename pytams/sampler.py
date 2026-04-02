@@ -68,10 +68,7 @@ class RareEventSampler:
 
     def _setup_db(self) -> None:
         """Create the database needed for the sampling strategy."""
-        self._db = self.strategy.db_type()(fmodel_t=self._fmodel_t,
-                                           params=self._parameters,
-                                           ntraj=self._parameters["sampler"]["ntraj"],
-                                           nsplititer=self._parameters["sampler"]["nsplititer"])
+        self._db = self.strategy.initialize_db()
 
     def run(self) -> None:
         """Sample rare events."""
