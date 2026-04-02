@@ -67,8 +67,22 @@ class DiagnosticPlugin:
             )
 
 
-class ScoreThresholdDiagnostic(DiagnosticPlugin):
-    """Triggers when the score function crosses pre-defined levels."""
+class FirstTimeCrossingDiagnostic(DiagnosticPlugin):
+    """Triggers when the score function crosses pre-defined levels.
+
+    This is a central diagnostic plugin to TAMS, triggered when
+    the score function crosses pre-defined levels, only for
+    the first time.
+
+    This allows to evaluate the probability of crossing any
+    intermediate score levels from a TAMS run, as well as
+    estimating mean first passage time.
+
+    Attributes:
+        _levels: the threshold levels
+        _highest_recorded_score: the high water mark of the plugin
+        _checked_db: True if the DB has been checked
+    """
 
     def __init__(
         self,
@@ -150,10 +164,12 @@ def diagnosticfactory(
             err_msg = f"Diagnostic {diag_str_list[i]} is missing a parameter dict !"
             raise RuntimeError(err_msg)
 
-        diag_type = diag_dict.get("trigger_type", "score")
+        diag_type = diag_dict.get("type", "FirstCrossing")
 
-        if diag_type == "score":
-            diags_l.append(ScoreThresholdDiagnostic(diag_str_list[i], diag_dict, tid, tweight, workdir, fprocess, ddb))
+        if diag_type == "FirstCrossing":
+            diags_l.append(
+                FirstTimeCrossingDiagnostic(diag_str_list[i], diag_dict, tid, tweight, workdir, fprocess, ddb)
+            )
         else:
             err_msg = f"Diagnostic {diag_str_list[i]} has unknown trigger type {diag_type} !"
             raise ValueError(err_msg)
@@ -172,14 +188,14 @@ class DiagnosticAnalyst:
     def __init__(self, db_path: str) -> None:
         self.db = DiagDB(db_path)
 
-    def get_diagnostic_data(self, label: str) -> dict[float, list[tuple[Any, float]]]:
+    def get_diagnostic_data(self, label: str) -> dict[float, list[tuple[Any, float, float, int]]]:
         """A user-facing access to the diag DB.
 
         An alias to the DB access for the analyst.
 
         Returns:
             A dictionary mapping each score iso-level (float) to a list of tuples.
-            Each tuple contains (unpickled_data, trajectory_weight).
+            Each tuple contains (unpickled_data, trajectory_weight, time, tid).
         """
         return self.db.get_diagnostic_data(label)
 
@@ -193,6 +209,7 @@ class DiagnosticAnalyst:
         for level, tdata in data_map.items():
             data = np.array([td[0] for td in tdata])
             weights = np.array([td[1] for td in tdata])
+            times = np.array([td[2] for td in tdata])
 
             sum_w = np.sum(weights)
             if level <= 0.0:
@@ -203,6 +220,7 @@ class DiagnosticAnalyst:
 
             proba = weights / full_sum
 
+            mean_time = np.average(times, weights=proba)
             weighted_mean = np.average(data, weights=proba, axis=0)
             delta = data - weighted_mean
             weighted_variance = np.average(delta**2, weights=proba, axis=0)
@@ -210,8 +228,50 @@ class DiagnosticAnalyst:
             stats_per_level[level] = {
                 "mean": weighted_mean,
                 "var": weighted_variance,
+                "mean_time": mean_time,
                 "count": len(tdata),
                 "total_weight": np.sum(proba),
             }
 
         return stats_per_level
+
+    def get_conditional_means(self, label: str) -> dict[float, dict[str, Any]]:
+        """Compute means at level L_i conditioned on reaching or not reaching L_{i+1}.
+
+        Returns:
+            { level: {"reached_next": mean_val, "failed_next": mean_val} }
+        """
+        # 1. Get all raw data for this label
+        raw_data = self.db.get_diagnostic_data(label)
+        levels = sorted(raw_data.keys())
+
+        results = {}
+
+        for i in range(len(levels) - 1):
+            current_level = levels[i]
+            next_level = levels[i + 1]
+
+            # Find IDs that exist at the next level
+            successful_ids = {entry[3] for entry in raw_data[next_level]}
+
+            reached_vals = []
+            reached_weights = []
+            failed_vals = []
+            failed_weights = []
+
+            for entry in raw_data[current_level]:
+                val, w, tid = entry[0], entry[1], entry[3]
+
+                if tid in successful_ids:
+                    reached_vals.append(val)
+                    reached_weights.append(w)
+                else:
+                    failed_vals.append(val)
+                    failed_weights.append(w)
+
+            results[current_level] = {
+                "reached_next": np.average(reached_vals, weights=reached_weights, axis=0) if reached_vals else None,
+                "failed_next": np.average(failed_vals, weights=failed_weights, axis=0) if failed_vals else None,
+            }
+
+        return results
