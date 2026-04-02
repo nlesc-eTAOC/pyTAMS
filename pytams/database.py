@@ -210,7 +210,7 @@ class Database(Generic[T_Noise, T_State]):
             self._pool_db = TrajDB(self.pool_file())
 
         # Check minimal parameters
-        if self._ntraj == -1 or self._nsplititer == -1:
+        if self._ntraj == -1:
             err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
