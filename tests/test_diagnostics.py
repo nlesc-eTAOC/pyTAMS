@@ -59,7 +59,7 @@ def test_init_unknown_diagnostic():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
     params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "Unknown"}}
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         _ = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
