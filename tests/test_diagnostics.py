@@ -37,7 +37,7 @@ def test_add_to_diagdb():
 def test_init_diagnostic():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score"}}
+    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing"}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._label == "testd"
     dplugin = []
@@ -58,7 +58,7 @@ def test_failed_init_diagnostic():
 def test_init_diagnostic_with_levels():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score", "n_levels": 3}}
+    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._levels[1] == 0.5
     dplugin = []
@@ -69,7 +69,7 @@ def test_init_diagnostic_with_levels():
 def test_diagnostic_crossed():
     """Test initialize a diagnostic and crossed."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score", "n_levels": 3}}
+    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     levels = dplugin[0].get_crossed_levels(s_new)
@@ -83,13 +83,13 @@ def test_diagnostic_update():
     """Test initialize a diagnostic and update."""
     fmodel = SimpleFModel(1, {})
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "score", "n_levels": 3}}
+    params_dict = {"tams": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
     dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
     s_old = Snapshot(time=0.0, score=0.0, noise=0.0)
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     dplugin[0].update(s_old, s_new)
     data = ddb.get_diagnostic_data("testd")
-    assert data[0.0] == [(42.0, 0.1)]
+    assert data[0.0] == [(42.0, 0.1, 1.0, 1)]
     dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
