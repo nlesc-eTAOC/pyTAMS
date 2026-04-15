@@ -36,7 +36,7 @@ def test_run_pool_worker_with_sql():
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     _ = pool_worker(t_test, enddate, "./test.db")
     _, metadata = poolfile.fetch_trajectory(0)
-    assert metadata["ended"]
+    assert metadata["terminated"]
     del poolfile
     Path("./test.db").unlink()
 
@@ -98,7 +98,7 @@ def test_run_ms_worker_with_sql():
     poolfile.add_trajectory("dummy.xml", rst_test.get_metadata())
     _ = ms_worker(t_test, rst_test, 0.049, 1.0, enddate, "./test.db")
     _, metadata = poolfile.fetch_trajectory(1)
-    assert metadata["ended"]
+    assert metadata["terminated"]
     del poolfile
     Path("./test.db").unlink()
 

@@ -665,17 +665,17 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._pool_db.lock_trajectory(tid, allow_completed_lock)
 
-    def unlock_trajectory(self, tid: int, has_ended: bool) -> None:
+    def unlock_trajectory(self, tid: int, has_terminated: bool) -> None:
         """Unlock a trajectory in the SQL DB.
 
         Args:
             tid: the trajectory id
-            has_ended: True if the trajectory has ended
+            has_terminated: True if the trajectory has terminated
 
         Raises:
             SQLAlchemyError if the DB could not be accessed
         """
-        if has_ended:
+        if has_terminated:
             self._pool_db.mark_trajectory_as_completed(tid)
         else:
             self._pool_db.release_trajectory(tid)
@@ -870,9 +870,9 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._init_ensemble_done
 
-    def count_ended_traj(self) -> int:
-        """Return the number of trajectories that ended."""
-        return self._pool_db.get_ended_trajectory_count()
+    def count_terminated_traj(self) -> int:
+        """Return the number of trajectories that terminated."""
+        return self._pool_db.get_terminated_trajectory_count()
 
     def count_converged_traj(self) -> int:
         """Return the number of trajectories that converged."""
@@ -892,7 +892,7 @@ class Database(Generic[T_Noise, T_State]):
 
     def get_transition_probability(self) -> float:
         """Return the transition probability."""
-        if self.count_ended_traj() < self._ntraj:
+        if self.count_terminated_traj() < self._ntraj:
             return 0.0
 
         # Insert a first element to the weight array
@@ -917,7 +917,7 @@ class Database(Generic[T_Noise, T_State]):
             {pretty_line}
             # Requested # of traj: {self._ntraj:27} #
             # Requested # of splitting iter: {self._nsplititer:17} #
-            # Number of 'Ended' trajectories: {self.count_ended_traj():16} #
+            # Number of 'Terminated' trajectories: {self.count_terminated_traj():10} #
             # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
             # Current splitting iter counter: {self.k_split():16} #
             # Current total number of steps: {self.count_computed_steps():17} #
