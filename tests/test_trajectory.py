@@ -90,7 +90,7 @@ def test_simple_model_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.01)
+    t_test.advance(t_end=0.01)
     assert isclose(t_test.score_max(), 0.1, abs_tol=1e-9)
     assert t_test.is_converged() is False
     t_test.advance()
@@ -132,12 +132,26 @@ def test_branch_simple_model_traj():
     assert t_branched.get_computed_steps_count() == 150
 
 
+def test_simple_model_traj_end_nstep():
+    """Test trajectory with simple model."""
+    fmodel = SimpleFModel
+    parameters = {"trajectory": {"step_size": 0.001, "targetscore": 0.55}}
+    t_test = Trajectory(1, 1.0, fmodel, parameters)
+    t_test.advance(nstep_end=20)
+    assert isclose(t_test.score_max(), 0.2, abs_tol=1e-9)
+    assert t_test.is_converged() is False
+    assert t_test.is_terminated() is True
+    t_test.advance(t_end=0.03)
+    assert isclose(t_test.score_max(), 0.3, abs_tol=1e-9)
+    assert t_test.is_converged() is False
+
+
 def test_store_and_restore_simple_traj():
     """Test store and restoring trajectory with simple model."""
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.05, "step_size": 0.001, "targetscore": 0.25}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.02)
+    t_test.advance(t_end=0.02)
     assert isclose(t_test.score_max(), 0.2, abs_tol=1e-9)
     assert t_test.is_converged() is False
     chkfile = Path("./test.xml")
@@ -156,7 +170,7 @@ def test_store_and_restore_frozen_simple_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.05, "step_size": 0.001, "targetscore": 0.25}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.02)
+    t_test.advance(t_end=0.02)
     assert isclose(t_test.score_max(), 0.2, abs_tol=1e-9)
     assert t_test.is_converged() is False
     chkfile = Path("./test.xml")
@@ -177,7 +191,7 @@ def test_restart_simple_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25}}
     from_traj = Trajectory(1, 0.5, fmodel, parameters)
-    from_traj.advance(0.01)
+    from_traj.advance(t_end=0.01)
     rst_traj = Trajectory(2, 0.5, fmodel, parameters)
     rst_test = Trajectory.branch_from_trajectory(from_traj, rst_traj, 0.05, 0.25)
     assert rst_test.current_time() == 0.006
@@ -188,7 +202,7 @@ def test_access_data_simple_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.01)
+    t_test.advance(t_end=0.01)
     assert t_test.get_length() == 11
     assert isclose(t_test.get_time_array()[-1], 0.01, abs_tol=1e-9)
     assert isclose(t_test.get_score_array()[-1], 0.1, abs_tol=1e-9)
@@ -199,7 +213,7 @@ def test_sparse_simple_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25, "sparse_freq": 5}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.012)
+    t_test.advance(t_end=0.012)
     assert isclose(t_test.score_max(), 0.12, abs_tol=1e-9)
     assert t_test.is_converged() is False
     assert isclose(t_test.get_last_state(), 0.009, abs_tol=1e-9)
@@ -222,7 +236,7 @@ def test_store_and_restart_sparse_simple_traj():
     fmodel = SimpleFModel
     parameters = {"trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25, "sparse_freq": 5}}
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(0.013)
+    t_test.advance(t_end=0.013)
     assert isclose(t_test.score_max(), 0.13, abs_tol=1e-9)
     assert t_test.is_converged() is False
     chkfile = Path("./test.xml")
@@ -255,7 +269,7 @@ def test_sparse_dw_traj_with_restore():
         "model": {"noise_amplitude": 0.8},
     }
     t_test = Trajectory(1, 1.0, fmodel, parameters)
-    t_test.advance(4.07)
+    t_test.advance(t_end=4.07)
     chkfile = Path("./test.xml")
     t_test.store(chkfile, write_metadata_json=True)
     assert isclose(t_test.score_max(), 0.5384037112515893, abs_tol=1e-9)

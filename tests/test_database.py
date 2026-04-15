@@ -114,12 +114,12 @@ def test_access_ensemble_length():
     assert tdb.is_empty() is False
 
 @pytest.mark.dependency(depends=["genDB"])
-def test_access_ended_count():
+def test_access_terminated_count():
     """Test accessing database trajectory metadata."""
     fmodel = DoubleWellModel
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
-    assert tdb.count_ended_traj() == 50
+    assert tdb.count_terminated_traj() == 50
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_converged_count():
