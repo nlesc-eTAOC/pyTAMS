@@ -230,10 +230,10 @@ class TrajDB(BaseSQLManager):
         with self.session_scope() as session:
             return session.scalar(select(func.count(Trajectory.id))) or 0
 
-    def get_ended_trajectory_count(self) -> int:
-        """Return the number of trajectories that have 'ended' in their metadata."""
+    def get_terminated_trajectory_count(self) -> int:
+        """Return the number of trajectories that have 'terminated' in their metadata."""
         with self.session_scope() as session:
-            stmt = select(func.count(Trajectory.id)).where(Trajectory.t_metadata["ended"].as_boolean())
+            stmt = select(func.count(Trajectory.id)).where(Trajectory.t_metadata["terminated"].as_boolean())
             return session.scalar(stmt) or 0
 
     def get_converged_trajectory_count(self) -> int:

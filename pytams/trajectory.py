@@ -1,3 +1,5 @@
+"""A trajectory class for individual MCMC runs."""
+
 from __future__ import annotations
 import copy
 import json
@@ -62,11 +64,13 @@ def get_index_from_id(identity: str) -> tuple[int, int]:
 class Trajectory(Generic[T_Noise, T_State]):
     """A class defining a stochastic trajectory.
 
+    Each trajectory is a MCMC simulation of the forward model.
+
     The trajectory class is a container for time-ordered snapshots.
     It contains an instance of the forward model, current and end times, and
     a list of the model snapshots. Note that the class uses a plain list of snapshots
     and not a more computationally efficient data structure such as a numpy array
-    for convenience. It is assumed that the computational cost of running TAMS
+    for convenience. It is assumed that the computational cost of running the sampling algorithm
     resides in the forward model and the overhead of the trajectory class is negligible.
 
     It also provide the forward model with the necessary context to advance in time,
@@ -105,7 +109,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         workdir: Path | None = None,
         frozen: bool = False,
     ) -> None:
-        """Create a trajectory.
+        """Initialize a trajectory.
 
         Args:
             traj_id: a int for the trajectory index
@@ -118,9 +122,10 @@ class Trajectory(Generic[T_Noise, T_State]):
         # Stash away the full parameters dict
         self._parameters_full: dict[Any, Any] = parameters
 
+        # Check that the step size is provided
         traj_params = parameters.get("trajectory", {})
-        if "end_time" not in traj_params or "step_size" not in traj_params:
-            err_msg = "Trajectory 'end_time' and 'step_size' must be specified in the input file !"
+        if "step_size" not in traj_params:
+            err_msg = "Trajectory 'step_size' must be specified in the input file !"
             _logger.error(err_msg)
             raise ValueError
 
@@ -128,17 +133,17 @@ class Trajectory(Generic[T_Noise, T_State]):
         self._tid: int = traj_id
         self._workdir: Path = Path.cwd() if workdir is None else workdir
         self._score_max: float = -1.0e12
-        self._has_ended: bool = False
         self._has_converged: bool = False
+        self._has_terminated: bool = False
         self._computed_steps: int = 0
         self._weight: float = weight
 
-        # TAMS is expected to start at t = 0.0, but the forward model
+        # Sampling is expected to start at t = 0.0, but the forward model
         # itself can have a different internal starting point
         # or an entirely different time scale.
         self._step: int = 0
         self._t_cur: float = 0.0
-        self._t_end: float = traj_params.get("end_time")
+        self._t_end: float = traj_params.get("end_time", -1.0)
         self._dt: float = traj_params.get("step_size")
 
         # Trajectory convergence is defined by a target score, with
@@ -153,8 +158,8 @@ class Trajectory(Generic[T_Noise, T_State]):
         # steps might be already available. This backlog is used to store them.
         self.noise_backlog: list[T_Noise] = []
 
-        # Keep track of the branching history during TAMS
-        # iterations
+        # Keep track of the branching history for iterative
+        # sampling algorithms
         self._branching_history: list[int] = []
 
         # For large models, the state may not be available at each snapshot due
@@ -239,7 +244,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         """
         return form_trajectory_id(self._tid, self.get_nbranching())
 
-    def advance(self, t_end: float = 1.0e12, walltime: float = 1.0e12) -> None:
+    def advance(self, nstep_end: int = -1, t_end: float = -1.0, walltime: float = 1.0e12) -> None:
         """Advance the trajectory to a prescribed end time.
 
         This is the main time loop of the trajectory object.
@@ -251,6 +256,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         TAMS workers.
 
         Args:
+            nstep_end: the number of steps to advance
             t_end: the end time of the advance
             walltime: a walltime limit to advance the model to t_end
 
@@ -261,34 +267,40 @@ class Trajectory(Generic[T_Noise, T_State]):
             WallTimeLimitError: if the walltime limit is reached
             RuntimeError: if the model advance run into a problem
         """
-        start_time = time.monotonic()
-        remaining_time = walltime - time.monotonic() + start_time
-        end_time = min(t_end, self._t_end)
-
+        # Check if the trajectory is frozen
         if not self._fmodel:
             err_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
             _logger.error(err_msg)
             raise RuntimeError(err_msg)
 
-        while self._t_cur < end_time and not self._has_converged and remaining_time >= 0.05 * walltime:
-            # Do a single step and keep track of remaining walltime
-            _ = self._one_step()
+        start_time = time.monotonic()
+        end_time = self._calculate_end_time(t_end)
 
-            # Initialize diagnostic now, access to diagdb
-            # no longer needs to be pickled at this point
-            if not self._initialized_diags and self._has_diagnostics:
-                self._setup_diagnostics()
+        # Termination depends on runtime arguments of the advance function.
+        # Re-evaluate before we move forward.
+        # (A previous call to advance with other arguments might have switched the boolean)
+        self._has_terminated = self._fmodel.check_termination(self._step, self._t_cur, nstep_end, end_time, -1.0)
 
-            # Perform any diagnostic requested
-            for plugin in self._diagplugins:
-                plugin.update(self._snaps[-2], self._snaps[-1])
+        while not (self._has_terminated or self._has_converged):
+            # Do a single model step
+            score = self._one_step()
 
-            remaining_time = walltime - time.monotonic() + start_time
+            # Check for termination/convergence
+            self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
+            self._has_terminated = self._fmodel.check_termination(self._step, self._t_cur, nstep_end, end_time, score)
 
-        if self._t_cur >= self._t_end or self._has_converged:
-            self._has_ended = True
+            # Handle diagnostics
+            self._update_diagnostics()
 
-        if self._has_ended:
+            # Check timeout before continuing
+            if (time.monotonic() - start_time) >= walltime:
+                break
+
+        # If the model has converged, terminate
+        if self._has_converged:
+            self._has_terminated = True
+
+        if self._has_terminated:
             self._fmodel.clear()
 
         # Clear the diagnostic
@@ -298,10 +310,35 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._diagplugins = []
             self._initialized_diags = False
 
-        if remaining_time < 0.05 * walltime:
+        if (time.monotonic() - start_time) >= walltime:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
             _logger.warning(warn_msg)
             raise WallTimeLimitError(warn_msg)
+
+    def _calculate_end_time(self, t_end: float) -> float:
+        """Returns the earliest positive end time, or -1.0 if none exist.
+
+        Args:
+            t_end: the end time of the advance
+
+        Returns:
+            the earliest positive end time
+        """
+        valid_times = [t for t in (self._t_end, t_end) if t > 0.0]
+        return min(valid_times) if valid_times else -1.0
+
+    def _update_diagnostics(self) -> None:
+        """Handle diagnostic initialization and plugin updates."""
+        if not self._has_diagnostics:
+            return
+
+        # Initialize diagnostic now, access to diagdb
+        # no longer needs to be pickled at this point
+        if not self._initialized_diags:
+            self._setup_diagnostics()
+
+        for plugin in self._diagplugins:
+            plugin.update(self._snaps[-2], self._snaps[-1])
 
     def _one_step(self) -> float:
         """Perform a single step of the forward model.
@@ -309,6 +346,10 @@ class Trajectory(Generic[T_Noise, T_State]):
         Perform a single time step of the forward model. This
         function will also set the noise to use for the next step
         in the forward model if a backlog is available.
+
+        Args:
+            nstep_end: the maximum number of steps to advance
+            t_end: the end time of the advance
         """
         if not self._fmodel:
             err_msg = f"Trajectory {self.idstr()} is frozen, without forward model. Advance() deactivated."
@@ -345,11 +386,6 @@ class Trajectory(Generic[T_Noise, T_State]):
             self.store()
 
         self._score_max = max(self._score_max, score)
-
-        # The default ABC method simply check for a score above
-        # the target value, but concrete implementations can override
-        # with mode complex convergence criteria
-        self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
 
         # Increment the computed step counter
         self._computed_steps += 1
@@ -452,7 +488,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         traj._t_cur = metadata["t_cur"]
         traj._dt = metadata["dt"]
         traj._score_max = metadata["score_max"]
-        traj._has_ended = metadata["ended"]
+        traj._has_terminated = metadata["terminated"]
         traj._has_converged = metadata["converged"]
         traj._branching_history = metadata["branching_history"]
         traj._computed_steps = metadata["nstep_compute"]
@@ -730,7 +766,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         """Update trajectory score/ending metadata.
 
         Update the maximum of the score function over the trajectory
-        as well as the bool values for has_converged and has_ended.
+        as well as the bool values for has_converged and has_terminated
         """
         new_score_max = 0.0
         for snap in self._snaps:
@@ -740,10 +776,15 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._has_converged = self._fmodel.check_convergence(
                 self._step, self._t_cur, self._score_max, self._convergedVal
             )
+            if self._has_converged:
+                self._has_terminated = True
+            else:
+                self._has_terminated = self._fmodel.check_termination(
+                    self._step, self._t_cur, -1, -1.0, self._score_max
+                )
         else:
             self._has_converged = False
-        if self._t_cur >= self._t_end or self._has_converged:
-            self._has_ended = True
+            self._has_terminated = False
 
     def set_current_time_and_step(self, time: float, step: int) -> None:
         """Set the current time and step."""
@@ -766,9 +807,9 @@ class Trajectory(Generic[T_Noise, T_State]):
         """Return True for converged trajectory."""
         return self._has_converged
 
-    def has_ended(self) -> bool:
+    def is_terminated(self) -> bool:
         """Return True for terminated trajectory."""
-        return self._has_ended
+        return self._has_terminated
 
     def has_started(self) -> bool:
         """Return True if computation has started."""
@@ -845,7 +886,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             "t_end": self._t_end,
             "t_cur": self._t_cur,
             "dt": self._dt,
-            "ended": bool(self._has_ended),
+            "terminated": bool(self._has_terminated),
             "converged": bool(self._has_converged),
             "score_max": float(self._score_max),
             "length": self.get_length(),
@@ -878,7 +919,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             "t_end": float(mstr["t_end"]),
             "t_cur": float(mstr["t_cur"]),
             "dt": float(mstr["dt"]),
-            "ended": mstr["ended"],
+            "terminated": mstr["terminated"],
             "converged": mstr["converged"],
             "score_max": float(mstr["score_max"]),
             "length": int(mstr["length"]),

@@ -199,7 +199,7 @@ class TAMS:
         t_list.sort(key=lambda t: t.id())
         self._tdb.update_traj_list(t_list)
 
-        if self._tdb.count_ended_traj() == self._tdb.n_traj():
+        if self._tdb.count_terminated_traj() == self._tdb.n_traj():
             self._tdb.set_init_ensemble_flag(True)
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
@@ -247,7 +247,7 @@ class TAMS:
         """Check and finish unfinished splitting iterations.
 
         If the run was interrupted during a splitting iteration,
-        the branched trajectories might not have ended yet. In that case,
+        the branched trajectories might not have terminated yet. In that case,
         a list of trajectories to finish is listed in the database.
         """
         # Check the database for unfinished splitting iteration when restarting.
