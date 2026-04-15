@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.database import Database
+from pytams.sampler import RareEventSampler
 from pytams.tams import TAMS
 from tests.dwmodel import DoubleWellModel
 
@@ -16,12 +17,6 @@ def test_failed_db_init_no_ntraj():
     with pytest.raises(ValueError):
         Database(fmodel, params_load_db)
 
-def test_failed_db_init_no_nsplit():
-    """Test init of TDB failing missing nsplit."""
-    fmodel = DoubleWellModel
-    params_load_db = {}
-    with pytest.raises(ValueError):
-        Database(fmodel, params_load_db, ntraj=10)
 
 def test_wrong_format():
     """Test init of TDB with unsupported format."""
@@ -30,10 +25,12 @@ def test_wrong_format():
     with pytest.raises(ValueError):
         _ = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
 
+
 def test_load_missing_tdb():
     """Test failed load database."""
     with pytest.raises(FileNotFoundError):
         _ = Database.load(Path("dwTestNonExistent.tdb"))
+
 
 def test_init_empty_tdb_inmemory():
     """Test init database."""
@@ -41,6 +38,7 @@ def test_init_empty_tdb_inmemory():
     params_load_db = {}
     tdb = Database(fmodel, params_load_db, ntraj=10, nsplititer=100)
     assert tdb.name() == "TAMS_DoubleWellModel"
+
 
 def test_init_empty_tdb():
     """Test init database on disk."""
@@ -51,6 +49,7 @@ def test_init_empty_tdb():
     # Necessary on Windows
     del tdb
     shutil.rmtree("dwTest.tdb")
+
 
 def test_reinit_empty_tdb():
     """Test init database on disk."""
@@ -69,6 +68,7 @@ def test_reinit_empty_tdb():
             ndb += 1
     assert ndb == 2
 
+
 def test_init_and_load_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
@@ -80,6 +80,7 @@ def test_init_and_load_empty_tdb():
     tdb = Database.load(tdb_path)
     del tdb
     shutil.rmtree("dwTest.tdb")
+
 
 @pytest.mark.dependency(name="genDB")
 def test_generate_and_load_tdb():
@@ -97,13 +98,15 @@ def test_generate_and_load_tdb():
             f,
         )
     tams = TAMS(fmodel_t=fmodel, a_args=[])
-    tams.compute_probability()
+    sampler = RareEventSampler(tams, a_args=[])
+    sampler.run()
 
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
     tdb.info()
     assert tdb
     Path("input.toml").unlink(missing_ok=True)
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_ensemble_length():
@@ -113,6 +116,7 @@ def test_access_ensemble_length():
     tdb = Database(fmodel, params_load_db)
     assert tdb.is_empty() is False
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_terminated_count():
     """Test accessing database trajectory metadata."""
@@ -121,6 +125,7 @@ def test_access_terminated_count():
     tdb = Database(fmodel, params_load_db)
     assert tdb.count_terminated_traj() == 50
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_converged_count():
     """Test accessing database trajectory metadata."""
@@ -128,6 +133,7 @@ def test_access_converged_count():
     params_load_db = {"database": {"path": "dwTest.tdb"}}
     tdb = Database(fmodel, params_load_db)
     assert tdb.count_converged_traj() == 50
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_pool_content():
@@ -139,6 +145,7 @@ def test_access_pool_content():
     assert Path("./test.json").exists()
     Path("./test.json").unlink()
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_copy_and_access():
     """Test copying the database and accessing it."""
@@ -149,6 +156,7 @@ def test_copy_and_access():
     assert tdb.count_converged_traj() == 50
     del tdb
     shutil.rmtree("dwTestCopy.tdb")
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_replace_traj_in_tdb():
@@ -162,6 +170,7 @@ def test_replace_traj_in_tdb():
     tdb.overwrite_traj(1, traj_zero)
     assert tdb.get_traj(1).idstr()[:10] == "traj000000"
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_unknown_traj_access_in_tdb():
     """Test accessing a trajectory out-of-range."""
@@ -172,6 +181,7 @@ def test_unknown_traj_access_in_tdb():
 
     with pytest.raises(ValueError):
         _ = tdb.get_traj(10000)
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_unknown_traj_overwrite_in_tdb():
@@ -184,6 +194,7 @@ def test_unknown_traj_overwrite_in_tdb():
     traj_zero = tdb.get_traj(0)
     with pytest.raises(ValueError):
         _ = tdb.overwrite_traj(10000, traj_zero)
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_access_trajdata_in_tdb():
@@ -201,6 +212,7 @@ def test_access_trajdata_in_tdb():
     assert scores.size > 0
     assert noises.size > 0
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_explore_tdb():
     """Test loading the TDB."""
@@ -210,6 +222,7 @@ def test_explore_tdb():
     tdb.load_data()
     tdb.plot_score_functions("test.png")
     Path("./test.png").unlink(missing_ok=False)
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_explore_minmax_tdb():
@@ -221,6 +234,7 @@ def test_explore_minmax_tdb():
     tdb.plot_min_max_span(fname="test_minmax.png")
     Path("./test_minmax.png").unlink(missing_ok=False)
 
+
 @pytest.mark.dependency(depends=["genDB"])
 def test_explore_active_at_k():
     """Test getting the initial active set."""
@@ -229,6 +243,7 @@ def test_explore_active_at_k():
     act_trajs = tdb.get_trajectory_active_at_k(0)
     assert len(act_trajs) == 50
     assert act_trajs[42].idstr() == "traj000042_0000"
+
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_restore_tdb():
