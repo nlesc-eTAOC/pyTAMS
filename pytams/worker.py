@@ -59,7 +59,7 @@ def traj_advance_with_exception(
     finally:
         # Update the SQL database
         if trajdb:
-            if traj.has_ended():
+            if traj.is_terminated():
                 trajdb.mark_trajectory_as_completed(traj.id())
             else:
                 trajdb.release_trajectory(traj.id())
@@ -93,7 +93,7 @@ def pool_worker(
     if timedelta:
         wall_time = timedelta.total_seconds()
 
-    if wall_time > 0.0 and not traj.has_ended():
+    if wall_time > 0.0 and not traj.is_terminated():
         # Try to lock the trajectory in the DB
         trajdb = None
         if trajdb_path:
