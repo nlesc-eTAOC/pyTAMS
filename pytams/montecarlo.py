@@ -148,7 +148,7 @@ class MonteCarlo(SamplingStrategy):
         """Return an initialized database of the TAMS sampling strategy."""
         return Database(fmodel_t=self._fmodel_t,
                         params=self._parameters,
-                        ntraj=self._parameters["tams"]["ntrajectories"])
+                        ntraj=self._parameters["montecarlo"]["ntrajectories"])
 
     def get_database(self) -> Database:
         """Accessor to database.
