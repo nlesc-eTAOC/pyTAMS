@@ -3,7 +3,6 @@
 import argparse
 import logging
 from pathlib import Path
-from typing import Any
 import toml
 from pytams.sampling_strategy import SamplingStrategy
 from pytams.utils import setup_logger
@@ -18,7 +17,7 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
         a_args: optional list of options
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", help="pyTAMS input .toml file", default="input.toml")
+    parser.add_argument("-i", "--input", help="input .toml file", default="input.toml")
     return parser.parse_args() if a_args is None else parser.parse_args(a_args)
 
 
@@ -29,21 +28,17 @@ class RareEventSampler:
     the forward model using a prescribed sampling strategy.
     """
 
-    def __init__(self,
-                 fmodel_t: Any,
-                 strategy: SamplingStrategy,
-                 a_args: list[str] | None = None) -> None:
+    def __init__(self, strategy: SamplingStrategy, a_args: list[str] | None = None) -> None:
         """Initialize a Sampler object.
 
         Args:
+            fmodel_t: the forward model
             strategy: the sampling strategy
             a_args: optional list of options
 
         Raises:
             ValueError: if the input file is not found
         """
-        self._fmodel_t = fmodel_t
-
         input_file = vars(parse_cl_args(a_args=a_args))["input"]
         if not Path(input_file).exists():
             err_msg = f"Could not find the {input_file} pyREVS input file !"
@@ -60,6 +55,9 @@ class RareEventSampler:
         # to make sure workers are always in sync
         self._wallTime: float = self._parameters.get("sampler", {}).get("walltime", 24.0 * 3600.0)
 
+        # Check for diagnostics while sampling
+        self._plot_diags = self._parameters.get("sampler", {}).get("plot_diagnostics", False)
+
         # Store strategy
         self.strategy = strategy
 
@@ -72,7 +70,7 @@ class RareEventSampler:
 
     def run(self) -> None:
         """Sample rare events."""
-        self.strategy.sample(self._db, self._wallTime)
+        self.strategy.sample(self._db, self._wallTime, self._plot_diags)
 
     def set_strategy(self, new_strategy: SamplingStrategy) -> None:
         """Set a new sampling strategy."""
