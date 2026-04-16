@@ -73,6 +73,10 @@ tams_init_model = "pytams.bin:tams_template_model"
 tams_check = "pytams.bin:tams_alive"
 tams_run = "pytams.bin:tams_run"
 
+[project.entry-points."pytams.strategies"]
+ams = "pytams.sampling_strategies.ams"
+montecarlo = "pytams.sampling_strategies.montecarlo"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

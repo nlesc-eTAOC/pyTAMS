@@ -1,4 +1,4 @@
-"""A database class for TAMS."""
+"""A database class for the pyREVS sampler."""
 
 from __future__ import annotations
 import copy
@@ -35,10 +35,10 @@ T_State = TypeVar("T_State")
 
 
 class Database(Generic[T_Noise, T_State]):
-    """A database class for TAMS.
+    """A database class for the pyREVS sampler.
 
-    The database class for TAMS is a container for
-    all the trajectory and splitting data. When the
+    The database class is a container for
+    all the trajectory (and splitting data). When the
     user provides a path to store the database, a local folder is
     created holding a number of readable files, any output
     from the model and SQL files used to lock/release
@@ -60,6 +60,7 @@ class Database(Generic[T_Noise, T_State]):
 
     def __init__(
         self,
+        strategy: str,
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
         params: dict[Any, Any],
         ntraj: int = -1,
@@ -76,6 +77,7 @@ class Database(Generic[T_Noise, T_State]):
         will be copied to a new random name.
 
         Args:
+            strategy: the sampling strategy
             fmodel_t: the forward model type
             params: a dictionary of parameters
             ntraj: [OPT] number of traj to hold
@@ -89,6 +91,7 @@ class Database(Generic[T_Noise, T_State]):
         self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
         self._version = version(__package__)
         self._name = "TAMS_" + fmodel_t.name()
+        self._strategy = strategy
 
         # Stash away the model class and parameters
         self._fmodel_t = fmodel_t
@@ -914,10 +917,11 @@ class Database(Generic[T_Noise, T_State]):
             # TAMS v{self._version:17s} trajectory database      #
             # Date: {db_date_str:42s} #
             # Model: {self._fmodel_t.name():41s} #
+            # Sampling strategy: {self._strategy:29s} #
             {pretty_line}
             # Requested # of traj: {self._ntraj:27} #
             # Requested # of splitting iter: {self._nsplititer:17} #
-            # Number of 'Terminated' trajectories: {self.count_terminated_traj():10} #
+            # Number of 'Terminated' trajectories: {self.count_terminated_traj():11} #
             # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
             # Current splitting iter counter: {self.k_split():16} #
             # Current total number of steps: {self.count_computed_steps():17} #

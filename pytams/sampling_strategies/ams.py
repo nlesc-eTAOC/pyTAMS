@@ -417,6 +417,7 @@ class AMS(BaseSamplingStrategy):
     def initialize_db(self) -> Database:
         """Return an initialized database of the AMS sampling strategy."""
         return Database(
+            strategy="ams",
             fmodel_t=self._fmodel_t,
             params=self._parameters,
             ntraj=self._parameters["ams"]["ntrajectories"],
