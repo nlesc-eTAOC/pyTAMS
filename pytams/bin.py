@@ -23,6 +23,11 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
         default="MyNewClass",
     )
     parser.add_argument(
+        "--include_optional",
+        help="Include optional methods in subclass",
+        default=False,
+    )
+    parser.add_argument(
         "-m",
         "--module",
         help="Module implementing forward model",
@@ -55,8 +60,9 @@ def tams_template_model(a_args: list[str] | None = None) -> None:
         a_args: optional list of options
     """
     model_name = vars(parse_cl_args(a_args=a_args))["name"]
+    incl_opt = vars(parse_cl_args(a_args=a_args))["include_optional"]
     out_file = f"{model_name}.py"
-    generate_subclass(ForwardModelBaseClass, model_name, out_file)
+    generate_subclass(ForwardModelBaseClass, model_name, out_file, incl_opt)
 
 
 def tams_run(a_args: list[str] | None = None) -> None:
