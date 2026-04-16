@@ -22,17 +22,41 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
 
 
 class RareEventSampler:
-    """The top-level rare event sampler object.
+    """The top-level interface for rare event sampling.
 
-    A user-facing object to sample rare events of
-    the forward model using a prescribed sampling strategy.
+    This class provides a user-facing entry point to perform rare event
+    sampling using a specified :class:`SamplingStrategy`.
+    It is responsible for:
+
+    - Parsing configuration from a TOML input file
+    - Initializing logging
+    - Managing global runtime parameters (e.g., walltime)
+    - Setting up the database
+    - Running the sampling strategy
+
+    Attributes:
+        _parameters (dict): Configuration parameters parsed from the input file
+        _wallTime (float): Maximum runtime in seconds
+        _plot_diags (bool): Enable diagnostic plots during sampling
+        _strategy (SamplingStrategy): The sampling strategy
+
+    Notes:
+    The sampler assumes that the input file contains a ``[sampler]`` section
+    with optional fields:
+
+    - ``walltime`` (float): Maximum runtime in seconds (default: 24h)
+    - ``plot_diagnostics`` (bool): Enable diagnostic plotting during sampling
+
+    The configuration file is also passed to the logging setup routine.
     """
 
     def __init__(self, strategy: SamplingStrategy, a_args: list[str] | None = None) -> None:
         """Initialize a Sampler object.
 
+        This constructor loads configuration parameters, initializes logging,
+        and prepares the sampling database using the provided strategy.
+
         Args:
-            fmodel_t: the forward model
             strategy: the sampling strategy
             a_args: optional list of options
 
@@ -53,25 +77,41 @@ class RareEventSampler:
 
         # Time management uses UTC date
         # to make sure workers are always in sync
+        # A 24h default is set
         self._wallTime: float = self._parameters.get("sampler", {}).get("walltime", 24.0 * 3600.0)
 
-        # Check for diagnostics while sampling
+        # Enable/disable diagnostic plots during sampling
         self._plot_diags = self._parameters.get("sampler", {}).get("plot_diagnostics", False)
 
-        # Store strategy
-        self.strategy = strategy
+        # Store sampling strategy
+        self._strategy = strategy
 
         # Setup database
         self._setup_db()
 
     def _setup_db(self) -> None:
-        """Create the database needed for the sampling strategy."""
-        self._db = self.strategy.initialize_db()
+        """Initialize the sampling database.
+
+        This method delegates database creation to the sampling strategy
+        via ``SamplingStrategy.initialize_db``.
+
+        Notes:
+            The structure and contents of the database are strategy-dependent.
+            The resulting object is stored internally as ``self._db`` and passed
+            unchanged to the strategy during sampling.
+        """
+        self._db = self._strategy.initialize_db()
 
     def run(self) -> None:
-        """Sample rare events."""
-        self.strategy.sample(self._db, self._wallTime, self._plot_diags)
+        """Execute the rare event sampling procedure.
 
-    def set_strategy(self, new_strategy: SamplingStrategy) -> None:
-        """Set a new sampling strategy."""
-        self.strategy = new_strategy
+        This method starts the sampling process by delegating execution to
+        the configured ``SamplingStrategy``.
+
+        Notes:
+            This method is typically the main entry point after initialization.
+            At this point, it does not return a value; results are expected to be stored in the
+            database or written to disk by the strategy.
+            Future extensions will allow to perform several runs (possibly in parallel)
+        """
+        self._strategy.sample(self._db, self._wallTime, self._plot_diags)
