@@ -3,8 +3,9 @@
 import argparse
 import logging
 from pathlib import Path
+from typing import Any
 import toml
-from pytams.sampling_strategy import SamplingStrategy
+from pytams.base_strategy import BaseSamplingStrategy
 from pytams.utils import setup_logger
 
 _logger = logging.getLogger(__name__)
@@ -25,11 +26,12 @@ class RareEventSampler:
     """The top-level interface for rare event sampling.
 
     This class provides a user-facing entry point to perform rare event
-    sampling using a specified :class:`SamplingStrategy`.
+    sampling using a specified :class:`BaseSamplingStrategy`.
     It is responsible for:
 
     - Parsing configuration from a TOML input file
     - Initializing logging
+    - Instanciating the proper sampling strategy
     - Managing global runtime parameters (e.g., walltime)
     - Setting up the database
     - Running the sampling strategy
@@ -38,7 +40,7 @@ class RareEventSampler:
         _parameters (dict): Configuration parameters parsed from the input file
         _wallTime (float): Maximum runtime in seconds
         _plot_diags (bool): Enable diagnostic plots during sampling
-        _strategy (SamplingStrategy): The sampling strategy
+        _strategy (BaseSamplingStrategy): The sampling strategy
 
     Notes:
     The sampler assumes that the input file contains a ``[sampler]`` section
@@ -46,18 +48,19 @@ class RareEventSampler:
 
     - ``walltime`` (float): Maximum runtime in seconds (default: 24h)
     - ``plot_diagnostics`` (bool): Enable diagnostic plotting during sampling
+    - ``strategy`` (str): The name of the sampling strategy
 
     The configuration file is also passed to the logging setup routine.
     """
 
-    def __init__(self, strategy: SamplingStrategy, a_args: list[str] | None = None) -> None:
+    def __init__(self, fmodel_t: Any, a_args: list[str] | None = None) -> None:
         """Initialize a Sampler object.
 
         This constructor loads configuration parameters, initializes logging,
-        and prepares the sampling database using the provided strategy.
+        instanciate the sampling strategy and prepares the sampling database.
 
         Args:
-            strategy: the sampling strategy
+            fmodel_t: the forward model type
             a_args: optional list of options
 
         Raises:
@@ -83,8 +86,11 @@ class RareEventSampler:
         # Enable/disable diagnostic plots during sampling
         self._plot_diags = self._parameters.get("sampler", {}).get("plot_diagnostics", False)
 
-        # Store sampling strategy
-        self._strategy = strategy
+        # Instanciate sampling strategy
+        strategy_type = self._parameters.get("sampler", {}).get("strategy", "ams")
+        self._strategy: BaseSamplingStrategy = BaseSamplingStrategy.create(
+            strategy_type, fmodel_t=fmodel_t, parameters=self._parameters
+        )
 
         # Setup database
         self._setup_db()
@@ -93,7 +99,7 @@ class RareEventSampler:
         """Initialize the sampling database.
 
         This method delegates database creation to the sampling strategy
-        via ``SamplingStrategy.initialize_db``.
+        via ``BaseSamplingStrategy.initialize_db``.
 
         Notes:
             The structure and contents of the database are strategy-dependent.
@@ -106,7 +112,7 @@ class RareEventSampler:
         """Execute the rare event sampling procedure.
 
         This method starts the sampling process by delegating execution to
-        the configured ``SamplingStrategy``.
+        the configured ``BaseSamplingStrategy``.
 
         Notes:
             This method is typically the main entry point after initialization.

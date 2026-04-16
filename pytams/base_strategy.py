@@ -1,23 +1,84 @@
 """Defines the generic interface for sampling strategies."""
 
+from __future__ import annotations
 import datetime
 from abc import ABC
 from abc import abstractmethod
+from importlib.metadata import entry_points
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import ClassVar
+from typing import TypeVar
 from pytams.database import Database
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pytams.database import Database
 
 min_remaining_time = 10.0
 
+T = TypeVar("T", bound="BaseSamplingStrategy")
 
-class SamplingStrategy(ABC):
+
+class BaseSamplingStrategy(ABC):
     """An interface for all rare-event algorithms.
 
     Define the common interface for sampling strategies within
     the sampler object.
 
+    A registry is used to store all available strategies.
+    It is managed using a decorator and entry_points.
+
     Attributes:
         _start_date: the start date
         _end_date: the end date
     """
+
+    # Registry, loaded on first use
+    _registry: ClassVar[dict[str, type[BaseSamplingStrategy]]] = {}
+    _strategies_loaded: ClassVar[bool] = False
+
+    @classmethod
+    def _load_strategies(cls) -> None:
+        """Load all available strategies."""
+        if cls._strategies_loaded:
+            return
+
+        eps = entry_points(group="pytams.strategies")
+        for ep in eps:
+            ep.load()
+
+        cls._strategies_loaded = True
+
+    @classmethod
+    def register(cls, name: str) -> Callable[[type[T]], type[T]]:
+        """Register a new strategy.
+
+        Args:
+            name: the strategy name
+        """
+
+        def decorator(subclass: type[T]) -> type[T]:
+            cls._registry[name] = subclass
+            return subclass
+
+        return decorator
+
+    @classmethod
+    def create(cls, name: str, *args: Any, **kwargs: Any) -> BaseSamplingStrategy:
+        """Instantiate a strategy out of the registry.
+
+        Args:
+            name: the strategy name
+            *args: positional arguments
+            **kwargs: keyword arguments
+        """
+        cls._load_strategies()
+        try:
+            return cls._registry[name](*args, **kwargs)
+        except KeyError:
+            err_msg = f"Unknown strategy type: {name}"
+            raise ValueError(err_msg) from KeyError
 
     # Time management uses UTC date
     _start_date: datetime.datetime

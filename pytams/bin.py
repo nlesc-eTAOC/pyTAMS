@@ -4,7 +4,7 @@ import argparse
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 from pytams.fmodel import ForwardModelBaseClass
-from pytams.tams import TAMS
+from pytams.sampler import RareEventSampler
 from pytams.utils import generate_subclass
 from pytams.utils import import_forward_model
 
@@ -54,7 +54,9 @@ def tams_template_model(a_args: list[str] | None = None) -> None:
     """Copy a templated forward model file.
 
     A helper function to help getting started from scratch
-    on a new model.
+    on a new model. The include_optional flag will add
+    all the non final methods to the subclass, usefull when
+    dealing with more complex models.
 
     Args:
         a_args: optional list of options
@@ -79,7 +81,5 @@ def tams_run(a_args: list[str] | None = None) -> None:
     input_file = vars(parse_cl_args(a_args=a_args))["input"]
     shorten_list = ["-i", f"{input_file}"]
 
-    # Run TAMS
-    tams = TAMS(fmodel_t, shorten_list)
-    prob = tams.compute_probability()
-    print(f"Transition probability: {prob}")  # noqa: T201
+    sampler = RareEventSampler(fmodel_t, shorten_list)
+    sampler.run()

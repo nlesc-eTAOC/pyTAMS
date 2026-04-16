@@ -1,14 +1,12 @@
-"""The main TAMS class."""
+"""The (T)AMS sampling strategy."""
 
-import argparse
 import logging
 from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-import toml
+from pytams.base_strategy import BaseSamplingStrategy
 from pytams.database import Database
-from pytams.sampling_strategy import SamplingStrategy
 from pytams.taskrunner import get_runner_type
 from pytams.utils import get_min_scored
 from pytams.worker import ms_worker
@@ -19,24 +17,14 @@ _logger = logging.getLogger(__name__)
 STALL_TOL = 1e-10
 
 
-def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
-    """Parse provided list or default CL argv.
+@BaseSamplingStrategy.register("ams")
+class AMS(BaseSamplingStrategy):
+    """A strategy class implementing (T)AMS.
 
-    Args:
-        a_args: optional list of options
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", help="pyTAMS input .toml file", default="input.toml")
-    return parser.parse_args() if a_args is None else parser.parse_args(a_args)
-
-
-class TAMS(SamplingStrategy):
-    """A strategy class implementing TAMS.
-
-    The interface to TAMS, implementing the main steps of
+    The interface to (T)AMS, implementing the main steps of
     the algorithm.
 
-    Initialization of the TAMS class requires a forward model
+    Initialization of the (T)AMS class requires a forward model
     type which encapsulate all the model-specific code, and
     an optional list of options.
 
@@ -47,7 +35,7 @@ class TAMS(SamplingStrategy):
     Separate control of the parallelism is provided for
     both steps.
 
-    All the algorithm data are contained in the TAMS database.
+    All the algorithm data are contained in the (T)AMS database.
     For control purposes, a walltime limit is also provided. It is
     passed to working and lead to the termination of the algorithm
     in a state that can be saved to disk and restarted at a later stage.
@@ -60,35 +48,31 @@ class TAMS(SamplingStrategy):
         _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
     """
 
-    def __init__(self, fmodel_t: Any, a_args: list[str] | None = None) -> None:
-        """Initialize a TAMS object.
+    def __init__(self, fmodel_t: Any, parameters: dict[Any, Any]) -> None:
+        """Initialize a AMS strategy.
 
         Args:
             fmodel_t: the forward model type
-            a_args: optional list of options
+            parameters: a dictionary of parameters
 
         Raises:
-            ValueError: if the input file is not found
+            ValueError: if necessary parameters are not found
         """
         self._fmodel_t = fmodel_t
-
-        input_file = vars(parse_cl_args(a_args=a_args))["input"]
-        if not Path(input_file).exists():
-            err_msg = f"Could not find the {input_file} TAMS input file !"
-            _logger.exception(err_msg)
-            raise ValueError(err_msg)
-
-        with Path(input_file).open("r") as f:
-            self._parameters = toml.load(f)
+        self._parameters = parameters
 
         # Parse user-inputs
-        tams_subdict = self._parameters["tams"]
-        if "ntrajectories" not in tams_subdict or "nsplititer" not in tams_subdict:
-            err_msg = "TAMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
+        ams_subdict = self._parameters["ams"]
+        if "ntrajectories" not in ams_subdict or "nsplititer" not in ams_subdict:
+            err_msg = "(T)AMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
             _logger.exception(err_msg)
             raise ValueError
 
-        self._init_ensemble_only = tams_subdict.get("init_ensemble_only", False)
+        # Two variants of AMS are available: regular AMS and
+        # trajectory-AMS
+        self._variant = ams_subdict.get("variant", "tams")
+
+        self._init_ensemble_only = ams_subdict.get("init_ensemble_only", False)
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -101,7 +85,7 @@ class TAMS(SamplingStrategy):
         input file under the runner section.
 
         Args:
-            tdb: the TAMS database
+            tdb: the AMS database
 
         Raises:
             Error if the runner fails
@@ -138,7 +122,7 @@ class TAMS(SamplingStrategy):
         """Check for exit criterion of the splitting loop.
 
         Args:
-            tdb: the TAMS database
+            tdb: the AMS database
             k: loop counter
 
         Returns:
@@ -218,7 +202,7 @@ class TAMS(SamplingStrategy):
         in min_idx_list.
 
         Args:
-            tdb: the TAMS database
+            tdb: the AMS database
             min_idx_list: list of trajectory index to restart from
 
         Returns:
@@ -226,7 +210,7 @@ class TAMS(SamplingStrategy):
         """
         # Enable deterministic runs by setting a (different) seed
         # for each splitting iteration
-        if self._parameters.get("tams", {}).get("deterministic", False):
+        if self._parameters.get("ams", {}).get("deterministic", False):
             rng = np.random.default_rng(seed=42 * tdb.k_split())
         else:
             rng = np.random.default_rng()
@@ -253,7 +237,7 @@ class TAMS(SamplingStrategy):
         input file under the runner section.
 
         Args:
-            tdb: the TAMS database
+            tdb: the AMS database
 
         Raises:
             Error if the runner fails
@@ -271,7 +255,7 @@ class TAMS(SamplingStrategy):
             self._parameters, ms_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
         ) as runner:
             while k < tdb.n_split_iter():
-                inf_msg = f"Starting TAMS iter. {k} with {runner.n_workers()} workers"
+                inf_msg = f"Starting AMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
 
                 # Plot trajectory database scores
@@ -306,7 +290,7 @@ class TAMS(SamplingStrategy):
 
                 # Exit the loop if needed
                 if early_exit:
-                    # If TAMS converged, final update of the weights.
+                    # If AMS converged, final update of the weights.
                     if tdb.all_converged():
                         tdb.update_trajectories_weights()
                     break
@@ -357,15 +341,15 @@ class TAMS(SamplingStrategy):
                 k = k + n_branch
 
     def compute_probability(self, tdb: Database) -> float:
-        """Compute the probability using TAMS.
+        """Compute the probability using AMS.
 
         Args:
-            tdb: the TAMS database
+            tdb: the AMS database
 
         Returns:
             the transition probability
         """
-        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using TAMS"
+        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using AMS"
         _logger.info(inf_msg)
 
         # Generate the initial trajectory ensemble
@@ -431,10 +415,10 @@ class TAMS(SamplingStrategy):
         self.compute_probability(database)
 
     def initialize_db(self) -> Database:
-        """Return an initialized database of the TAMS sampling strategy."""
+        """Return an initialized database of the AMS sampling strategy."""
         return Database(
             fmodel_t=self._fmodel_t,
             params=self._parameters,
-            ntraj=self._parameters["tams"]["ntrajectories"],
-            nsplititer=self._parameters["tams"]["nsplititer"],
+            ntraj=self._parameters["ams"]["ntrajectories"],
+            nsplititer=self._parameters["ams"]["nsplititer"],
         )

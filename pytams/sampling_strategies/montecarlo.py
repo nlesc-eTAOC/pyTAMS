@@ -1,30 +1,17 @@
-"""The MonteCarlo sampling strategyclass."""
+"""The MonteCarlo sampling strategy."""
 
-import argparse
 import logging
-from pathlib import Path
 from typing import Any
-import toml
+from pytams.base_strategy import BaseSamplingStrategy
 from pytams.database import Database
-from pytams.sampling_strategy import SamplingStrategy
 from pytams.taskrunner import get_runner_type
 from pytams.worker import pool_worker
 
 _logger = logging.getLogger(__name__)
 
 
-def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
-    """Parse provided list or default CL argv.
-
-    Args:
-        a_args: optional list of options
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", help="pyREVS input .toml file", default="input.toml")
-    return parser.parse_args() if a_args is None else parser.parse_args(a_args)
-
-
-class MonteCarlo(SamplingStrategy):
+@BaseSamplingStrategy.register("montecarlo")
+class MonteCarlo(BaseSamplingStrategy):
     """A strategy class implementing MonteCarlo.
 
     Monte-Carlo or Direct Numerical Simulation (DNS) is not per-se
@@ -40,26 +27,18 @@ class MonteCarlo(SamplingStrategy):
     version of these other strategies.
     """
 
-    def __init__(self, fmodel_t: Any, a_args: list[str] | None = None) -> None:
+    def __init__(self, fmodel_t: Any, parameters: dict[Any, Any]) -> None:
         """Initialize a Monte-Carlo object.
 
         Args:
             fmodel_t: the forward model type
-            a_args: optional list of options
+            parameters: a dictionary of parameters
 
         Raises:
-            ValueError: if the input file is not found
+            ValueError: if necessary parameters are not found
         """
         self._fmodel_t = fmodel_t
-
-        input_file = vars(parse_cl_args(a_args=a_args))["input"]
-        if not Path(input_file).exists():
-            err_msg = f"Could not find the {input_file} pyREVS input file !"
-            _logger.exception(err_msg)
-            raise ValueError(err_msg)
-
-        with Path(input_file).open("r") as f:
-            self._parameters = toml.load(f)
+        self._parameters = parameters
 
         # Parse user-inputs
         mc_subdict = self._parameters["montecarlo"]
