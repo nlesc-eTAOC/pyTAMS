@@ -102,7 +102,7 @@ def test_simple_model_traj_with_diag():
     fmodel = SimpleFModel
     parameters = {
         "trajectory": {"end_time": 0.04, "step_size": 0.001, "targetscore": 0.25},
-        "tams": {"diagnostics": ["testd"]},
+        "sampler": {"diagnostics": ["testd"]},
         "testd": {"score_min": 0.0, "score_max": 0.25, "n_levels": 11},
     }
     t_test_1 = Trajectory(1, 0.5, fmodel, parameters)
@@ -264,7 +264,7 @@ def test_sparse_dw_traj_with_restore():
     """Test restore a sparse trajectory with DW model."""
     fmodel = DoubleWellModel
     parameters = {
-        "tams": {"deterministic": True},
+        "ams": {"deterministic": True},
         "trajectory": {"end_time": 15.0, "step_size": 0.01, "targetscore": 0.95, "sparse_freq": 10},
         "model": {"noise_amplitude": 0.8},
     }
@@ -287,7 +287,7 @@ def test_sparse_dw_traj_with_branching():
     """Test branching a sparse trajectory with simple model."""
     fmodel = DoubleWellModel
     parameters = {
-        "tams": {"deterministic": True},
+        "ams": {"deterministic": True},
         "trajectory": {"end_time": 2.0, "step_size": 0.01, "targetscore": 0.95, "sparse_freq": 10},
         "model": {"noise_amplitude": 0.3},
     }

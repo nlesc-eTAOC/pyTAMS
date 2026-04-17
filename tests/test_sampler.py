@@ -6,142 +6,153 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.database import Database
-from pytams.tams import TAMS
+from pytams.sampler import RareEventSampler
 from pytams.utils import is_mac_os
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
 
 
-def test_init_tams():
-    """Test TAMS initialization."""
-    fmodel = SimpleFModel
-    with Path("input.toml").open("w") as f:
-        toml.dump(
-            {"tams": {"ntrajectories": 500, "nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f
-        )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    assert tams.n_traj() == 500
-    Path("input.toml").unlink(missing_ok=True)
-
-
-def test_init_tams_missing_req():
-    """Test failed TAMS initialization."""
-    fmodel = SimpleFModel
-    with Path("input.toml").open("w") as f:
-        toml.dump({"tams": {"nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f)
-    with pytest.raises(ValueError):
-        _ = TAMS(fmodel_t=fmodel, a_args=[])
-    Path("input.toml").unlink(missing_ok=True)
-
-
-def test_init_tams_no_input():
-    """Test failed TAMS initialization."""
-    fmodel = SimpleFModel
-    with pytest.raises(ValueError):
-        _ = TAMS(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
-
-
-def test_simple_model_tams():
-    """Test TAMS with simple model."""
+def test_init_sampler():
+    """Test sampler initialization."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "sampler": {"strategy": "ams"},
+                "ams": {"ntrajectories": 500, "nsplititer": 200},
+                "trajectory": {"end_time": 0.02, "step_size": 0.001}
+            }, f
+        )
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    assert sampler.database().n_traj() == 500
+    Path("input.toml").unlink(missing_ok=True)
+
+
+def test_init_sampler_missing_req():
+    """Test failed sampler initialization."""
+    fmodel = SimpleFModel
+    with Path("input.toml").open("w") as f:
+        toml.dump({"sampler": {}, "tams": {"nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f)
+    with pytest.raises(ValueError):
+        _ = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    Path("input.toml").unlink(missing_ok=True)
+
+
+def test_init_sampler_no_input():
+    """Test failed sampler initialization."""
+    fmodel = SimpleFModel
+    with pytest.raises(ValueError):
+        _ = RareEventSampler(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
+
+
+def test_simple_model_sampler():
+    """Test sampler with simple model."""
+    fmodel = SimpleFModel
+    with Path("input.toml").open("w") as f:
+        toml.dump(
+            {
+                "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams"},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
 
 
-def test_simple_model_tams_with_diags():
-    """Test TAMS with simple model."""
+def test_simple_model_sampler_with_diags():
+    """Test sampler with simple model and diags."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "diagnostics": ["testd"]},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING", "diagnostics": ["testd"]},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams"},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
                 "testd": {"n_levels": 11},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
     Path("./diagDB.db").unlink(missing_ok=True)
 
 
-def test_failing_model_tams():
-    """Test TAMS with simple model."""
+def test_failing_model_sampler():
+    """Test sampler with simple model."""
     fmodel = FailingFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 0.1, "step_size": 0.005, "targetscore": 0.75},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     Path("input.toml").unlink(missing_ok=True)
     with pytest.raises(RuntimeError):
-        _ = tams.compute_probability()
+        sampler.run()
 
 
 def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture):
-    """Test TAMS with simple model."""
+    """Test sampler with tams and simple model."""
     caplog.set_level(logging.WARNING)
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "init_ensemble_only": True},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "init_ensemble_only": True},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
-    _ = tams.compute_probability()
+    sampler.run()
     assert "Stopping after the initial ensemble stage !" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
 
 
 def test_simple_model_init_ensemble_stage_and_continue_tams():
-    """Test TAMS with simple model."""
+    """Test sampler with TAMS and simple model."""
     fmodel = SimpleFModel
     params_dict = {
-        "tams": {"ntrajectories": 10, "nsplititer": 200, "loglevel": "WARNING", "init_ensemble_only": True},
+        "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+        "ams": {"ntrajectories": 10, "nsplititer": 200, "init_ensemble_only": True},
         "runner": {"type": "asyncio"},
         "database": {"path": "simpleModelTest.tdb"},
         "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    _ = tams.compute_probability()
-    del tams
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    del sampler
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 10
     del tdb
-    params_dict["tams"]["ntrajectories"] = 20
+    params_dict["ams"]["ntrajectories"] = 20
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    _ = tams.compute_probability()
-    del tams
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    del sampler
     tdb = Database.load(Path("simpleModelTest.tdb"))
     assert tdb.n_traj() == 20
     del tdb
@@ -150,91 +161,99 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
 
 
 def test_simple_model_tams_with_db():
-    """Test TAMS with simple model."""
+    """Test sampler with tams and simple model."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200},
                 "runner": {"type": "dask"},
                 "database": {"path": "simpleModelTest.tdb"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
-    del tams
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
+    del sampler
     assert transition_proba == 1.0
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
 
 def test_simple_model_tams_with_db_access():
-    """Test TAMS with simple model and access to the database."""
+    """Test sampler with simple model and access to the database."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING"},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200},
                 "runner": {"type": "dask"},
                 "database": {"path": "simpleModelTest.tdb"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    _ = tams.compute_probability()
-    tdb = tams.get_database()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    tdb = sampler.database()
     assert tdb.get_transition_probability() == 1
-    del tams
+    del sampler
     del tdb
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
 
-def test_simple_model_tams_slurm_fail():
-    """Test TAMS with simple model with Slurm dask backend."""
+def test_simple_model_mc_slurm_fail():
+    """Test MonteCarlo with simple model with Slurm dask backend."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "DEBUG"},
+                "sampler": {"strategy": "montecarlo", "loglevel": "DEBUG"},
+                "montecarlo": {"ntrajectories": 100},
                 "runner": {"type": "dask"},
                 "dask": {"backend": "slurm", "slurm_config_file": "dummy.yaml"},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     with pytest.raises(FileNotFoundError):
-        tams.compute_probability()
+        sampler.run()
     Path("input.toml").unlink(missing_ok=True)
 
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_simple_model_twice_tams():
-    """Test TAMS with simple model."""
+    """Test sampler with simple model."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "WARNING", "logfile": "test.log"},
+                "sampler": {"strategy": "ams", "loglevel": "WARNING", "logfile": "test.log"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200},
                 "runner": {"type": "asyncio"},
                 "database": {"path": "simpleModelTest.tdb", "restart": True},
                 "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba == 1.0
-    del tams
+    del sampler
     # Re-init TAMS and run to test competing database
     # on disk.
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
-    del tams
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
+    assert transition_proba == 1.0
+    del sampler
     ndb = 0
     for folder in Path("./").iterdir():
         if "simpleModelTest" in str(folder):
@@ -247,48 +266,52 @@ def test_simple_model_twice_tams():
 
 
 def test_stalling_simplemodel_tams():
-    """Test TAMS with simple model and stalled score function."""
+    """Test sampler with tams, simple model and stalled score function."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 200, "loglevel": "ERROR"},
+                "sampler": {"strategy": "ams", "loglevel": "ERROR"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 1.1},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     with pytest.raises(RuntimeError):
-        tams.compute_probability()
+        sampler.run()
 
 
-def test_doublewell_tams():
-    """Test TAMS with the doublewell model."""
+def test_sample_doublewell():
+    """Test sampler with the doublewell model."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0},
+                "sampler": {"strategy": "ams", "walltime": 500.0},
+                "ams": {"ntrajectories": 50, "nsplititer": 200},
                 "runner": {"type": "dask"},
                 "model": {"noise_amplitude": 0.8},
                 "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.8},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
 
 
 def test_doublewell_save_tams():
-    """Test TAMS with the doublewell model."""
+    """Test sampler with TAMS on the doublewell model."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 50, "nsplititer": 100, "walltime": 500.0},
+                "sampler": {"strategy": "ams", "walltime": 500.0},
+                "ams": {"ntrajectories": 50, "nsplititer": 100},
                 "runner": {"type": "dask"},
                 "database": {"path": "dwTest.tdb"},
                 "model": {"noise_amplitude": 0.8},
@@ -296,10 +319,11 @@ def test_doublewell_save_tams():
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba >= 0.2
-    del tams
+    del sampler
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
 
@@ -310,15 +334,17 @@ def test_doublewell_deterministic_tams():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0, "deterministic": True},
+                "sampler": {"strategy": "ams", "walltime": 500.0},
+                "ams": {"ntrajectories": 100, "nsplititer": 400, "deterministic": True},
                 "runner": {"type": "asyncio"},
                 "model": {"noise_amplitude": 0.8},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.8},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     if is_mac_os():
         assert transition_proba == 0.5416298076191378
     else:
@@ -327,20 +353,19 @@ def test_doublewell_deterministic_tams():
 
 
 @pytest.mark.usefixtures("skip_on_windows")
-def test_doublewell_deterministic_tams_with_diags(caplog: pytest.LogCaptureFixture):
-    """Test TAMS with the doublewell model."""
+def test_doublewell_deterministic_sampler_with_pltdiags(caplog: pytest.LogCaptureFixture):
+    """Test sampler with tams on the doublewell model."""
     caplog.set_level(logging.WARNING)
     fmodel = DoubleWellModel
     Path("Score_k00001.png").touch()
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {
+                "sampler": {"strategy": "ams", "walltime": 500.0, "plot_diagnostics": True},
+                "ams": {
                     "ntrajectories": 5,
                     "nsplititer": 5,
-                    "walltime": 500.0,
                     "deterministic": True,
-                    "plot_diagnostics": True,
                 },
                 "runner": {"type": "asyncio"},
                 "model": {"noise_amplitude": 0.4},
@@ -348,10 +373,10 @@ def test_doublewell_deterministic_tams_with_diags(caplog: pytest.LogCaptureFixtu
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
-    _ = tams.compute_probability()
+    _ = sampler.run()
     assert "Attempting to overwrite the plot file" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
     for p in Path().glob("Score*.png"):
@@ -365,7 +390,8 @@ def test_doublewell_2_workers_tams():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 50, "nsplititer": 400, "walltime": 500.0, "deterministic": True},
+                "sampler": {"strategy": "ams", "walltime": 500.0},
+                "ams": {"ntrajectories": 50, "nsplititer": 400, "deterministic": True},
                 "runner": {"type": "dask", "nworker_init": 2, "nworker_iter": 2},
                 "model": {"noise_amplitude": 0.8},
                 "database": {"path": "dwTest.tdb", "archive_discarded": True},
@@ -373,10 +399,11 @@ def test_doublewell_2_workers_tams():
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba == 0.6925339958244802
-    del tams
+    del sampler
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -391,13 +418,14 @@ def test_doublewell_2_workers_load_db():
 
 
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
-def test_doublewell_2_workers_restore_tams():
+def test_doublewell_2_workers_restore_sampler():
     """Test TAMS with the doublewell model using two workers and restoring."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 100, "nsplititer": 400, "walltime": 500.0},
+                "sampler": {"strategy": "ams", "walltime": 500.0},
+                "ams": {"ntrajectories": 100, "nsplititer": 400},
                 "database": {"path": "dwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 2},
                 "model": {"noise_amplitude": 0.8},
@@ -405,21 +433,23 @@ def test_doublewell_2_workers_restore_tams():
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
-    del tams
+    del sampler
     shutil.rmtree("dwTest.tdb")
 
 
-def test_doublewell_very_slow_tams():
-    """Test TAMS run out of time with a slow doublewell."""
+def test_doublewell_very_slow_model():
+    """Test sampler with tams run out of time with a slow doublewell."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 10, "nsplititer": 400, "walltime": 3.0},
+                "sampler": {"strategy": "ams", "walltime": 3.0},
+                "ams": {"ntrajectories": 10, "nsplititer": 400},
                 "database": {"path": "vslowdwTest.tdb"},
                 "runner": {"type": "dask", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
@@ -427,55 +457,60 @@ def test_doublewell_very_slow_tams():
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
-    del tams
+    del sampler
     shutil.rmtree("vslowdwTest.tdb")
 
 
 @pytest.mark.dependency
-def test_doublewell_slow_tams_stop():
-    """Test TAMS run out of time with a slow doublewell."""
+def test_doublewell_slow_model_stop():
+    """Test sampler run out of time with a slow doublewell."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 3.0},
+                "sampler": {"strategy": "ams", "walltime": 3.0},
+                "ams": {"ntrajectories": 10, "nsplititer": 400},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba <= 0.0
-    del tams
+    del sampler
     Path("input.toml").unlink(missing_ok=True)
 
 
-@pytest.mark.dependency(depends=["test_doublewell_slow_tams_stop"])
+@pytest.mark.dependency(depends=["test_doublewell_slow_model_stop"])
 def test_doublewell_slow_tams_restore_during_initial_ensemble():
     """Test TAMS restarting a slow doublewell."""
     fmodel = DoubleWellModel
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 8.0},
+                "sampler": {"strategy": "ams", "walltime": 8.0, "loglevel": "INFO"},
+                "ams": {"ntrajectories": 10, "nsplititer": 400},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     assert transition_proba <= 0.0
-    del tams
+    del sampler
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -488,21 +523,22 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 8, "nsplititer": 400, "walltime": 2.0},
+                "sampler": {"strategy": "ams", "walltime": 2.0, "loglevel": "INFO"},
+                "ams": {"ntrajectories": 10, "nsplititer": 400},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
                 "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.1},
+                "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
-    _ = tams.compute_probability()
+    _ = sampler.run()
     assert "Unfinished splitting iteration detected" in caplog.text
     Path("input.toml").unlink(missing_ok=True)
-    del tams
+    del sampler
     shutil.rmtree("slowdwTest.tdb")
 
 
@@ -511,7 +547,8 @@ def test_doublewell_slow_tams_restore_more_split():
     """Test restart TAMS more splitting iterations."""
     fmodel = DoubleWellModel
     params_dict = {
-        "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 20.0, "deterministic": True},
+        "sampler": {"strategy": "ams", "walltime": 20.0},
+        "ams": {"ntrajectories": 20, "nsplititer": 20, "deterministic": True},
         "database": {"path": "dwTest.tdb"},
         "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
         "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
@@ -519,20 +556,22 @@ def test_doublewell_slow_tams_restore_more_split():
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams.compute_probability()
-    del tams
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
+    del sampler
     assert transition_proba == 0.1251225103143388
-    params_dict["tams"]["nsplititer"] = 30
+    params_dict["ams"]["nsplititer"] = 30
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tams_load = TAMS(fmodel_t=fmodel, a_args=[])
-    transition_proba = tams_load.compute_probability()
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler.run()
+    transition_proba = sampler.database().get_transition_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
         assert transition_proba == 0.1391287278743694
     else:
         assert transition_proba == 0.14983093771085937
     Path("input.toml").unlink(missing_ok=True)
-    del tams_load
+    del sampler
     shutil.rmtree("dwTest.tdb")

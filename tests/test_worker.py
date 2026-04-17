@@ -1,4 +1,4 @@
-"""Tests for the pytams.worker functions."""
+"""Tests for the pyREVS.worker functions."""
 
 import datetime
 import logging
@@ -46,7 +46,7 @@ def test_run_pool_worker_outoftime(caplog: pytest.LogCaptureFixture):
     fmodel = DoubleWellModel
     parameters = {
         "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.75},
-        "tams": {"loglevel": "DEBUG"},
+        "sampler": {"loglevel": "DEBUG"},
         "model": {"slow_factor": 0.03},
     }
     setup_logger(parameters)
@@ -63,7 +63,7 @@ def test_run_pool_worker_advanceerror():
     fmodel = FailingFModel
     parameters = {
         "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 0.75},
-        "tams": {"loglevel": "DEBUG"},
+        "sampler": {"loglevel": "DEBUG"},
     }
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     t_test = Trajectory(1, 1.0, fmodel, parameters)
@@ -108,7 +108,7 @@ def test_run_ms_worker_model_outoftime(caplog: pytest.LogCaptureFixture):
     fmodel = DoubleWellModel
     parameters = {
         "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.75},
-        "tams": {"loglevel": "DEBUG"},
+        "sampler": {"loglevel": "DEBUG"},
         "model": {"slow_factor": 0.003},
     }
     setup_logger(parameters)
@@ -127,7 +127,7 @@ def test_run_ms_worker_outoftime(caplog: pytest.LogCaptureFixture):
     fmodel = DoubleWellModel
     parameters = {
         "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.75},
-        "tams": {"loglevel": "DEBUG"},
+        "sampler": {"loglevel": "DEBUG"},
         "model": {"slow_factor": 0.003},
     }
     setup_logger(parameters)
@@ -146,7 +146,7 @@ def test_run_ms_worker_advanceerror():
     fmodel = FailingFModel
     parameters = {
         "trajectory": {"end_time": 1.0, "step_size": 0.001, "targetscore": 0.75},
-        "tams": {"loglevel": "DEBUG"},
+        "sampler": {"loglevel": "DEBUG"},
     }
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     t_test = Trajectory(1, 0.5, fmodel, parameters)

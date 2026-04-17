@@ -1,10 +1,10 @@
-"""Tests for the pytams.bin functions."""
+"""Tests for the pyrevs.bin functions."""
 from pathlib import Path
 import pytest
 import toml
 from pytams.bin import tams_alive
-from pytams.bin import tams_template_model
 from pytams.bin import tams_run
+from pytams.bin import tams_template_model
 
 
 def test_tams_alive(capsys: pytest.CaptureFixture[str]):
@@ -27,7 +27,8 @@ def test_tams_template_model_with_name():
 def test_tams_run():
     """Test TAMS run."""
     params_dict = {
-        "tams": {"ntrajectories": 20, "nsplititer": 20, "walltime": 20.0, "deterministic": True},
+        "sampler": {"strategy": "ams", "walltime": 20.0},
+        "ams": {"ntrajectories": 20, "nsplititer": 20, "deterministic": True},
         "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
         "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},

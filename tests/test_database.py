@@ -6,7 +6,6 @@ import pytest
 import toml
 from pytams.database import Database
 from pytams.sampler import RareEventSampler
-from pytams.tams import TAMS
 from tests.dwmodel import DoubleWellModel
 
 
@@ -89,7 +88,8 @@ def test_generate_and_load_tdb():
     with Path("input.toml").open("w") as f:
         toml.dump(
             {
-                "tams": {"ntrajectories": 50, "nsplititer": 200, "walltime": 500.0, "loglevel": "DEBUG"},
+                "sampler": {"strategy": "ams", "loglevel": "INFO"},
+                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams"},
                 "database": {"path": "dwTest.tdb"},
                 "runner": {"type": "asyncio", "nworker_init": 2, "nworker_iter": 1},
                 "model": {"noise_amplitude": 0.8},
@@ -97,8 +97,7 @@ def test_generate_and_load_tdb():
             },
             f,
         )
-    tams = TAMS(fmodel_t=fmodel, a_args=[])
-    sampler = RareEventSampler(tams, a_args=[])
+    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
 
     params_load_db = {"database": {"path": "dwTest.tdb"}}
