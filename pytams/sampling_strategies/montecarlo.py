@@ -119,8 +119,8 @@ class MonteCarlo(BaseSamplingStrategy):
     def initialize_db(self) -> Database:
         """Return an initialized database of the Monte-Carlo sampling strategy."""
         return Database(
-            strategy="montecarlo",
             fmodel_t=self._fmodel_t,
             params=self._parameters,
+            strategy="montecarlo",
             ntraj=self._parameters["montecarlo"]["ntrajectories"],
         )

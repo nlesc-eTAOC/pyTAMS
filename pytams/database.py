@@ -60,9 +60,9 @@ class Database(Generic[T_Noise, T_State]):
 
     def __init__(
         self,
-        strategy: str,
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
         params: dict[Any, Any],
+        strategy: str = "undefined",
         ntraj: int = -1,
         nsplititer: int = -1,
         read_only: bool = True,
@@ -313,6 +313,7 @@ class Database(Generic[T_Noise, T_State]):
             mdata.append(new_element("pyTAMS_version", version(__package__)))
             mdata.append(new_element("date", self._creation_date))
             mdata.append(new_element("model_t", self._fmodel_t.name()))
+            mdata.append(new_element("strategy", self._strategy))
             mdata.append(new_element("ntraj", self._ntraj))
             mdata.append(new_element("nsplititer", self._nsplititer))
             mdata.append(new_element("init_ensemble_done", self._init_ensemble_done))
@@ -335,6 +336,7 @@ class Database(Generic[T_Noise, T_State]):
                 self._ntraj = datafromxml["ntraj"]
                 self._nsplititer = datafromxml["nsplititer"]
                 self._init_ensemble_done = datafromxml["init_ensemble_done"]
+                self._strategy = datafromxml["strategy"]
                 self._version = datafromxml["pyTAMS_version"]
                 if self._version != version(__package__):
                     warn_msg = f"Database pyTAMS version {self._version} is different from {version(__package__)}"
