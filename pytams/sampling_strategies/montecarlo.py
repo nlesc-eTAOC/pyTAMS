@@ -123,4 +123,5 @@ class MonteCarlo(BaseSamplingStrategy):
             params=self._parameters,
             strategy="montecarlo",
             ntraj=self._parameters["montecarlo"]["ntrajectories"],
+            read_only=False,
         )

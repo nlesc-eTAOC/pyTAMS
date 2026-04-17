@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pytams.database import Database
 
-min_remaining_time = 10.0
-
 T = TypeVar("T", bound="BaseSamplingStrategy")
 
 
@@ -88,6 +86,7 @@ class BaseSamplingStrategy(ABC):
         """Sample rare events."""
         self._start_date = datetime.datetime.now(tz=datetime.timezone.utc)
         self._end_date = self._start_date + datetime.timedelta(seconds=walltime)
+        self._min_remaining_time = 0.05 * walltime
         self.execute_sampling(database, plot_diags)
 
     def remaining_time(self) -> float:
@@ -96,7 +95,7 @@ class BaseSamplingStrategy(ABC):
 
     def out_of_time(self) -> bool:
         """Return true if insufficient walltime remains."""
-        return self.remaining_time() <= min_remaining_time
+        return self.remaining_time() <= self._min_remaining_time
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time."""

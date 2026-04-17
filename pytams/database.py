@@ -231,30 +231,34 @@ class Database(Generic[T_Noise, T_State]):
             old_params: a dictionary of input parameter loaded from disk
         """
         # For testing purposes the params might be lacking
-        # a "tams" subdir
-        if "tams" not in old_params or "tams" not in self._parameters:
+        # a "ams" subdir
+        if "ams" not in old_params or "ams" not in self._parameters:
             # Simply overwrite the provided input params
             self._parameters.update(old_params)
             return
 
         # Update the number of splitting iteration
-        self._nsplititer = self._parameters.get("tams", {}).get("nsplititer")
-        old_params["tams"].update({"nsplititer": self._nsplititer})
+        self._nsplititer = self._parameters.get("ams", {}).get("nsplititer")
+        old_params["ams"].update({"nsplititer": self._nsplititer})
 
         # If the initial ensemble of trajectory is not done
         # or we stopped after the initial ensemble stage
         if not self._init_ensemble_done or (
-            self._init_ensemble_done and old_params["tams"].get("init_ensemble_only", False)
+            self._init_ensemble_done and old_params["ams"].get("init_ensemble_only", False)
         ):
-            self._ntraj = self._parameters.get("tams", {}).get("ntrajectories")
-            old_params["tams"].update({"ntrajectories": self._ntraj})
+            self._ntraj = self._parameters.get("ams", {}).get("ntrajectories")
+            old_params["ams"].update({"ntrajectories": self._ntraj})
             self._init_ensemble_done = False
 
-        # Update other parameters in the [tams] subdir,
+        # Update other parameters in the [ams] subdir,
         # even if they do not change the database behavior
-        for key, value in self._parameters["tams"].items():
+        for key, value in self._parameters["ams"].items():
             if key not in ["nsplititer", "ntrajectories"]:
-                old_params["tams"][key] = value
+                old_params["ams"][key] = value
+
+        for key, value in self._parameters["sampler"].items():
+            if key not in ["nsplititer", "ntrajectories"]:
+                old_params["sampler"][key] = value
 
         # Updated disk parameters overwrite the input params
         self._parameters.update(old_params)

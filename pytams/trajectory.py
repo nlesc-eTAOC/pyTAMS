@@ -398,7 +398,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         Returns:
             A boolean indicating if diagnostics are requested
         """
-        diag_list = self._parameters_full.get("tams", {}).get("diagnostics", [])
+        diag_list = self._parameters_full.get("sampler", {}).get("diagnostics", [])
         # Return True only if the list exists and has at least one entry
         return isinstance(diag_list, list) and len(diag_list) > 0
 

@@ -1,4 +1,4 @@
-"""Diagnostic class for pyTAMS."""
+"""Diagnostic class for pyREVS."""
 
 import pickle
 from collections.abc import Callable
@@ -155,7 +155,7 @@ def diagnosticfactory(
         ddb: the diagnostic database to add the data to
     """
     diags_l: list[DiagnosticPlugin] = []
-    diag_str_list = params.get("tams", {}).get("diagnostics", [])
+    diag_str_list = params.get("sampler", {}).get("diagnostics", [])
     ndiags = len(diag_str_list)
 
     for i in range(ndiags):

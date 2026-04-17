@@ -422,4 +422,5 @@ class AMS(BaseSamplingStrategy):
             strategy="ams",
             ntraj=self._parameters["ams"]["ntrajectories"],
             nsplititer=self._parameters["ams"]["nsplititer"],
+            read_only=False,
         )

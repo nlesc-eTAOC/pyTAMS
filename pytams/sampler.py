@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 import toml
 from pytams.base_strategy import BaseSamplingStrategy
+from pytams.database import Database
 from pytams.utils import setup_logger
 
 _logger = logging.getLogger(__name__)
@@ -121,3 +122,7 @@ class RareEventSampler:
             Future extensions will allow to perform several runs (possibly in parallel)
         """
         self._strategy.sample(self._db, self._wallTime, self._plot_diags)
+
+    def database(self) -> Database:
+        """Access the sampling database."""
+        return self._db

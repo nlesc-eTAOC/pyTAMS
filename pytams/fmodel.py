@@ -72,7 +72,7 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
 
         # Add the deterministic parameter to the model dictionary
         lparams = copy.deepcopy(params)
-        tams_conf = lparams.get("tams", {})
+        tams_conf = lparams.get("ams", {})
         model_conf = lparams.setdefault("model", {})
         model_conf["deterministic"] = tams_conf.get("deterministic", False)
 
