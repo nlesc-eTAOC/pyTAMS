@@ -104,7 +104,7 @@ class MonteCarlo(BaseSamplingStrategy):
 
         return transition_probability
 
-    def execute_sampling(self, database: Database, plot_diags: bool) -> None:
+    def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
         """Shallow wrapper to enable sampler."""
         database.load_data()
 

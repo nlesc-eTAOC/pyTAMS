@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import datetime
+import logging
 from abc import ABC
 from abc import abstractmethod
 from importlib.metadata import entry_points
@@ -9,11 +10,13 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import ClassVar
 from typing import TypeVar
-from pytams.database import Database
+from typing import final
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pytams.database import Database
+
+_logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound="BaseSamplingStrategy")
 
@@ -27,9 +30,9 @@ class BaseSamplingStrategy(ABC):
     A registry is used to store all available strategies.
     It is managed using a decorator and entry_points.
 
-    Attributes:
-        _start_date: the start date
-        _end_date: the end date
+    Subclasses must implement the following methods:
+    - :meth:`sample`
+    - :meth:`out_of_time`
     """
 
     # Registry, loaded on first use
@@ -44,7 +47,11 @@ class BaseSamplingStrategy(ABC):
 
         eps = entry_points(group="pytams.strategies")
         for ep in eps:
-            ep.load()
+            try:
+                ep.load()
+            except (ImportError, AttributeError) as exc:  # noqa: PERF203
+                wrn_msg = f"Failed to load strategy {ep.name}: {exc}"
+                _logger.warning(wrn_msg)
 
         cls._strategies_loaded = True
 
@@ -55,9 +62,13 @@ class BaseSamplingStrategy(ABC):
         Args:
             name: the strategy name
         """
+        key = name.lower()
 
         def decorator(subclass: type[T]) -> type[T]:
-            cls._registry[name] = subclass
+            if key in cls._registry:
+                err_msg = f"Strategy {key} already registered"
+                raise ValueError(err_msg)
+            cls._registry[key] = subclass
             return subclass
 
         return decorator
@@ -72,26 +83,55 @@ class BaseSamplingStrategy(ABC):
             **kwargs: keyword arguments
         """
         cls._load_strategies()
+        key = name.lower()
         try:
-            return cls._registry[name](*args, **kwargs)
-        except KeyError:
-            err_msg = f"Unknown strategy type: {name}"
-            raise ValueError(err_msg) from KeyError
+            return cls._registry[key](*args, **kwargs)
+        except KeyError as err:
+            err_msg = f"Unknown strategy type: {key}"
+            raise ValueError(err_msg) from err
+
+    @classmethod
+    def available_strategies(cls) -> list[str]:
+        """Return list of registered strategy names."""
+        cls._load_strategies()
+        return sorted(cls._registry.keys())
 
     # Time management uses UTC date
     _start_date: datetime.datetime
     _end_date: datetime.datetime
+    _min_remaining_time: float
+    _MIN_REMAINING_TIME_RATIO: ClassVar[float] = 0.05
 
+    @final
     def sample(self, database: Database, walltime: float, plot_diags: bool) -> None:
-        """Sample rare events."""
-        self._start_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        """Run the sampling lifecycle.
+
+        This method handles walltime bookkeeping and delegates the
+        algorithm implementation to ``_execute_sampling``.
+
+        Subclasses must implement ``_execute_sampling`` and should
+        regularly check ``out_of_time()`` to terminate gracefully.
+
+        Args:
+            database: Database used for storing results.
+            walltime: Maximum allowed runtime in seconds.
+            plot_diags: Whether to enable diagnostic plotting.
+        """
+        self._start_date = self._now()
         self._end_date = self._start_date + datetime.timedelta(seconds=walltime)
-        self._min_remaining_time = 0.05 * walltime
-        self.execute_sampling(database, plot_diags)
+        self._min_remaining_time = self._MIN_REMAINING_TIME_RATIO * walltime
+        self._execute_sampling(database, plot_diags)
+
+    def _now(self) -> datetime.datetime:
+        """Return the current time."""
+        return datetime.datetime.now(tz=datetime.timezone.utc)
 
     def remaining_time(self) -> float:
         """Return the remaining wallclock time."""
-        return (self._end_date - datetime.datetime.now(tz=datetime.timezone.utc)).total_seconds()
+        if not hasattr(self, "_end_date"):
+            err_msg = "Sampling has not been started. Call 'sample()' first."
+            raise RuntimeError(err_msg)
+        return (self._end_date - self._now()).total_seconds()
 
     def out_of_time(self) -> bool:
         """Return true if insufficient walltime remains."""
@@ -99,15 +139,30 @@ class BaseSamplingStrategy(ABC):
 
     def elapsed_time(self) -> float:
         """Return the elapsed wallclock time."""
-        return (datetime.datetime.now(tz=datetime.timezone.utc) - self._start_date).total_seconds()
+        if not hasattr(self, "_start_date"):
+            err_msg = "Sampling has not been started. Call 'sample()' first."
+            raise RuntimeError(err_msg)
+        return (self._now() - self._start_date).total_seconds()
 
     @abstractmethod
-    def execute_sampling(self, database: Database, plot_diags: bool) -> None:
-        """Perform rare_event sampling with concrete strategy.
+    def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
+        """Implement the core sampling algorithm.
+
+        This method is called by :meth:`sample` after time bookkeeping
+        has been initialized. Concrete implementations should
+        implement the actual rare event sampling algorithm.
+
+        Implementations should:
+        - Regularly call :meth:`out_of_time` to respect walltime limits
+        - Store intermediate and final results in ``database``
+        - Optionally produce diagnostics if ``plot_diags`` is True
 
         Args:
-            database (Database): The database to store data in
-            plot_diags (bool): Plot diagnostics trigger
+            database: Database used for storing results.
+            plot_diags: Whether to enable diagnostic plotting.
+
+        Notes:
+            This method should terminate gracefully when time is exhausted.
         """
         raise NotImplementedError
 
