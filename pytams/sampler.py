@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 import toml
 from pytams.base_strategy import BaseSamplingStrategy
+from pytams.config import Config
 from pytams.database import Database
 from pytams.utils import setup_logger
 
@@ -38,7 +39,7 @@ class RareEventSampler:
     - Running the sampling strategy
 
     Attributes:
-        _parameters (dict): Configuration parameters parsed from the input file
+        _config (Config): Configuration parameters parsed from the input file
         _wallTime (float): Maximum runtime in seconds
         _plot_diags (bool): Enable diagnostic plots during sampling
         _strategy (BaseSamplingStrategy): The sampling strategy
@@ -74,13 +75,11 @@ class RareEventSampler:
             raise ValueError(err_msg)
 
         with Path(input_file).open("r") as f:
-            self._parameters = toml.load(f)
+            self._config = Config(toml.load(f))
 
         # Setup logger
-        setup_logger(self._parameters)
-
-        # Extract sampler config
-        sampler_cfg = self._parameters.get("sampler", {})
+        sampler_cfg = self._config.section("sampler", {})
+        setup_logger(sampler_cfg.get("loglevel", "info"), sampler_cfg.get("logfile", None))
 
         # Time management uses UTC date
         # to make sure workers are always in sync
@@ -101,7 +100,7 @@ class RareEventSampler:
             _logger.exception(err_msg)
             raise TypeError(err_msg)
         self._strategy: BaseSamplingStrategy = BaseSamplingStrategy.create(
-            strategy_type, fmodel_t=fmodel_t, parameters=self._parameters
+            strategy_type, fmodel_t=fmodel_t, config=self._config
         )
 
         # Setup database
