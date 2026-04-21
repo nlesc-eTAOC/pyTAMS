@@ -51,7 +51,7 @@ class RareEventSampler:
     - ``plot_diagnostics`` (bool): Enable diagnostic plotting during sampling
     - ``strategy`` (str): The name of the sampling strategy
 
-    The configuration file is also passed to the logging setup routine.
+    The configuration file is also passed to the logging and strategy setup routine.
     """
 
     def __init__(self, fmodel_t: Any, a_args: list[str] | None = None) -> None:
@@ -79,16 +79,27 @@ class RareEventSampler:
         # Setup logger
         setup_logger(self._parameters)
 
+        # Extract sampler config
+        sampler_cfg = self._parameters.get("sampler", {})
+
         # Time management uses UTC date
         # to make sure workers are always in sync
         # A 24h default is set
-        self._wallTime: float = self._parameters.get("sampler", {}).get("walltime", 24.0 * 3600.0)
+        self._wallTime: float = sampler_cfg.get("walltime", 24.0 * 3600.0)
+        if not isinstance(self._wallTime, (int, float)):
+            err_msg = "sampler.walltime must be a number"
+            _logger.exception(err_msg)
+            raise TypeError(err_msg)
 
         # Enable/disable diagnostic plots during sampling
-        self._plot_diags = self._parameters.get("sampler", {}).get("plot_diagnostics", False)
+        self._plot_diags = sampler_cfg.get("plot_diagnostics", False)
 
         # Instanciate sampling strategy
-        strategy_type = self._parameters.get("sampler", {}).get("strategy", "ams")
+        strategy_type = sampler_cfg.get("strategy", "ams")
+        if not isinstance(strategy_type, str):
+            err_msg = "sampler.strategy must be a string"
+            _logger.exception(err_msg)
+            raise TypeError(err_msg)
         self._strategy: BaseSamplingStrategy = BaseSamplingStrategy.create(
             strategy_type, fmodel_t=fmodel_t, parameters=self._parameters
         )
@@ -121,8 +132,12 @@ class RareEventSampler:
             database or written to disk by the strategy.
             Future extensions will allow to perform several runs (possibly in parallel)
         """
+        inf_msg = f"Starting rare event sampling with {self._strategy} with walltime = {self._wallTime} s"
+        _logger.info(inf_msg)
+
         self._strategy.sample(self._db, self._wallTime, self._plot_diags)
 
+    @property
     def database(self) -> Database:
         """Access the sampling database."""
         return self._db

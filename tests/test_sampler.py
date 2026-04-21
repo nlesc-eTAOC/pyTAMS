@@ -25,7 +25,7 @@ def test_init_sampler():
             }, f
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
-    assert sampler.database().n_traj() == 500
+    assert sampler.database.n_traj() == 500
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -61,7 +61,7 @@ def test_simple_model_sampler():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
 
@@ -82,7 +82,7 @@ def test_simple_model_sampler_with_diags():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
     Path("./diagDB.db").unlink(missing_ok=True)
@@ -176,7 +176,7 @@ def test_simple_model_tams_with_db():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     del sampler
     assert transition_proba == 1.0
     shutil.rmtree("simpleModelTest.tdb")
@@ -199,7 +199,7 @@ def test_simple_model_tams_with_db_access():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    tdb = sampler.database()
+    tdb = sampler.database
     assert tdb.get_transition_probability() == 1
     del sampler
     del tdb
@@ -244,14 +244,14 @@ def test_simple_model_twice_tams():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba == 1.0
     del sampler
     # Re-init TAMS and run to test competing database
     # on disk.
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba == 1.0
     del sampler
     ndb = 0
@@ -299,7 +299,7 @@ def test_sample_doublewell():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
 
@@ -321,7 +321,7 @@ def test_doublewell_save_tams():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba >= 0.2
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -344,7 +344,7 @@ def test_doublewell_deterministic_tams():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     if is_mac_os():
         assert transition_proba == 0.5416298076191378
     else:
@@ -401,7 +401,7 @@ def test_doublewell_2_workers_tams():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba == 0.6925339958244802
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -435,7 +435,7 @@ def test_doublewell_2_workers_restore_sampler():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
     del sampler
@@ -459,7 +459,7 @@ def test_doublewell_very_slow_model():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
     del sampler
@@ -484,7 +484,7 @@ def test_doublewell_slow_model_stop():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -508,7 +508,7 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
         )
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     assert transition_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -558,7 +558,7 @@ def test_doublewell_slow_tams_restore_more_split():
         toml.dump(params_dict, f)
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     del sampler
     assert transition_proba == 0.1251225103143388
     params_dict["ams"]["nsplititer"] = 30
@@ -566,7 +566,7 @@ def test_doublewell_slow_tams_restore_more_split():
         toml.dump(params_dict, f)
     sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database().get_transition_probability()
+    transition_proba = sampler.database.get_transition_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
         assert transition_proba == 0.1391287278743694

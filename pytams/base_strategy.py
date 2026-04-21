@@ -170,3 +170,7 @@ class BaseSamplingStrategy(ABC):
     def initialize_db(self) -> Database:
         """Return an initialized database."""
         raise NotImplementedError
+
+    def __repr__(self) -> str:
+        """Return a string representation of the object."""
+        return f"{self.__class__.__name__}()"
