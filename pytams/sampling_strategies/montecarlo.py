@@ -1,6 +1,7 @@
 """The MonteCarlo sampling strategy."""
 
 import logging
+from pathlib import Path
 from typing import Any
 from pytams.base_strategy import BaseSamplingStrategy
 from pytams.database import Database
@@ -25,6 +26,10 @@ class MonteCarlo(BaseSamplingStrategy):
     In practice, this is the first step of a TAMS or AMS run (depending
     on the termination condition), such that this class is a lightweight
     version of these other strategies.
+
+    Notes:
+        This strategy relies on time management provided by
+        BaseSamplingStrategy (e.g. ``self._end_date``, ``elapsed_time()``).
     """
 
     def __init__(self, fmodel_t: Any, parameters: dict[Any, Any]) -> None:
@@ -45,7 +50,7 @@ class MonteCarlo(BaseSamplingStrategy):
         if "ntrajectories" not in mc_subdict:
             err_msg = "Monte-Carlo 'ntrajectories' must be specified in the input file !"
             _logger.exception(err_msg)
-            raise ValueError
+            raise ValueError(err_msg)
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -72,10 +77,10 @@ class MonteCarlo(BaseSamplingStrategy):
 
             try:
                 t_list = runner.execute_promises()
-            except:
+            except Exception as exc:
                 err_msg = f"Failed to generate the ensemble of {tdb.n_traj()} trajectories"
                 _logger.exception(err_msg)
-                raise
+                raise RuntimeError(err_msg) from exc
 
         # Re-order list since runner does not guarantee order
         # And update list of trajectories in the database
@@ -91,30 +96,34 @@ class MonteCarlo(BaseSamplingStrategy):
         Returns:
             the transition probability
         """
-        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using MonteCarlo"
-        _logger.info(inf_msg)
-
         # Generate the initial trajectory ensemble
         self.generate_trajectory_ensemble(tdb)
 
-        # Get the transition probability
-        transition_probability = tdb.count_converged_traj() / tdb.n_traj()
-
-        tdb.info()
-
-        return transition_probability
+        # Return the transition probability
+        return tdb.count_converged_traj() / tdb.n_traj()
 
     def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
         """Shallow wrapper to enable sampler."""
         database.load_data()
 
-        self._plot_diags = plot_diags
-
         # Initialize an empty trajectory ensemble
         if database.is_empty():
             database.init_active_ensemble()
 
+        inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using MonteCarlo"
+        _logger.info(inf_msg)
+
         self.compute_probability(database)
+
+        # Plot trajectory database scores
+        if plot_diags:
+            pltfile = "Score_MCEnd.png"
+            if Path(pltfile).exists():
+                wrn_msg = f"Attempting to overwrite the plot file {pltfile}"
+                _logger.warning(wrn_msg)
+            database.plot_score_functions(pltfile)
+
+        database.info()
 
     def initialize_db(self) -> Database:
         """Return an initialized database of the Monte-Carlo sampling strategy."""

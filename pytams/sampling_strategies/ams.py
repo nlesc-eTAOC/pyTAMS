@@ -44,7 +44,6 @@ class AMS(BaseSamplingStrategy):
         _fmodel_t: the forward model type
         _parameters: the dictionary of parameters
         _wallTime: the walltime limit
-        _plot_diags: whether or not to plot diagnostics during splitting iterations
         _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
     """
 
@@ -66,7 +65,7 @@ class AMS(BaseSamplingStrategy):
         if "ntrajectories" not in ams_subdict or "nsplititer" not in ams_subdict:
             err_msg = "(T)AMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
             _logger.exception(err_msg)
-            raise ValueError
+            raise ValueError(err_msg)
 
         # Two variants of AMS are available: regular AMS and
         # trajectory-AMS
@@ -102,10 +101,10 @@ class AMS(BaseSamplingStrategy):
 
             try:
                 t_list = runner.execute_promises()
-            except:
+            except Exception as exc:
                 err_msg = f"Failed to generate the initial ensemble of {tdb.n_traj()} trajectories"
                 _logger.exception(err_msg)
-                raise
+                raise RuntimeError(err_msg) from exc
 
         # Re-order list since runner does not guarantee order
         # And update list of trajectories in the database
@@ -132,7 +131,7 @@ class AMS(BaseSamplingStrategy):
         # Gather max score from all trajectories
         # and check for early convergence
         all_converged = True
-        maxes = np.zeros(tdb.traj_list_len())
+        maxes = np.zeros(tdb.traj_list_len(), dtype=float)
         for i in range(tdb.traj_list_len()):
             maxes[i] = tdb.get_traj(i).score_max()
             all_converged = all_converged and tdb.get_traj(i).is_converged()
@@ -181,10 +180,10 @@ class AMS(BaseSamplingStrategy):
 
                 try:
                     finished_traj = runner.execute_promises()
-                except Exception:
+                except Exception as exc:
                     err_msg = f"Failed to finish branching {len(ongoing_list)} trajectories"
                     _logger.exception(err_msg)
-                    raise
+                    raise RuntimeError(err_msg) from exc
 
                 _logger.info("Done with unfinished")
 
@@ -221,7 +220,7 @@ class AMS(BaseSamplingStrategy):
                 rest_idx[i] = rng.integers(low=0, high=tdb.traj_list_len(), dtype=int)
         return rest_idx
 
-    def do_multilevel_splitting(self, tdb: Database) -> None:
+    def do_multilevel_splitting(self, tdb: Database, plot_diags: bool) -> None:
         """Schedule splitting of the initial ensemble of stochastic trajectories.
 
         Perform the multi-level splitting iterations, possibly restarting multiple
@@ -238,6 +237,7 @@ class AMS(BaseSamplingStrategy):
 
         Args:
             tdb: the AMS database
+            plot_diags: whether or not to plot diagnostics
 
         Raises:
             Error if the runner fails
@@ -259,7 +259,7 @@ class AMS(BaseSamplingStrategy):
                 _logger.info(inf_msg)
 
                 # Plot trajectory database scores
-                if self._plot_diags:
+                if plot_diags:
                     pltfile = f"Score_k{k:05}.png"
                     if Path(pltfile).exists():
                         wrn_msg = f"Attempting to overwrite the plot file {pltfile}"
@@ -315,10 +315,10 @@ class AMS(BaseSamplingStrategy):
 
                 try:
                     restarted_trajs = runner.execute_promises()
-                except Exception:
+                except Exception as exc:
                     err_msg = f"Failed to branch {n_branch} trajectories at iteration {k}"
                     _logger.exception(err_msg)
-                    raise
+                    raise RuntimeError(err_msg) from exc
 
                 # Update the trajectories in the database
                 for t in restarted_trajs:
@@ -340,11 +340,12 @@ class AMS(BaseSamplingStrategy):
                 tdb.mark_last_splitting_iteration_as_done()
                 k = k + n_branch
 
-    def compute_probability(self, tdb: Database) -> float:
+    def compute_probability(self, tdb: Database, plot_diags: bool) -> float:
         """Compute the probability using AMS.
 
         Args:
             tdb: the AMS database
+            plot_diags: whether or not to plot diagnostics
 
         Returns:
             the transition probability
@@ -381,7 +382,7 @@ class AMS(BaseSamplingStrategy):
 
         # Perform multilevel splitting
         if not all_converged:
-            self.do_multilevel_splitting(tdb)
+            self.do_multilevel_splitting(tdb, plot_diags)
 
         if self.out_of_time():
             warn_msg = "Ran out of walltime ! Exiting now."
@@ -406,13 +407,11 @@ class AMS(BaseSamplingStrategy):
         """Shallow wrapper to enable sampler."""
         database.load_data()
 
-        self._plot_diags = plot_diags
-
         # Initialize an empty trajectory ensemble
         if database.is_empty():
             database.init_active_ensemble()
 
-        self.compute_probability(database)
+        self.compute_probability(database, plot_diags)
 
     def initialize_db(self) -> Database:
         """Return an initialized database of the AMS sampling strategy."""
