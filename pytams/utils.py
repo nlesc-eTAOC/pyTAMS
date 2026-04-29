@@ -28,14 +28,15 @@ def is_mac_os() -> bool:
     return system.startswith("dar")
 
 
-def setup_logger(params: dict[Any, Any]) -> None:
+def setup_logger(loglevel: str, logfile: str | None = None) -> None:
     """Setup the logger parameters.
 
     Args:
-        params: a dictionary of parameters
+        loglevel: logging level
+        logfile: optional logging file
     """
     # Set logging level
-    log_level_str = params["sampler"].get("loglevel", "INFO").upper()
+    log_level_str = loglevel.upper()
     log_level = getattr(logging, log_level_str, logging.INFO)
 
     # Set formatter
@@ -51,7 +52,7 @@ def setup_logger(params: dict[Any, Any]) -> None:
     root_logger.handlers.clear()
 
     # Query log file
-    log_file = params["sampler"].get("logfile")
+    log_file = logfile
 
     # Set console handler: warning+ if logfile provided
     # full log otherwise
