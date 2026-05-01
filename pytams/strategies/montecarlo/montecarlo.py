@@ -3,10 +3,14 @@
 import logging
 from pathlib import Path
 from typing import Any
-from pytams.base_strategy import BaseSamplingStrategy
+from pytams.config import Config
+from .config import MCConfig
+from pytams.config import RuntimeConfig
 from pytams.database import Database
-from pytams.taskrunner import get_runner_type
-from pytams.worker import pool_worker
+from pytams.runner import make_runner
+from pytams.runner import pool_worker
+from pytams.runner import RunnerConfig
+from pytams.strategies.base_strategy import BaseSamplingStrategy
 
 _logger = logging.getLogger(__name__)
 
@@ -32,25 +36,26 @@ class MonteCarlo(BaseSamplingStrategy):
         BaseSamplingStrategy (e.g. ``self._end_date``, ``elapsed_time()``).
     """
 
-    def __init__(self, fmodel_t: Any, parameters: dict[Any, Any]) -> None:
+    def __init__(self, fmodel_t: Any, config: Config, runtime_cfg: RuntimeConfig, deterministic: bool) -> None:
         """Initialize a Monte-Carlo object.
 
         Args:
             fmodel_t: the forward model type
-            parameters: a dictionary of parameters
+            config: the config object
+            runtime_cfg: the runtime config
+            deterministic: the deterministic flag
 
         Raises:
-            ValueError: if necessary parameters are not found
+            ValueError: if necessary config parameters are not found
         """
         self._fmodel_t = fmodel_t
-        self._parameters = parameters
-
-        # Parse user-inputs
-        mc_subdict = self._parameters["montecarlo"]
-        if "ntrajectories" not in mc_subdict:
-            err_msg = "Monte-Carlo 'ntrajectories' must be specified in the input file !"
-            _logger.exception(err_msg)
-            raise ValueError(err_msg)
+        self._config = config
+        self._mc_cfg = config.load(MCConfig)
+        self._mc_cfg.validate()
+        self._runner_cfg = config.load(RunnerConfig)
+        self._loglevel = runtime_cfg.loglevel
+        self._logfile = runtime_cfg.logfile
+        self._deterministic = deterministic
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -68,8 +73,12 @@ class MonteCarlo(BaseSamplingStrategy):
         inf_msg = f"Creating a Monte Carlo ensemble of {tdb.n_traj()} trajectories"
         _logger.info(inf_msg)
 
-        with get_runner_type(self._parameters)(
-            self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_init", 1)
+        with make_runner(
+            self._runner_cfg,
+            pool_worker,
+            is_pool_worker=True,
+            loglevel=self._loglevel,
+            logfile=self._logfile,
         ) as runner:
             for t in tdb.traj_list():
                 task = [t, self._end_date, tdb.pool_file(), tdb.path()]
@@ -107,8 +116,7 @@ class MonteCarlo(BaseSamplingStrategy):
         database.load_data()
 
         # Initialize an empty trajectory ensemble
-        if database.is_empty():
-            database.init_active_ensemble()
+        database.init_active_ensemble()
 
         inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using MonteCarlo"
         _logger.info(inf_msg)
@@ -125,12 +133,13 @@ class MonteCarlo(BaseSamplingStrategy):
 
         database.info()
 
-    def initialize_db(self) -> Database:
+    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
         """Return an initialized database of the Monte-Carlo sampling strategy."""
         return Database(
             fmodel_t=self._fmodel_t,
-            params=self._parameters,
+            config=self._config,
+            diag_configs=diag_configs,
             strategy="montecarlo",
-            ntraj=self._parameters["montecarlo"]["ntrajectories"],
+            ntraj=self._mc_cfg.ntrajectories,
             read_only=False,
         )

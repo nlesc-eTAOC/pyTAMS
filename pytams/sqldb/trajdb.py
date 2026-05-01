@@ -17,7 +17,7 @@ from sqlalchemy import update
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from pytams.sqlmanager import BaseSQLManager
+from .sqlmanager import BaseSQLManager
 
 _logger = logging.getLogger(__name__)
 
@@ -279,6 +279,19 @@ class TrajDB(BaseSQLManager):
             err_msg = f"Trajectory {traj_id} does not exist"
             _logger.error(err_msg)
             raise ValueError(err_msg)
+
+    def check_trajectory_exist(self, traj_id: int) -> bool:
+        """Check if a trajectory exist for a given index.
+
+        Args:
+            traj_id : The trajectory id
+
+        Return:
+            True if the trajectory exist, False otherwise
+        """
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
+            return bool(traj)
 
     def release_all_trajectories(self) -> None:
         """Release all trajectories in the DB."""

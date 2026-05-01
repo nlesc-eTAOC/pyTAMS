@@ -18,12 +18,13 @@ class DoubleWellModel(ForwardModelBaseClass):
     With the 2 wells at [-1.0, 0.0] and [1.0, 0.0]
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any] | None) -> None:
         """Override the template."""
         self._state = self.init_condition()
-        self._slow_factor = params.get("model", {}).get("slow_factor", 0.00000001)
-        self._noise_amplitude = params.get("model", {}).get("noise_amplitude", 1.0)
-        if params["model"]["deterministic"]:
+        if params is not None:
+            self._slow_factor = params.get("slow_factor", 0.00000001)
+            self._noise_amplitude = params.get("noise_amplitude", 1.0)
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()

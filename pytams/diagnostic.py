@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.diagdb import DiagDB
+from pytams.config import Config
+from pytams.sqldb import DiagDB
 from pytams.snapshot import Snapshot
 
 
@@ -142,12 +143,12 @@ class FirstTimeCrossingDiagnostic(DiagnosticPlugin):
 
 
 def diagnosticfactory(
-    params: dict[Any, Any], tid: int, tweight: float, workdir: Path, fprocess: Callable[..., Any], ddb: DiagDB
+    configs: dict[str, Config], tid: int, tweight: float, workdir: Path, fprocess: Callable[..., Any], ddb: DiagDB
 ) -> list[DiagnosticPlugin]:
     """Parse input parameters to generate a list of DiagnosticPlugin.
 
     Args:
-        params: the input parameters
+        configs: a dict with a Config object for each diagnostic
         tid: the ID of the traj the diagnostic is attached to
         tweight: the weight of the traj
         workdir: the workdir associated with a trajectory
@@ -155,23 +156,19 @@ def diagnosticfactory(
         ddb: the diagnostic database to add the data to
     """
     diags_l: list[DiagnosticPlugin] = []
-    diag_str_list = params.get("sampler", {}).get("diagnostics", [])
-    ndiags = len(diag_str_list)
 
-    for i in range(ndiags):
-        diag_dict = params.get(diag_str_list[i])
-        if diag_dict is None:
-            err_msg = f"Diagnostic {diag_str_list[i]} is missing a parameter dict !"
+    for k, v_cfg in configs.items():
+        v = v_cfg.as_dict()
+        if v is None:
+            err_msg = f"Diagnostic {k} is missing a parameter dict !"
             raise RuntimeError(err_msg)
 
-        diag_type = diag_dict.get("type", "FirstCrossing")
+        diag_type = v.get("type", "FirstCrossing")
 
         if diag_type == "FirstCrossing":
-            diags_l.append(
-                FirstTimeCrossingDiagnostic(diag_str_list[i], diag_dict, tid, tweight, workdir, fprocess, ddb)
-            )
+            diags_l.append(FirstTimeCrossingDiagnostic(k, v, tid, tweight, workdir, fprocess, ddb))
         else:
-            err_msg = f"Diagnostic {diag_str_list[i]} has unknown trigger type {diag_type} !"
+            err_msg = f"Diagnostic {k} has unknown trigger type {diag_type} !"
             raise ValueError(err_msg)
 
     return diags_l

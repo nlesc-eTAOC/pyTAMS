@@ -5,12 +5,16 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.base_strategy import BaseSamplingStrategy
+from .config import AMSConfig
+from pytams.config import Config
+from pytams.config import RuntimeConfig
 from pytams.database import Database
-from pytams.taskrunner import get_runner_type
+from pytams.runner import make_runner
+from pytams.runner import ms_worker
+from pytams.runner import pool_worker
+from pytams.runner import RunnerConfig
+from pytams.strategies.base_strategy import BaseSamplingStrategy
 from pytams.utils import get_min_scored
-from pytams.worker import ms_worker
-from pytams.worker import pool_worker
 
 _logger = logging.getLogger(__name__)
 
@@ -42,36 +46,31 @@ class AMS(BaseSamplingStrategy):
 
     Attributes:
         _fmodel_t: the forward model type
-        _parameters: the dictionary of parameters
+        _config: the config object
         _wallTime: the walltime limit
         _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
     """
 
-    def __init__(self, fmodel_t: Any, parameters: dict[Any, Any]) -> None:
+    def __init__(self, fmodel_t: Any, config: Config, runtime_cfg: RuntimeConfig, deterministic: bool) -> None:
         """Initialize a AMS strategy.
 
         Args:
             fmodel_t: the forward model type
-            parameters: a dictionary of parameters
+            config: the config object
+            runtime_cfg: the runtime config dataclass
+            deterministic: the deterministic flag trigger deterministic runs
 
         Raises:
             ValueError: if necessary parameters are not found
         """
         self._fmodel_t = fmodel_t
-        self._parameters = parameters
-
-        # Parse user-inputs
-        ams_subdict = self._parameters["ams"]
-        if "ntrajectories" not in ams_subdict or "nsplititer" not in ams_subdict:
-            err_msg = "(T)AMS 'ntrajectories' and 'nsplititer' must be specified in the input file !"
-            _logger.exception(err_msg)
-            raise ValueError(err_msg)
-
-        # Two variants of AMS are available: regular AMS and
-        # trajectory-AMS
-        self._variant = ams_subdict.get("variant", "tams")
-
-        self._init_ensemble_only = ams_subdict.get("init_ensemble_only", False)
+        self._config = config
+        self._ams_cfg = config.load(AMSConfig)
+        self._ams_cfg.validate()
+        self._runner_cfg = config.load(RunnerConfig)
+        self._loglevel = runtime_cfg.loglevel
+        self._logfile = runtime_cfg.logfile
+        self._deterministic = deterministic
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -92,8 +91,12 @@ class AMS(BaseSamplingStrategy):
         inf_msg = f"Creating the initial ensemble of {tdb.n_traj()} trajectories"
         _logger.info(inf_msg)
 
-        with get_runner_type(self._parameters)(
-            self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_init", 1)
+        with make_runner(
+            self._runner_cfg,
+            pool_worker,
+            is_pool_worker=True,
+            loglevel=self._loglevel,
+            logfile=self._logfile,
         ) as runner:
             for t in tdb.traj_list():
                 task = [t, self._end_date, tdb.pool_file(), tdb.path()]
@@ -170,8 +173,12 @@ class AMS(BaseSamplingStrategy):
         if ongoing_list:
             inf_msg = f"Unfinished splitting iteration detected, traj {ongoing_list} need(s) finishing"
             _logger.info(inf_msg)
-            with get_runner_type(self._parameters)(
-                self._parameters, pool_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
+            with make_runner(
+                self._runner_cfg,
+                pool_worker,
+                is_pool_worker=False,
+                loglevel=self._loglevel,
+                logfile=self._logfile,
             ) as runner:
                 for i in ongoing_list:
                     t = tdb.get_traj(i)
@@ -209,10 +216,7 @@ class AMS(BaseSamplingStrategy):
         """
         # Enable deterministic runs by setting a (different) seed
         # for each splitting iteration
-        if self._parameters.get("ams", {}).get("deterministic", False):
-            rng = np.random.default_rng(seed=42 * tdb.k_split())
-        else:
-            rng = np.random.default_rng()
+        rng = np.random.default_rng(seed=42 * tdb.k_split()) if self._deterministic else np.random.default_rng()
         rest_idx = [-1] * len(min_idx_list)
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
@@ -251,8 +255,12 @@ class AMS(BaseSamplingStrategy):
         # Initialize splitting iterations counter
         k = tdb.k_split()
 
-        with get_runner_type(self._parameters)(
-            self._parameters, ms_worker, self._parameters.get("runner", {}).get("nworker_iter", 1)
+        with make_runner(
+            self._runner_cfg,
+            ms_worker,
+            is_pool_worker=False,
+            loglevel=self._loglevel,
+            logfile=self._logfile,
         ) as runner:
             while k < tdb.n_split_iter():
                 inf_msg = f"Starting AMS iter. {k} with {runner.n_workers()} workers"
@@ -375,7 +383,7 @@ class AMS(BaseSamplingStrategy):
             _logger.warning(warn_msg)
             return -1.0
 
-        if self._init_ensemble_only:
+        if self._ams_cfg.init_ensemble_only:
             warn_msg = "Stopping after the initial ensemble stage !"
             _logger.warning(warn_msg)
             return -1.0
@@ -407,19 +415,19 @@ class AMS(BaseSamplingStrategy):
         """Shallow wrapper to enable sampler."""
         database.load_data()
 
-        # Initialize an empty trajectory ensemble
-        if database.is_empty():
-            database.init_active_ensemble()
+        # Initialize the active ensemble
+        database.init_active_ensemble()
 
         self.compute_probability(database, plot_diags)
 
-    def initialize_db(self) -> Database:
+    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
         """Return an initialized database of the AMS sampling strategy."""
         return Database(
             fmodel_t=self._fmodel_t,
-            params=self._parameters,
+            config=self._config,
+            diag_configs=diag_configs,
             strategy="ams",
-            ntraj=self._parameters["ams"]["ntrajectories"],
-            nsplititer=self._parameters["ams"]["nsplititer"],
+            ntraj=self._ams_cfg.ntrajectories,
+            nsplititer=self._ams_cfg.nsplititer,
             read_only=False,
         )

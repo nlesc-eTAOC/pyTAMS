@@ -17,16 +17,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import toml
-from pytams.diagdb import DiagDB
-from pytams.trajdb import TrajDB
+from pytams.config import Config
+from .config import DatabaseConfig
+from pytams.sqldb import DiagDB
+from pytams.sqldb import TrajDB
 from pytams.trajectory import Trajectory
-from pytams.trajectory import form_trajectory_id
+from pytams.trajectory import TrajectoryConfig
+from pytams.trajectory.trajectory import form_trajectory_id
 from pytams.utils import get_module_local_import
 from pytams.xmlutils import new_element
 from pytams.xmlutils import xml_to_dict
 
 if TYPE_CHECKING:
     from pytams.fmodel import ForwardModelBaseClass
+    from pytams.strategies.base_strategy import BaseSamplingStrategy
 
 _logger = logging.getLogger(__name__)
 
@@ -52,8 +56,7 @@ class Database(Generic[T_Noise, T_State]):
     Attributes:
         _fmodel_t: the forward model type
         _save_to_disk: boolean to trigger saving the database to disk
-        _path: a path to an existing database to restore or a new path
-        _restart: a bool to override an existing database
+        _database_cfg: the database configuration dataclass
         _parameters: the dictionary of parameters
         _trajs_db: the list of trajectories
     """
@@ -61,10 +64,10 @@ class Database(Generic[T_Noise, T_State]):
     def __init__(
         self,
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
-        params: dict[Any, Any],
+        config: Config,
         strategy: str = "undefined",
-        ntraj: int = -1,
-        nsplititer: int = -1,
+        diag_configs: dict[str, Config] | None = None,
+        deterministic: bool = False,
         read_only: bool = True,
     ) -> None:
         """Initialize a TAMS database.
@@ -77,11 +80,11 @@ class Database(Generic[T_Noise, T_State]):
         will be copied to a new random name.
 
         Args:
-            strategy: the sampling strategy
             fmodel_t: the forward model type
-            params: a dictionary of parameters
-            ntraj: [OPT] number of traj to hold
-            nsplititer: [OPT] number of splitting iteration to hold
+            config: a Config object with the full configuration
+            strategy: [OPT] the sampling strategy
+            diag_configs: [OPT] a list of diagnostic configurations
+            deterministic: [OPT] boolean setting deterministic mode
             read_only: [OPT] boolean setting database access mode
         """
         # Access mode
@@ -89,32 +92,35 @@ class Database(Generic[T_Noise, T_State]):
 
         # For posterity
         self._creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
-        self._version = version(__package__)
+        self._version = version("pytams")
         self._name = "TAMS_" + fmodel_t.name()
         self._strategy = strategy
 
-        # Stash away the model class and parameters
+        # Instanciate the config dataclasses
+        # Note: the model parameters are in a dictionary since
+        # they can be of any type
         self._fmodel_t = fmodel_t
-        self._parameters = params
+        self._config = config
+        self._database_cfg = config.load(DatabaseConfig)
+        self._diag_configs = diag_configs
+        self._model_params = config.section_dict("model")
+        self._deterministic = deterministic
 
         # Database format/storage parameters
         self._save_to_disk = False
-        self._path: str | None = params.get("database", {}).get("path", None)
-        if self._path:
+        if self._database_cfg.path:
             self._save_to_disk = True
-            self._restart = params.get("database", {}).get("restart", False)
-            self._format = params.get("database", {}).get("format", "XML")
-            if self._format != "XML":
-                err_msg = f"Unsupported TAMS database format: {self._format} !"
+            if self._database_cfg.format != "XML":
+                err_msg = f"Unsupported TAMS database format: {self._database_cfg.format} !"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
-            self._name = f"{self._path}"
+            self._name = f"{self._database_cfg.path}"
             self._abs_path: Path = Path.cwd() / self._name
             self._sql_name = f"{self._name}/trajPool.db"
         else:
             self._sql_name = f".sqldb_tams_{np.random.default_rng().integers(0, 999999):06d}.db"
 
-        self._store_archive = params.get("database", {}).get("archive_discarded", True)
+        self._store_archive = self._database_cfg.archive_discarded
 
         # Trajectory ensembles: one for active trajectories and one for
         # archived (discarded) members.
@@ -148,21 +154,29 @@ class Database(Generic[T_Noise, T_State]):
             raise FileNotFoundError(err_msg)
 
         # Load necessary elements to call the constructor
-        db_params = toml.load(a_path / "input_params.toml")
+        db_config = Config(toml.load(a_path / "input_params.toml"))
+        indb_path = db_config.load(DatabaseConfig).path
+        if indb_path is None:
+            err_msg = "Database has been tampered with: DatabaseConfig.path cannot be None upon loading !"
+            _logger.error(err_msg)
+            raise ValueError(err_msg)
 
         # If the a_path differs from the one stored in the
         # database (the DB has been moved), update the path
-        if a_path.absolute().as_posix() != Path(db_params["database"]["path"]).absolute().as_posix():
-            warn_msg = f"Database {db_params['database']['path']} has been moved to {a_path} !"
+        if a_path.absolute().as_posix() != Path(indb_path).absolute().as_posix():
+            warn_msg = f"Database {indb_path} has been moved to {a_path} !"
             _logger.warning(warn_msg)
-            db_params["database"]["path"] = str(a_path)
+            # TODO: find a better to update some of the Config entries
+            db_config._data["database"]["path"] = str(a_path)
+            sys_cfg = db_config.load(SystemConfig)
+            sys_cfg.write_toml(a_path / "input_params.toml")
 
         # Load picked forward model
         model_file = Path(a_path / "fmodel.pkl")
         with model_file.open("rb") as f:
             model = cloudpickle.load(f)
 
-        return cls(model, db_params, read_only=read_only)
+        return cls(model, db_config, read_only=read_only)
 
     def _init_metadata(self) -> None:
         """Initialize the database.
@@ -177,10 +191,8 @@ class Database(Generic[T_Noise, T_State]):
 
             # If no previous db or we force restart
             # Overwrite the default read-only mode
-            if not db_exists or self._restart:
-                # The 'restart' is no longer useful, drop it
-                self._parameters["database"].pop("restart", None)
-                self._restart = False
+            if not db_exists or self._database_cfg.restart:
+                # The 'restart' is no longer useful, drop it TODO
                 self._read_only = False
                 self._setup_tree()
 
@@ -188,14 +200,13 @@ class Database(Generic[T_Noise, T_State]):
             else:
                 self._load_metadata()
 
-                # Parameters stored in the DB override
-                # newly provided parameters.
+                # Load parameters stored in the DB and
+                # Update configuration parameters that can be updated
                 with Path(self._abs_path / "input_params.toml").open("r") as f:
-                    stored_params = toml.load(f)
+                    db_config = Config(toml.load(f))
 
-                # Update input parameters that can be updated
-                if self._parameters != stored_params:
-                    self._update_run_params(stored_params)
+                updated_sys_cfg = SystemConfig.merge(db_config.load(SystemConfig), self._config.load(SystemConfig))
+                updated_sys_cfg.write_toml(self._abs_path / "input_params.toml")
 
             # Initialize the TrajDB file
             if self._read_only:
@@ -214,61 +225,9 @@ class Database(Generic[T_Noise, T_State]):
 
         # Check minimal parameters
         if self._ntraj == -1:
-            err_msg = "Initializing TAMS database missing ntraj and/or nsplititer parameter !"
+            err_msg = "Initializing TAMS database missing ntraj parameter !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
-
-    def _update_run_params(self, old_params: dict[Any, Any]) -> None:
-        """Update database params and metadata.
-
-        Upon loading a database from disk, compare the dictionary of
-        parameters stored in the database against the newly inputted one
-        and update the database metadata when possible.
-        Note that only the [tams] sub-dictionary can be updated updated at this point
-        and the database params overwrite the other subdicts.
-
-        Args:
-            old_params: a dictionary of input parameter loaded from disk
-        """
-        # For testing purposes the params might be lacking
-        # a "ams" subdir
-        if "ams" not in old_params or "ams" not in self._parameters:
-            # Simply overwrite the provided input params
-            self._parameters.update(old_params)
-            return
-
-        # Update the number of splitting iteration
-        self._nsplititer = self._parameters.get("ams", {}).get("nsplititer")
-        old_params["ams"].update({"nsplititer": self._nsplititer})
-
-        # If the initial ensemble of trajectory is not done
-        # or we stopped after the initial ensemble stage
-        if not self._init_ensemble_done or (
-            self._init_ensemble_done and old_params["ams"].get("init_ensemble_only", False)
-        ):
-            self._ntraj = self._parameters.get("ams", {}).get("ntrajectories")
-            old_params["ams"].update({"ntrajectories": self._ntraj})
-            self._init_ensemble_done = False
-
-        # Update other parameters in the [ams] subdir,
-        # even if they do not change the database behavior
-        for key, value in self._parameters["ams"].items():
-            if key not in ["nsplititer", "ntrajectories"]:
-                old_params["ams"][key] = value
-
-        for key, value in self._parameters["sampler"].items():
-            if key not in ["nsplititer", "ntrajectories"]:
-                old_params["sampler"][key] = value
-
-        # Updated disk parameters overwrite the input params
-        self._parameters.update(old_params)
-
-        # Update the content of the database
-        # if permitted
-        if not self._read_only:
-            self._write_metadata()
-            with Path(self._abs_path / "input_params.toml").open("w") as f:
-                toml.dump(self._parameters, f)
 
     def _setup_tree(self) -> None:
         """Initialize the trajectory database tree."""
@@ -287,8 +246,8 @@ class Database(Generic[T_Noise, T_State]):
             Path(self._name).mkdir()
 
             # Save the runtime options
-            with Path(self._abs_path / "input_params.toml").open("w") as f:
-                toml.dump(self._parameters, f)
+            sys_cfg = self._config.load(SystemConfig)
+            sys_cfg.write_toml(self._abs_path / "input_params.toml")
 
             # Header file with metadata
             self._write_metadata()
@@ -310,11 +269,11 @@ class Database(Generic[T_Noise, T_State]):
 
     def _write_metadata(self) -> None:
         """Write the database Metadata to disk."""
-        if self._format == "XML":
+        if self._database_cfg.format == "XML":
             header_file = self.header_file()
             root = ET.Element("header")
             mdata = ET.SubElement(root, "metadata")
-            mdata.append(new_element("pyTAMS_version", version(__package__)))
+            mdata.append(new_element("pyTAMS_version", version("pytams")))
             mdata.append(new_element("date", self._creation_date))
             mdata.append(new_element("model_t", self._fmodel_t.name()))
             mdata.append(new_element("strategy", self._strategy))
@@ -325,14 +284,14 @@ class Database(Generic[T_Noise, T_State]):
             ET.indent(tree, space="\t", level=0)
             tree.write(header_file)
         else:
-            err_msg = f"Unsupported TAMS database format: {self._format} !"
+            err_msg = f"Unsupported TAMS database format: {self._database_cfg.format} !"
             _logger.error(err_msg)
             raise ValueError(err_msg)
 
     def _load_metadata(self) -> None:
         """Read the database Metadata from the header."""
         if self._save_to_disk:
-            if self._format == "XML":
+            if self._database_cfg.format == "XML":
                 tree = ET.parse(self.header_file())
                 root = tree.getroot()
                 mdata = root.find("metadata")
@@ -342,8 +301,8 @@ class Database(Generic[T_Noise, T_State]):
                 self._init_ensemble_done = datafromxml["init_ensemble_done"]
                 self._strategy = datafromxml["strategy"]
                 self._version = datafromxml["pyTAMS_version"]
-                if self._version != version(__package__):
-                    warn_msg = f"Database pyTAMS version {self._version} is different from {version(__package__)}"
+                if self._version != version("pytams"):
+                    warn_msg = f"Database pyTAMS version {self._version} is different from {version('pytams')}"
                     _logger.warning(warn_msg)
                 self._creation_date = datafromxml["date"]
                 db_model = datafromxml["model_t"]
@@ -352,22 +311,28 @@ class Database(Generic[T_Noise, T_State]):
                     _logger.error(err_msg)
                     raise RuntimeError(err_msg)
             else:
-                err_msg = f"Unsupported TAMS database format: {self._format} !"
+                err_msg = f"Unsupported TAMS database format: {self._database_cfg.format} !"
                 _logger.error(err_msg)
                 raise ValueError(err_msg)
 
     def init_active_ensemble(self) -> None:
         """Initialize the requested number of trajectories."""
+        traj_cfg = self._config.load(TrajectoryConfig)
+        traj_cfg.validate()
         for n in range(self._ntraj):
-            workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
-            t: Trajectory[T_Noise, T_State] = Trajectory(
-                traj_id=n,
-                weight=1.0,
-                fmodel_t=self._fmodel_t,
-                parameters=self._parameters,
-                workdir=workdir,
-            )
-            self.append_traj(t, True)
+            if not self._pool_db.check_trajectory_exist(n):
+                workdir = Path(self._abs_path / f"trajectories/{form_trajectory_id(n)}") if self._save_to_disk else None
+                t: Trajectory[T_Noise, T_State] = Trajectory(
+                    traj_id=n,
+                    weight=1.0,
+                    fmodel_t=self._fmodel_t,
+                    traj_cfg=traj_cfg,
+                    diag_configs=self._diag_configs,
+                    model_params=self._model_params,
+                    workdir=workdir,
+                    deterministic=self._deterministic,
+                )
+                self.append_traj(t, True)
 
     def save_trajectory(self, traj: Trajectory[T_Noise, T_State]) -> None:
         """Save a trajectory to disk in the database.
@@ -399,8 +364,11 @@ class Database(Generic[T_Noise, T_State]):
 
         # Counter for number of trajectory loaded
         n_traj_restored = 0
+        n_traj_initialized = 0
 
         load_frozen = self._read_only
+        traj_cfg = self._config.load(TrajectoryConfig)
+        traj_cfg.validate()
 
         ntraj_in_db = self._pool_db.get_trajectory_count()
         for n in range(ntraj_in_db):
@@ -414,18 +382,23 @@ class Database(Generic[T_Noise, T_State]):
                         traj_checkfile,
                         metadata,
                         fmodel_t=self._fmodel_t,
-                        parameters=self._parameters,
+                        traj_cfg=traj_cfg,
+                        diag_configs=self._diag_configs,
+                        model_params=self._model_params,
                         workdir=workdir,
                         frozen=load_frozen,
                     ),
                     False,
                 )
             else:
+                n_traj_initialized += 1
                 self.append_traj(
                     Trajectory.init_from_metadata(
                         metadata,
                         fmodel_t=self._fmodel_t,
-                        parameters=self._parameters,
+                        traj_cfg=traj_cfg,
+                        diag_configs=self._diag_configs,
+                        model_params=self._model_params,
                         workdir=workdir,
                     ),
                     False,
@@ -433,6 +406,8 @@ class Database(Generic[T_Noise, T_State]):
 
         if n_traj_restored > 0:
             inf_msg = f"{n_traj_restored} active trajectories loaded"
+            _logger.info(inf_msg)
+            inf_msg = f"{n_traj_initialized} active trajectories initialized"
             _logger.info(inf_msg)
 
         # Load the archived trajectories if requested.
@@ -454,6 +429,8 @@ class Database(Generic[T_Noise, T_State]):
             raise RuntimeError(err_msg)
 
         n_traj_restored = 0
+        traj_cfg = self._config.load(TrajectoryConfig)
+        traj_cfg.validate()
 
         archived_ntraj_in_db = self._pool_db.get_archived_trajectory_count()
         for n in range(archived_ntraj_in_db):
@@ -467,7 +444,9 @@ class Database(Generic[T_Noise, T_State]):
                         traj_checkfile,
                         metadata_str,
                         fmodel_t=self._fmodel_t,
-                        parameters=self._parameters,
+                        traj_cfg=traj_cfg,
+                        diag_configs=self._diag_configs,
+                        model_params=self._model_params,
                         workdir=workdir,
                         frozen=True,
                     ),
@@ -562,26 +541,57 @@ class Database(Generic[T_Noise, T_State]):
             raise ValueError(err_msg)
         self._trajs_db[idx] = copy.deepcopy(traj)
 
-    def _check_for_diag_request(self) -> bool:
-        """Check if any diagnostics are requested in the parameters.
-
-        Returns:
-            A boolean indicating if diagnostics are requested
-        """
-        diag_list = self._parameters.get("tams", {}).get("diagnostics", [])
-        # Return True only if the list exists and has at least one entry
-        return isinstance(diag_list, list) and len(diag_list) > 0
-
     def ping_diag_database(self) -> None:
         """Initialize the diagDB from the main process.
 
         To avoid race condition in creating the DB from workers,
         let it be initialized from the main process here.
         """
-        if self._check_for_diag_request():
+        if self._diag_configs is not None:
             ddb_path = self._abs_path / "./diagDB.db" if self._save_to_disk else Path("./diagDB.db")
             ddb = DiagDB(ddb_path.absolute().as_posix())
             ddb.close()
+
+    def update_ntraj(self, ntraj: int) -> None:
+        """Update the number of trajectories in the DB."""
+        if self._strategy == "ams":
+            if not self._init_ensemble_done:
+                if ntraj < self._ntraj:
+                    err_msg = f"Trying to reduce the number of trajectories from {self._ntraj} to {ntraj} !"
+                    _logger.error(err_msg)
+                    raise ValueError(err_msg)
+                self._ntraj = ntraj
+                self._config._data["ams"]["ntrajectories"] = ntraj
+                self._init_ensemble_done = False
+                self._write_metadata()
+                sys_cfg = self._config.load(SystemConfig)
+                sys_cfg.write_toml(self._abs_path / "input_params.toml")
+        elif self._strategy == "montecarlo":
+            if ntraj < self._ntraj:
+                err_msg = f"Trying to reduce the number of trajectories from {self._ntraj} to {ntraj} !"
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+            self._ntraj = ntraj
+            self._config._data["montecarlo"]["ntrajectories"] = ntraj
+            self._init_ensemble_done = False
+            self._write_metadata()
+            sys_cfg = self._config.load(SystemConfig)
+            sys_cfg.write_toml(self._abs_path / "input_params.toml")
+
+    def update_nsplititer(self, nsplititer: int) -> None:
+        """Update the number of splitting iteration in the DB."""
+        if self._strategy == "ams":
+            if nsplititer < self._nsplititer:
+                err_msg = (
+                    f"Trying to reduce the number of splitting iteration from {self._nsplititer} to {nsplititer} !"
+                )
+                _logger.error(err_msg)
+                raise ValueError(err_msg)
+            self._nsplititer = nsplititer
+            self._config._data["ams"]["nsplititer"] = nsplititer
+            self._write_metadata()
+            sys_cfg = self._config.load(SystemConfig)
+            sys_cfg.write_toml(self._abs_path / "input_params.toml")
 
     def header_file(self) -> str:
         """Helper returning the DB header file.
@@ -713,7 +723,7 @@ class Database(Generic[T_Noise, T_State]):
             if self._save_to_disk:
                 self._pool_db.update_trajectory_weight(t.id(), float(tweight))
 
-        if self._check_for_diag_request():
+        if self._diag_configs is not None:
             ddb_path = self._abs_path / "./diagDB.db" if self._save_to_disk else Path("./diagDB.db")
             ddb = DiagDB(ddb_path.absolute().as_posix())
             ddb.update_all_active_weights(tweight)

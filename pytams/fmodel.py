@@ -1,6 +1,5 @@
 """A base class for the stochastic forward model."""
 
-import copy
 from abc import ABC
 from abc import abstractmethod
 from logging import getLogger
@@ -47,21 +46,21 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
     _time: float = 0.0
 
     @final
-    def __init__(self, a_id: int, params: dict[Any, Any], workdir: Path | None = None):
+    def __init__(
+        self, a_id: int, deterministic: bool, params: dict[str, Any] | None = None, workdir: Path | None = None
+    ):
         """Base class __init__ method.
 
         The ABC init method calls the concrete class init method
-        while performing some common initializations. Additionally
-        this method create/append to a model dictionary to the
-        parameter dictionary to ensure the 'deterministic' parameter
-        is always available in the model dictionary.
+        while performing some common initializations.
 
         Upon initializing the model, a first call to make_noise
         is made to ensure the proper type is generated.
 
         Args:
             a_id: an int providing a unique id to the model instance
-            params: a dict containing parameters
+            deterministic: whether the model needs to be deterministic
+            params: a dict containing model parameters
             workdir: an optional path to the working directory
         """
         # Initialize common tooling
@@ -69,17 +68,12 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
         self._step: int = 0
         self._time: float = 0.0
         self._workdir: Path = Path.cwd() if workdir is None else workdir
-
-        # Add the deterministic parameter to the model dictionary
-        lparams = copy.deepcopy(params)
-        tams_conf = lparams.get("ams", {})
-        model_conf = lparams.setdefault("model", {})
-        model_conf["deterministic"] = tams_conf.get("deterministic", False)
+        self._deterministic: bool = deterministic
 
         # Call the concrete class init method
-        self._init_model(a_id, lparams)
+        self._init_model(a_id, params)
 
-        # Initialize property with type casting for mypy.
+        # Initialize property with type casting for mypy
         self._noise = cast("T_Noise", None)
 
     @final
@@ -140,7 +134,7 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
         self._workdir = workdir
 
     @abstractmethod
-    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[str, Any] | None) -> None:
         """Concrete class specific initialization.
 
         Args:

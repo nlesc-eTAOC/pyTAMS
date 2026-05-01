@@ -8,9 +8,9 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from pytams.trajdb import TrajDB
+from pytams.sqldb import TrajDB
 from pytams.trajectory import Trajectory
-from pytams.trajectory import WallTimeLimitError
+from pytams.trajectory.trajectory import WallTimeLimitError
 
 _logger = logging.getLogger(__name__)
 

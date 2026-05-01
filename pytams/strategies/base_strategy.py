@@ -14,6 +14,7 @@ from typing import final
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pytams.config import Config
     from pytams.database import Database
 
 _logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ class BaseSamplingStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def initialize_db(self) -> Database:
+    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
         """Return an initialized database."""
         raise NotImplementedError
 

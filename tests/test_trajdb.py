@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from pytams.trajdb import TrajDB
+from pytams.sqldb import TrajDB
 
 
 def test_createdb():

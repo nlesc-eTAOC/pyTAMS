@@ -12,7 +12,7 @@ class SimpleFModel(ForwardModelBaseClass):
     10 times the state, ceiled to 1.0
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[str, Any] | None) -> None:
         """Initialize model state."""
         _, _ = m_id, params
         self._state: float = 0.0
@@ -34,16 +34,16 @@ class SimpleFModel(ForwardModelBaseClass):
         """Override the template."""
         return min(self._state * 10.0, 1.0)
 
-    def diagnostic_hook(self,
-                        dlabel: str,
-                        tid: int,
-                        score_level: float,
-                        old_snap: Snapshot,
-                        new_snap: Snapshot,
-                        ) -> None:
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot,
+        new_snap: Snapshot,
+    ) -> None:
         """Override the template."""
         return 42.0
-
 
     def make_noise(self) -> float:
         """Override the template."""
@@ -63,7 +63,7 @@ class FailingFModel(ForwardModelBaseClass):
     The model thow an exception if the score exceed 0.5
     """
 
-    def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[Any, Any] | None) -> None:
         """Initialize model state."""
         _, _ = m_id, params
         self._state: float = 0.0

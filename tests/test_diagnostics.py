@@ -3,7 +3,8 @@
 import pickle
 from pathlib import Path
 import pytest
-from pytams.diagdb import DiagDB
+from pytams.config import Config
+from pytams.sqldb import DiagDB
 from pytams.diagnostic import diagnosticfactory
 from pytams.snapshot import Snapshot
 from tests.models import SimpleFModel
@@ -37,20 +38,10 @@ def test_add_to_diagdb():
 def test_init_diagnostic():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing"}}
-    dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
+    dconfig = {"testd": Config({"type": "FirstCrossing"})}
+    dplugin = diagnosticfactory(dconfig, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._label == "testd"
     dplugin = []
-    del ddb
-    Path("./diagDBtest.db").unlink(missing_ok=True)
-
-
-def test_failed_init_diagnostic():
-    """Test initialize a diagnostic."""
-    ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}}
-    with pytest.raises(RuntimeError):
-        _ = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
@@ -58,9 +49,9 @@ def test_failed_init_diagnostic():
 def test_init_unknown_diagnostic():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}, "testd": {"type": "Unknown"}}
+    dconfig = {"testd": Config({"type": "Unknown"})}
     with pytest.raises(ValueError):
-        _ = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
+        _ = diagnosticfactory(dconfig, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
@@ -68,8 +59,8 @@ def test_init_unknown_diagnostic():
 def test_init_diagnostic_with_levels():
     """Test initialize a diagnostic."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
-    dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 3})}
+    dplugin = diagnosticfactory(dconfig, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     assert dplugin[0]._levels[1] == 0.5
     dplugin = []
     del ddb
@@ -79,8 +70,8 @@ def test_init_diagnostic_with_levels():
 def test_diagnostic_crossed():
     """Test initialize a diagnostic and crossed."""
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
-    dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 3})}
+    dplugin = diagnosticfactory(dconfig, 1, 0.1, "./", SimpleFModel.diagnostic_hook, ddb)
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     levels = dplugin[0].get_crossed_levels(s_new)
     assert len(levels) == 2
@@ -93,8 +84,8 @@ def test_diagnostic_update():
     """Test initialize a diagnostic and update."""
     fmodel = SimpleFModel(1, {})
     ddb = DiagDB("./diagDBtest.db")
-    params_dict = {"sampler": {"diagnostics": ["testd"]}, "testd": {"type": "FirstCrossing", "n_levels": 3}}
-    dplugin = diagnosticfactory(params_dict, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 3})}
+    dplugin = diagnosticfactory(dconfig, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
     s_old = Snapshot(time=0.0, score=0.0, noise=0.0)
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     dplugin[0].update(s_old, s_new)
