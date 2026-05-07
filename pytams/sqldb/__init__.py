@@ -1,4 +1,5 @@
+from .amsdb import AMSDB
+from .coredb import TrajDB
 from .diagdb import DiagDB
-from .trajdb import TrajDB
 
-__all__ = ["DiagDB", "TrajDB"]
+__all__ = ["AMSDB", "DiagDB", "TrajDB"]
