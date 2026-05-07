@@ -18,11 +18,11 @@ import numpy as np
 import numpy.typing as npt
 from pytams.diagnostic import DiagnosticPlugin
 from pytams.diagnostic import diagnosticfactory
+from pytams.snapshot import Snapshot
 from pytams.sqldb import DiagDB
 from pytams.xmlutils import dict_to_xml
 from pytams.xmlutils import make_xml_snapshot
 from pytams.xmlutils import read_xml_snapshot
-from pytams.snapshot import Snapshot
 
 if TYPE_CHECKING:
     from pytams.config import Config
