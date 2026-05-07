@@ -49,7 +49,12 @@ class DiagDB(BaseSQLManager):
     is associated to a trajectory and its weight in the ensemble.
     """
 
-    def __init__(self, file_name: str, in_memory: bool = False, ro_mode: bool = False) -> None:
+    @classmethod
+    def default_name(cls) -> str:
+        """Default name for the database file."""
+        return "diagDB.db"
+
+    def __init__(self, file_name: str | None = None, in_memory: bool = False, ro_mode: bool = False) -> None:
         """Initialize the file.
 
         Args:
@@ -57,6 +62,8 @@ class DiagDB(BaseSQLManager):
             in_memory: a bool to trigger in-memory creation
             ro_mode: a bool to trigger read-only access to the database
         """
+        if file_name is None:
+            file_name = self.default_name()
         super().__init__(file_name, DiagBase.metadata, in_memory, ro_mode)
 
     def add_diagnostic_entry(
