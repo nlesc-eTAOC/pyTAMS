@@ -553,14 +553,14 @@ class Database(Generic[T_Noise, T_State]):
         let it be initialized from the main process here.
         """
         if self._diag_configs is not None:
-            ddb_path = self._abs_path / "./diagDB.db" if self.to_disk() else Path("./diagDB.db")
+            ddb_path = self._abs_path / DiagDB.default_name() if self.to_disk() else Path(DiagDB.default_name())
             ddb = DiagDB(ddb_path.absolute().as_posix())
             ddb.close()
 
     def update_diagnostic_weights(self, tweight: float) -> None:
         """Update the weights of all the active trajectories."""
         if self._diag_configs is not None:
-            ddb_path = self._abs_path / "./diagDB.db" if self.to_disk() else Path("./diagDB.db")
+            ddb_path = self._abs_path / DiagDB.default_name() if self.to_disk() else Path(DiagDB.default_name())
             ddb = DiagDB(ddb_path.absolute().as_posix())
             ddb.update_all_active_weights(tweight)
             ddb.close()

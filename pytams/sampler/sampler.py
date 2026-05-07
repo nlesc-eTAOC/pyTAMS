@@ -72,11 +72,12 @@ def build_system_config(cfg: Config) -> SystemConfig:
 
 def build_database(fmodel_t: Any, cfg: Config, sys_cfg: SystemConfig, overwrite: bool) -> Database:
     """Build the database."""
+    def_toml_output = "input_params.toml"
     # Instanciate the database
     # Load existing database if possible
     if sys_cfg.database.path and Path(sys_cfg.database.path).exists() and not sys_cfg.database.restart:
         # First build old system config
-        db_cfg = load_config(Path(sys_cfg.database.path) / "input_params.toml")
+        db_cfg = load_config(Path(sys_cfg.database.path) / def_toml_output)
         db_sys_cfg = build_system_config(db_cfg)
 
         # Merge & update, or overwrite
@@ -88,7 +89,7 @@ def build_database(fmodel_t: Any, cfg: Config, sys_cfg: SystemConfig, overwrite:
         else:
             updated_sys_cfg = SystemConfig.merge(db_sys_cfg, sys_cfg)
             model_dict = db_cfg.section_dict("model")
-        updated_sys_cfg.write_toml(Path(sys_cfg.database.path) / "input_params.toml", {"model": model_dict})
+        updated_sys_cfg.write_toml(Path(sys_cfg.database.path) / def_toml_output, {"model": model_dict})
 
         # Load
         return Database.load(Path(sys_cfg.database.path), read_only=False)
@@ -99,7 +100,7 @@ def build_database(fmodel_t: Any, cfg: Config, sys_cfg: SystemConfig, overwrite:
 
     db = Database.create(fmodel_t, cfg)
     if sys_cfg.database.path:
-        sys_cfg.write_toml(Path(sys_cfg.database.path) / "input_params.toml", {"model": cfg.section_dict("model")})
+        sys_cfg.write_toml(Path(sys_cfg.database.path) / def_toml_output, {"model": cfg.section_dict("model")})
 
     return db
 
