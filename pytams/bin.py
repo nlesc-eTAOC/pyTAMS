@@ -4,7 +4,7 @@ import argparse
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 from pytams.fmodel import ForwardModelBaseClass
-from pytams.sampler import RareEventSampler
+from pytams.sampler import build_sampler
 from pytams.utils import generate_subclass
 from pytams.utils import import_forward_model
 
@@ -81,5 +81,5 @@ def tams_run(a_args: list[str] | None = None) -> None:
     input_file = vars(parse_cl_args(a_args=a_args))["input"]
     shorten_list = ["-i", f"{input_file}"]
 
-    sampler = RareEventSampler(fmodel_t, shorten_list)
+    sampler = build_sampler(fmodel_t, shorten_list)
     sampler.run()
