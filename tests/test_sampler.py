@@ -7,6 +7,7 @@ import pytest
 import toml
 from pytams.database import Database
 from pytams.sampler import RareEventSampler
+from pytams.sampler import build_sampler
 from pytams.utils import is_mac_os
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
@@ -24,7 +25,7 @@ def test_init_sampler():
                 "trajectory": {"end_time": 0.02, "step_size": 0.001}
             }, f
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     assert sampler.database.n_traj() == 500
     Path("input.toml").unlink(missing_ok=True)
 
@@ -35,15 +36,15 @@ def test_init_sampler_missing_req():
     with Path("input.toml").open("w") as f:
         toml.dump({"sampler": {}, "tams": {"nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f)
     with pytest.raises(ValueError):
-        _ = RareEventSampler(fmodel_t=fmodel, a_args=[])
+        _ = build_sampler(fmodel_t=fmodel, a_args=[])
     Path("input.toml").unlink(missing_ok=True)
 
 
 def test_init_sampler_no_input():
     """Test failed sampler initialization."""
     fmodel = SimpleFModel
-    with pytest.raises(ValueError):
-        _ = RareEventSampler(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
+    with pytest.raises(FileNotFoundError):
+        _ = build_sampler(fmodel_t=fmodel, a_args=["-i", "dummy.toml"])
 
 
 def test_simple_model_sampler():
@@ -60,10 +61,10 @@ def test_simple_model_sampler():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 1.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -82,10 +83,10 @@ def test_simple_model_sampler_with_diags():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 1.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
     Path("./diagDB.db").unlink(missing_ok=True)
 
@@ -103,7 +104,7 @@ def test_failing_model_sampler():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     Path("input.toml").unlink(missing_ok=True)
     with pytest.raises(RuntimeError):
         sampler.run()
@@ -124,7 +125,7 @@ def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture)
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
     sampler.run()
@@ -145,7 +146,7 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
     del sampler
     tdb = Database.load(Path("simpleModelTest.tdb"))
@@ -153,10 +154,8 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
     params_dict["ams"]["ntrajectories"] = 20
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tdb.update_ntraj(20)
-    assert tdb.n_traj() == 20
 
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=["-ov"])
     sampler.run()
     del sampler
     tdb = Database.load(Path("simpleModelTest.tdb"))
@@ -182,11 +181,11 @@ def test_simple_model_tams_with_db():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
+    re_proba = sampler.database.get_rareevent_probability()
     del sampler
-    assert transition_proba == 1.0
+    assert re_proba == 1.0
     shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
@@ -206,10 +205,10 @@ def test_simple_model_tams_with_db_access():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
     tdb = sampler.database
-    assert tdb.get_transition_probability() == 1
+    assert tdb.get_rareevent_probability() == 1
     del sampler
     del tdb
     shutil.rmtree("simpleModelTest.tdb")
@@ -232,7 +231,7 @@ def test_simple_model_mc_slurm_fail():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     with pytest.raises(FileNotFoundError):
         sampler.run()
     Path("input.toml").unlink(missing_ok=True)
@@ -254,17 +253,17 @@ def test_simple_model_twice_tams():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 1.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 1.0
     del sampler
     # Re-init TAMS and run to test competing database
     # on disk.
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 1.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 1.0
     del sampler
     ndb = 0
     for folder in Path("./").iterdir():
@@ -291,7 +290,7 @@ def test_stalling_simplemodel_tams():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     with pytest.raises(RuntimeError):
         sampler.run()
 
@@ -311,10 +310,10 @@ def test_sample_doublewell():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba >= 0.2
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -326,7 +325,7 @@ def test_doublewell_save_tams():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 100},
+                "ams": {"ntrajectories": 50, "nsplititer": 200},
                 "runner": {"type": "dask"},
                 "database": {"path": "dwTest.tdb"},
                 "model": {"noise_amplitude": 0.8},
@@ -334,10 +333,10 @@ def test_doublewell_save_tams():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba >= 0.2
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba >= 0.2
     del sampler
     Path("input.toml").unlink(missing_ok=True)
     shutil.rmtree("dwTest.tdb")
@@ -358,13 +357,13 @@ def test_doublewell_deterministic_tams():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
+    re_proba = sampler.database.get_rareevent_probability()
     if is_mac_os():
-        assert transition_proba == 0.5416298076191378
+        assert re_proba == 0.5416298076191378
     else:
-        assert transition_proba == 0.5471008157769068
+        assert re_proba == 0.5471008157769068
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -389,7 +388,7 @@ def test_doublewell_deterministic_sampler_with_pltdiags(caplog: pytest.LogCaptur
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
     _ = sampler.run()
@@ -416,10 +415,10 @@ def test_doublewell_2_workers_tams():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 0.6925339958244802
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 0.6925339958244802
     del sampler
     Path("input.toml").unlink(missing_ok=True)
 
@@ -451,10 +450,10 @@ def test_doublewell_2_workers_restore_sampler():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba == 0.6925339958244802
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba == 0.6925339958244802
     Path("input.toml").unlink(missing_ok=True)
     del sampler
     shutil.rmtree("dwTest.tdb")
@@ -476,10 +475,10 @@ def test_doublewell_very_slow_model():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba <= 0.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
     del sampler
     shutil.rmtree("vslowdwTest.tdb")
@@ -502,10 +501,10 @@ def test_doublewell_slow_model_stop():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba <= 0.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
 
@@ -527,10 +526,10 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
-    assert transition_proba <= 0.0
+    re_proba = sampler.database.get_rareevent_probability()
+    assert re_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
 
@@ -554,7 +553,7 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     # Re-attach pytest handler for testing purposes
     logging.getLogger().addHandler(caplog.handler)
     _ = sampler.run()
@@ -579,26 +578,24 @@ def test_doublewell_slow_tams_restore_more_split():
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
+    re_proba = sampler.database.get_rareevent_probability()
     del sampler
-    assert transition_proba == 0.1251225103143388
-    tdb = Database.load(Path("dwTest.tdb"))
-    tdb.update_nsplititer(30)
+    assert re_proba == 0.1251225103143388
+
     params_dict["ams"]["nsplititer"] = 30
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    del tdb
 
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=["-ov"])
     sampler.run()
-    transition_proba = sampler.database.get_transition_probability()
+    re_proba = sampler.database.get_rareevent_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
-        assert transition_proba == 0.1391287278743694
+        assert re_proba == 0.1391287278743694
     else:
-        assert transition_proba == 0.14983093771085937
+        assert re_proba == 0.14983093771085937
     Path("input.toml").unlink(missing_ok=True)
     del sampler
     shutil.rmtree("dwTest.tdb")

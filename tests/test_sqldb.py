@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from pytams.sqldb import TrajDB
+from pytams.sqldb import AMSDB
 
 
 def test_createdb():
@@ -233,50 +234,57 @@ def test_release_unknown_trajectory():
 def test_splitting_data_add():
     """Adding splitting data to the database."""
     poolfile = TrajDB("test.db")
+    amsfile = AMSDB(poolfile.engine())
     for i in range(10):
-        poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
-        poolfile.mark_last_iteration_as_completed()
+        amsfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
+        amsfile.mark_last_iteration_as_completed()
+    del amsfile
     del poolfile
     Path("./test.db").unlink(missing_ok=True)
 
 def test_splitting_data_add_and_ongoing():
     """Adding splitting data to the database."""
     poolfile = TrajDB("", in_memory=True)
-    poolfile.mark_last_iteration_as_completed()
+    amsfile = AMSDB(poolfile.engine())
+    amsfile.mark_last_iteration_as_completed()
     for i in range(10):
-        poolfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
-        poolfile.mark_last_iteration_as_completed()
-    assert poolfile.get_ongoing() is None
-    poolfile.add_splitting_data(10, 1, 0.1, [10-1,1,56], [0], [0.0], [0.0, 0.0])
-    assert poolfile.get_ongoing() == [9,1,56]
+        amsfile.add_splitting_data(i, 1, 0.1, [i-1], [0], [0.0], [0.0, 0.0])
+        amsfile.mark_last_iteration_as_completed()
+    assert amsfile.get_ongoing() is None
+    amsfile.add_splitting_data(10, 1, 0.1, [10-1,1,56], [0], [0.0], [0.0, 0.0])
+    assert amsfile.get_ongoing() == [9,1,56]
 
 def test_splitting_data_add_and_query():
     """Adding splitting data to the database."""
     poolfile = TrajDB("", in_memory=True)
+    amsfile = AMSDB(poolfile.engine())
     for i in range(1,2):
-        poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
-        poolfile.mark_last_iteration_as_completed()
-    assert np.all(poolfile.get_minmax()[0] == np.array([2.0,0.0,0.0], dtype="float64"))
+        amsfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
+        amsfile.mark_last_iteration_as_completed()
+    assert np.all(amsfile.get_minmax()[0] == np.array([2.0,0.0,0.0], dtype="float64"))
 
 def test_splitting_data_add_update_and_query():
     """Adding splitting data to the database."""
     poolfile = TrajDB("", in_memory=True)
-    poolfile.add_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.0])
-    poolfile.update_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.3])
-    poolfile.mark_last_iteration_as_completed()
-    assert np.all(poolfile.get_minmax()[0] == np.array([2.0,0.0,0.3], dtype="float64"))
+    amsfile = AMSDB(poolfile.engine())
+    amsfile.add_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.0])
+    amsfile.update_splitting_data(2, 1, 0.1, [1], [0], [0.0], [0.0, 0.3])
+    amsfile.mark_last_iteration_as_completed()
+    assert np.all(amsfile.get_minmax()[0] == np.array([2.0,0.0,0.3], dtype="float64"))
 
 @pytest.mark.usefixtures("skip_on_windows")
 def test_splitting_data_query_fail():
     """Adding splitting data to the database."""
     poolfile = TrajDB("test.db")
+    amsfile = AMSDB(poolfile.engine())
     for i in range(1):
-        poolfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
-    assert poolfile.get_k_split() == 1
+        amsfile.add_splitting_data(2*i, 1, 0.1, [2*i-1], [0], [0.0], [0.0, 0.0])
+    assert amsfile.get_k_split() == 1
 
     poolfile = TrajDB("test.db", ro_mode=True)
+    amsfile = AMSDB(poolfile.engine())
     with pytest.raises(SQLAlchemyError):
-        poolfile.mark_last_iteration_as_completed()
+        amsfile.mark_last_iteration_as_completed()
     Path("./test.db").unlink(missing_ok=True)
 
 def test_dump_json():

@@ -5,17 +5,11 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.config import Config
+from pytams.database import AMSDatabaseExtension
 from pytams.database import Database
-from pytams.sampler import RareEventSampler
+from pytams.database import prepare_database_path
+from pytams.sampler import build_sampler
 from tests.dwmodel import DoubleWellModel
-
-
-def test_failed_db_init_no_ntraj():
-    """Test init of TDB from scratch missing argument."""
-    fmodel = DoubleWellModel
-    cfg = Config({})
-    with pytest.raises(ValueError):
-        Database(fmodel, cfg)
 
 
 def test_wrong_format():
@@ -23,7 +17,7 @@ def test_wrong_format():
     fmodel = DoubleWellModel
     cfg = Config({"database": {"path": "dwTest.tdb", "format": "WRONG"}})
     with pytest.raises(ValueError):
-        _ = Database(fmodel, cfg, ntraj=10, nsplititer=100)
+        _ = Database.create(fmodel, cfg)
 
 
 def test_load_missing_tdb():
@@ -36,15 +30,15 @@ def test_init_empty_tdb_inmemory():
     """Test init database."""
     fmodel = DoubleWellModel
     cfg = Config({})
-    tdb = Database(fmodel, cfg, ntraj=10, nsplititer=100)
-    assert tdb.name() == "TAMS_DoubleWellModel"
+    tdb = Database.create(fmodel, cfg)
+    assert tdb.name() == "pyREVS_DoubleWellModel"
 
 
 def test_init_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
     cfg= Config({"database": {"path": "dwTest.tdb"}})
-    tdb = Database(fmodel, cfg, ntraj=10, nsplititer=100)
+    tdb = Database.create(fmodel, cfg)
     assert tdb.name() == "dwTest.tdb"
     # Necessary on Windows
     del tdb
@@ -54,12 +48,19 @@ def test_init_empty_tdb():
 def test_reinit_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
+
+    # First create
     cfg = Config({"database": {"path": "dwTestDouble.tdb"}})
-    tdb = Database(fmodel, cfg, ntraj=10, nsplititer=100)
+    tdb = Database.create(fmodel, cfg)
     # Necessary on Windows
     del tdb
+
+    # Archive old
+    prepare_database_path(Path("dwTestDouble.tdb"), True)
+
+    # Second create
     cfg = Config({"database": {"path": "dwTestDouble.tdb", "restart": True}})
-    tdb = Database(fmodel, cfg, ntraj=10, nsplititer=100)
+    tdb = Database.create(fmodel, cfg)
     del tdb
     ndb = 0
     for folder in Path("./").iterdir():
@@ -72,8 +73,13 @@ def test_reinit_empty_tdb():
 def test_init_and_load_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
+
+    # Create: note that when not using the sampler.build_database helper
+    # one need to manually create the input_params.toml
     cfg= Config({"database": {"path": "dwTest.tdb"}})
-    tdb = Database(fmodel, cfg, ntraj=10, nsplititer=100)
+    tdb = Database.create(fmodel, cfg)
+    with Path("dwTest.tdb/input_params.toml").open("w") as f:
+        toml.dump({"database": {"path": "dwTest.tdb"}}, f)
     tdb_path = Path(tdb.path())
     assert tdb.name() == "dwTest.tdb"
     del tdb
@@ -99,7 +105,7 @@ def test_generate_and_load_tdb():
             },
             f,
         )
-    sampler = RareEventSampler(fmodel_t=fmodel, a_args=[])
+    sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
 
     tdb = Database.load(Path("dwTest.tdb"))
@@ -209,7 +215,9 @@ def test_explore_minmax_tdb():
     """Test loading the TDB."""
     tdb = Database.load(Path("dwTest.tdb"))
     tdb.load_data()
-    tdb.plot_min_max_span(fname="test_minmax.png")
+    amsdb = AMSDatabaseExtension()
+    amsdb.initialize_from_database(tdb)
+    amsdb.plot_min_max_span(fname="test_minmax.png")
     Path("./test_minmax.png").unlink(missing_ok=False)
 
 
@@ -218,17 +226,11 @@ def test_explore_active_at_k():
     """Test getting the initial active set."""
     tdb = Database.load(Path("dwTest.tdb"))
     tdb.load_data(load_archived_trajectories=True)
-    act_trajs = tdb.get_trajectory_active_at_k(0)
+    amsdb = AMSDatabaseExtension()
+    amsdb.initialize_from_database(tdb)
+    act_trajs = amsdb.get_trajectory_active_at_k(0)
     assert len(act_trajs) == 50
     assert act_trajs[42].idstr() == "traj000042_0000"
-
-
-@pytest.mark.dependency(depends=["genDB"])
-def test_restore_tdb():
-    """Test loading and restoring the TDB."""
-    tdb = Database.load(Path("dwTest.tdb"), read_only= False)
-    tdb.load_data()
-    tdb.reset_initial_ensemble_stage()
-    assert tdb.k_split() == 0
     del tdb
+    del amsdb
     shutil.rmtree("dwTest.tdb")
