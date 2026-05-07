@@ -755,12 +755,15 @@ class Database(Generic[T_Noise, T_State]):
         pretty_line = "####################################################"
         inf_tbl = f"""
             {pretty_line}
-            # TAMS v{self._version:17s} trajectory database      #
-            # Date: {db_date_str:42s} #
+            # pyTAMS v{self._version:40s} #
+            # Creation Date: {db_date_str:33s} #
             # Model: {self._fmodel_t.name():41s} #
             # Sampling strategy: {self._strategy:29s} #
             {pretty_line}
             # Requested # of traj: {self.n_traj():27} #
+            # Number of 'Terminated' trajectories: {self.count_terminated_traj():11} #
+            # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
+            # Current total number of steps: {self.count_computed_steps():17} #
             {pretty_line}
         """
         _logger.info(inf_tbl)
@@ -771,12 +774,15 @@ class Database(Generic[T_Noise, T_State]):
         pretty_line = "####################################################"
         inf_tbl = f"""
             {pretty_line}
-            # TAMS v{self._version:42s} #
+            # pyTAMS v{self._version:40s} #
             # Creation Date: {db_date_str:33s} #
             # Model: {self._fmodel_t.name():41s} #
             # Sampling strategy: {self._strategy:29s} #
             {pretty_line}
             # Requested # of traj: {self.n_traj():27} #
+            # Number of 'Terminated' trajectories: {self.count_terminated_traj():11} #
+            # Number of 'Converged' trajectories: {self.count_converged_traj():12} #
+            # Current total number of steps: {self.count_computed_steps():17} #
             {pretty_line}
         """
         print(inf_tbl)  # noqa: T201
