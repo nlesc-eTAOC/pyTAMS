@@ -4,13 +4,15 @@ import logging
 from pathlib import Path
 from typing import Any
 from pytams.config import Config
-from .config import MCConfig
 from pytams.config import RuntimeConfig
 from pytams.database import Database
+from pytams.database import DatabaseCoreSpec
+from pytams.database import MCDatabaseExtension
+from pytams.runner import RunnerConfig
 from pytams.runner import make_runner
 from pytams.runner import pool_worker
-from pytams.runner import RunnerConfig
 from pytams.strategies.base_strategy import BaseSamplingStrategy
+from .config import MCConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -36,23 +38,30 @@ class MonteCarlo(BaseSamplingStrategy):
         BaseSamplingStrategy (e.g. ``self._end_date``, ``elapsed_time()``).
     """
 
-    def __init__(self, fmodel_t: Any, config: Config, runtime_cfg: RuntimeConfig, deterministic: bool) -> None:
+    def __init__(
+        self,
+        fmodel_t: Any,
+        runtime_cfg: RuntimeConfig,
+        runner_cfg: RunnerConfig,
+        strategy_cfg: MCConfig,
+        deterministic: bool,
+    ) -> None:
         """Initialize a Monte-Carlo object.
 
         Args:
             fmodel_t: the forward model type
-            config: the config object
             runtime_cfg: the runtime config
+            runner_cfg: the runner config
+            strategy_cfg: the montecarlo config
             deterministic: the deterministic flag
 
         Raises:
             ValueError: if necessary config parameters are not found
         """
         self._fmodel_t = fmodel_t
-        self._config = config
-        self._mc_cfg = config.load(MCConfig)
+        self._mc_cfg = strategy_cfg
         self._mc_cfg.validate()
-        self._runner_cfg = config.load(RunnerConfig)
+        self._runner_cfg = runner_cfg
         self._loglevel = runtime_cfg.loglevel
         self._logfile = runtime_cfg.logfile
         self._deterministic = deterministic
@@ -103,13 +112,12 @@ class MonteCarlo(BaseSamplingStrategy):
         """Compute the rare-event probability using MonteCarlo.
 
         Returns:
-            the transition probability
+            the rare-event probability
         """
         # Generate the initial trajectory ensemble
         self.generate_trajectory_ensemble(tdb)
 
-        # Return the transition probability
-        return tdb.count_converged_traj() / tdb.n_traj()
+        return tdb.get_rareevent_probability()
 
     def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
         """Shallow wrapper to enable sampler."""
@@ -133,13 +141,17 @@ class MonteCarlo(BaseSamplingStrategy):
 
         database.info()
 
-    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
-        """Return an initialized database of the Monte-Carlo sampling strategy."""
-        return Database(
-            fmodel_t=self._fmodel_t,
-            config=self._config,
-            diag_configs=diag_configs,
-            strategy="montecarlo",
+    def initialize_database_schema(self, database: Database, diag_configs: dict[str, Config] | None) -> None:
+        """Initialize database core state."""
+        spec = DatabaseCoreSpec(
             ntraj=self._mc_cfg.ntrajectories,
-            read_only=False,
+            strategy="montecarlo",
+            deterministic=self._deterministic,
+            diag_configs=diag_configs,
         )
+        database.initialize_core_state(spec)
+
+        # Setup MC extension
+        self._db_ext = MCDatabaseExtension()
+        self._db_ext.initialize(database)
+        database.attach_extension(self._db_ext)

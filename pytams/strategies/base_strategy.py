@@ -168,8 +168,8 @@ class BaseSamplingStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
-        """Return an initialized database."""
+    def initialize_database_schema(self, database: Database, diag_configs: dict[str, Config] | None) -> None:
+        """Initialize the schema of the database."""
         raise NotImplementedError
 
     def __repr__(self) -> str:

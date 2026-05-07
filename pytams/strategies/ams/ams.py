@@ -5,16 +5,18 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from .config import AMSConfig
 from pytams.config import Config
 from pytams.config import RuntimeConfig
+from pytams.database import AMSDatabaseExtension
 from pytams.database import Database
+from pytams.database import DatabaseCoreSpec
+from pytams.runner import RunnerConfig
 from pytams.runner import make_runner
 from pytams.runner import ms_worker
 from pytams.runner import pool_worker
-from pytams.runner import RunnerConfig
 from pytams.strategies.base_strategy import BaseSamplingStrategy
 from pytams.utils import get_min_scored
+from .config import AMSConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -51,26 +53,41 @@ class AMS(BaseSamplingStrategy):
         _init_ensemble_only: whether or not to stop after initializing the trajectory ensemble
     """
 
-    def __init__(self, fmodel_t: Any, config: Config, runtime_cfg: RuntimeConfig, deterministic: bool) -> None:
+    def __init__(
+        self,
+        fmodel_t: Any,
+        runtime_cfg: RuntimeConfig,
+        runner_cfg: RunnerConfig,
+        strategy_cfg: AMSConfig,
+        deterministic: bool,
+    ) -> None:
         """Initialize a AMS strategy.
 
         Args:
             fmodel_t: the forward model type
-            config: the config object
             runtime_cfg: the runtime config dataclass
+            runner_cfg: the runner config dataclass
+            strategy_cfg: the AMS config dataclass
             deterministic: the deterministic flag trigger deterministic runs
 
         Raises:
             ValueError: if necessary parameters are not found
         """
         self._fmodel_t = fmodel_t
-        self._config = config
-        self._ams_cfg = config.load(AMSConfig)
+        self._ams_cfg = strategy_cfg
         self._ams_cfg.validate()
-        self._runner_cfg = config.load(RunnerConfig)
+        self._runner_cfg = runner_cfg
         self._loglevel = runtime_cfg.loglevel
         self._logfile = runtime_cfg.logfile
         self._deterministic = deterministic
+        self._db_ext: AMSDatabaseExtension | None = None
+
+    def _req_db_ext(self) -> AMSDatabaseExtension:
+        if self._db_ext is None:
+            err_msg = "Database extension not initialized"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
+        return self._db_ext
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -115,7 +132,7 @@ class AMS(BaseSamplingStrategy):
         tdb.update_traj_list(t_list)
 
         if tdb.count_terminated_traj() == tdb.n_traj():
-            tdb.set_init_ensemble_flag(True)
+            self._req_db_ext().set_init_ensemble_flag(True)
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -169,7 +186,7 @@ class AMS(BaseSamplingStrategy):
         # Check the database for unfinished splitting iteration when restarting.
         # At this point, branching has been done, but advancing to final
         # time is still ongoing.
-        ongoing_list = tdb.get_ongoing()
+        ongoing_list = self._req_db_ext().get_ongoing()
         if ongoing_list:
             inf_msg = f"Unfinished splitting iteration detected, traj {ongoing_list} need(s) finishing"
             _logger.info(inf_msg)
@@ -199,7 +216,7 @@ class AMS(BaseSamplingStrategy):
 
                 # Wrap up the iteration by updating its status in the
                 # database and incrementing the iteration counter
-                tdb.mark_last_splitting_iteration_as_done()
+                self._req_db_ext().mark_last_splitting_iteration_as_done()
 
     def get_restart_at_random(self, tdb: Database, min_idx_list: list[int]) -> list[int]:
         """Get a list of trajectory index to restart from at random.
@@ -216,7 +233,11 @@ class AMS(BaseSamplingStrategy):
         """
         # Enable deterministic runs by setting a (different) seed
         # for each splitting iteration
-        rng = np.random.default_rng(seed=42 * tdb.k_split()) if self._deterministic else np.random.default_rng()
+        rng = (
+            np.random.default_rng(seed=42 * self._req_db_ext().k_split())
+            if self._deterministic
+            else np.random.default_rng()
+        )
         rest_idx = [-1] * len(min_idx_list)
         for i in range(len(min_idx_list)):
             rest_idx[i] = min_idx_list[0]
@@ -253,7 +274,7 @@ class AMS(BaseSamplingStrategy):
         self.finish_ongoing_splitting(tdb)
 
         # Initialize splitting iterations counter
-        k = tdb.k_split()
+        k = self._req_db_ext().k_split()
 
         with make_runner(
             self._runner_cfg,
@@ -262,7 +283,7 @@ class AMS(BaseSamplingStrategy):
             loglevel=self._loglevel,
             logfile=self._logfile,
         ) as runner:
-            while k < tdb.n_split_iter():
+            while k < self._ams_cfg.nsplititer:
                 inf_msg = f"Starting AMS iter. {k} with {runner.n_workers()} workers"
                 _logger.info(inf_msg)
 
@@ -287,20 +308,20 @@ class AMS(BaseSamplingStrategy):
 
                 # Update the database with the data of the current
                 # iteration
-                tdb.append_splitting_iteration_data(
+                self._req_db_ext().append_splitting_iteration_data(
                     k, n_branch, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
                 )
 
                 # Query the current iteration weight
                 # to compute the individual weight of each trajectory in the ensemble
                 # at the end of the splitting iteration
-                new_traj_weight = tdb.weights()[-1]
+                new_traj_weight = self._req_db_ext().weights()[-1]
 
                 # Exit the loop if needed
                 if early_exit:
                     # If AMS converged, final update of the weights.
                     if tdb.all_converged():
-                        tdb.update_trajectories_weights()
+                        self._req_db_ext().update_trajectories_weights()
                     break
 
                 # Assemble a list of promises
@@ -334,7 +355,7 @@ class AMS(BaseSamplingStrategy):
 
                 # Update the weights of all trajectories in the ensemble with the current
                 # iteration weight
-                tdb.update_trajectories_weights()
+                self._req_db_ext().update_trajectories_weights()
 
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
@@ -345,7 +366,7 @@ class AMS(BaseSamplingStrategy):
 
                 # Wrap up the iteration by updating its status in the
                 # database and incrementing the iteration counter
-                tdb.mark_last_splitting_iteration_as_done()
+                self._req_db_ext().mark_last_splitting_iteration_as_done()
                 k = k + n_branch
 
     def compute_probability(self, tdb: Database, plot_diags: bool) -> float:
@@ -356,13 +377,13 @@ class AMS(BaseSamplingStrategy):
             plot_diags: whether or not to plot diagnostics
 
         Returns:
-            the transition probability
+            the rare-event probability
         """
         inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using AMS"
         _logger.info(inf_msg)
 
         # Generate the initial trajectory ensemble
-        init_ensemble_need_work = not tdb.init_ensemble_done()
+        init_ensemble_need_work = not self._req_db_ext().init_ensemble_done()
         if init_ensemble_need_work:
             self.generate_trajectory_ensemble(tdb)
 
@@ -397,7 +418,7 @@ class AMS(BaseSamplingStrategy):
             _logger.warning(warn_msg)
             return -1.0
 
-        transition_probability = tdb.get_transition_probability()
+        rare_event_probability = tdb.get_rareevent_probability()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
@@ -409,7 +430,7 @@ class AMS(BaseSamplingStrategy):
 
         tdb.info()
 
-        return transition_probability
+        return rare_event_probability
 
     def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
         """Shallow wrapper to enable sampler."""
@@ -418,16 +439,27 @@ class AMS(BaseSamplingStrategy):
         # Initialize the active ensemble
         database.init_active_ensemble()
 
-        self.compute_probability(database, plot_diags)
+        # Check that the database extension is initialized
+        if self._db_ext is None:
+            err_msg = "Database extension is not initialized ! Call initialize_database_schema() first"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg)
 
-    def initialize_db(self, diag_configs: dict[str, Config] | None) -> Database:
-        """Return an initialized database of the AMS sampling strategy."""
-        return Database(
-            fmodel_t=self._fmodel_t,
-            config=self._config,
-            diag_configs=diag_configs,
-            strategy="ams",
+        proba = self.compute_probability(database, plot_diags)
+        inf_msg = f"Rare event probability: {proba}"
+        _logger.info(inf_msg)
+
+    def initialize_database_schema(self, database: Database, diag_configs: dict[str, Config] | None) -> None:
+        """Initialize database core state."""
+        spec = DatabaseCoreSpec(
             ntraj=self._ams_cfg.ntrajectories,
-            nsplititer=self._ams_cfg.nsplititer,
-            read_only=False,
+            strategy="ams",
+            deterministic=self._deterministic,
+            diag_configs=diag_configs,
         )
+        database.initialize_core_state(spec)
+
+        # Setup the AMS database extension
+        self._db_ext = AMSDatabaseExtension()
+        self._db_ext.initialize(self._ams_cfg.nsplititer, database)
+        database.attach_extension(self._db_ext)
