@@ -3,14 +3,20 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.bin import tams_alive
+from pytams.bin import tams_input_help
 from pytams.bin import tams_run
 from pytams.bin import tams_template_model
 
 
 def test_tams_alive(capsys: pytest.CaptureFixture[str]):
-    """Test TAMS check function."""
+    """Test pyREVS check function."""
     tams_alive()
     assert "rare-event finder tool" in capsys.readouterr().out
+
+def test_tams_help(capsys: pytest.CaptureFixture[str]):
+    """Test pyREVS help function."""
+    tams_input_help()
+    assert "pyTAMS input file help" in capsys.readouterr().out
 
 def test_tams_template_model():
     """Test TAMS new model init function."""
