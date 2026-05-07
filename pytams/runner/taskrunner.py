@@ -276,6 +276,7 @@ class DaskRunner(BaseRunner):
                 )
                 self.cluster = SLURMCluster()
             else:
+                ntasks_per_node = dask_cfg.ntasks_per_node if dask_cfg.ntasks_per_node > 0 else dask_cfg.ntasks_per_job
                 self.cluster = SLURMCluster(
                     queue=dask_cfg.queue,
                     cores=dask_cfg.ncores_per_worker,
@@ -286,7 +287,7 @@ class DaskRunner(BaseRunner):
                     job_script_prologue=dask_cfg.job_prologue,
                     job_extra_directives=[
                         f"--ntasks={dask_cfg.ntasks_per_job}",
-                        f"--tasks-per-node={dask_cfg.ntasks_per_node}",
+                        f"--tasks-per-node={ntasks_per_node}",
                         "--exclusive",
                     ],
                     job_directives_skip=["--cpus-per-task=", "--mem"],

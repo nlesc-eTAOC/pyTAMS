@@ -35,7 +35,7 @@ class DaskConfig:
         },
     )
     ntasks_per_node: int = field(
-        default=ntasks_per_job,
+        default=-1,
         metadata={
             "doc": "The number of tasks per node.",
         },
