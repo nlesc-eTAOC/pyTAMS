@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 from pytams.config import Config
-from pytams.sqldb import DiagDB
 from pytams.snapshot import Snapshot
+from pytams.sqldb import DiagDB
 
 
 class DiagnosticPlugin:
