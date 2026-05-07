@@ -1,5 +1,6 @@
 """Diagnostic class for pyREVS."""
 
+import logging
 import pickle
 from collections.abc import Callable
 from pathlib import Path
@@ -9,6 +10,8 @@ import numpy.typing as npt
 from pytams.config import Config
 from pytams.snapshot import Snapshot
 from pytams.sqldb import DiagDB
+
+_logger = logging.getLogger(__name__)
 
 
 class DiagnosticPlugin:
@@ -167,6 +170,8 @@ def diagnosticfactory(
 
         if diag_type == "FirstCrossing":
             diags_l.append(FirstTimeCrossingDiagnostic(k, v, tid, tweight, workdir, fprocess, ddb))
+            dbg_msg = f"Created FirstCrossing Diagnostic {k} for traj {tid}"
+            _logger.debug(dbg_msg)
         else:
             err_msg = f"Diagnostic {k} has unknown trigger type {diag_type} !"
             raise ValueError(err_msg)
