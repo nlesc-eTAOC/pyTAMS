@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 from pytams.fmodel import ForwardModelBaseClass
 from pytams.sampler import build_sampler
+from pytams.sampler.system_config import SystemConfig
 from pytams.utils import generate_subclass
 from pytams.utils import import_forward_model
 
@@ -48,6 +49,12 @@ def tams_alive() -> None:
         print(f"== pyTAMS v{version('pytams')} :: a rare-event finder tool ==")  # noqa: T201
     except PackageNotFoundError:
         print("Package version not found")  # noqa: T201
+
+
+def tams_input_help() -> None:
+    """Print a help message for a dataclass."""
+    print("== pyTAMS input file help ==")  # noqa: T201
+    SystemConfig.print_config_help()
 
 
 def tams_template_model(a_args: list[str] | None = None) -> None:

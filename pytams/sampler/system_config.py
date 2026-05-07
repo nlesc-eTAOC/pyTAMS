@@ -9,6 +9,7 @@ from pytams.config import Config
 from pytams.config import RuntimeConfig
 from pytams.config.core import collect_sections
 from pytams.config.core import merge_config
+from pytams.config.core import print_config_help
 from pytams.database import DatabaseConfig
 from pytams.runner import RunnerConfig
 from pytams.strategies.ams import AMSConfig
@@ -102,3 +103,14 @@ class SystemConfig:
             runner=merge_config(old.runner, new.runner),
             trajectory=merge_config(old.trajectory, new.trajectory),
         )
+
+    @classmethod
+    def print_config_help(cls) -> None:
+        """Print a help message for the system configuration."""
+        print_config_help(SamplerConfig)
+        print_config_help(RuntimeConfig)
+        print_config_help(AMSConfig)
+        print_config_help(MCConfig)
+        print_config_help(DatabaseConfig)
+        print_config_help(RunnerConfig)
+        print_config_help(TrajectoryConfig)

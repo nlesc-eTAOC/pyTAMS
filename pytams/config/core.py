@@ -257,3 +257,18 @@ def merge_config(old: T, new: T) -> T:
 
     err_msg = f"Unknown merge policy for {type(old).__name__}"
     raise ValueError(err_msg)
+
+
+def print_config_help(cls: type) -> None:
+    """Print a help for a pyREVS config dataclass."""
+    section = getattr(cls, "__section__", cls.__name__.lower())
+    docstring = cls.__doc__ or ""
+
+    print(f"\n[{section}]", docstring.strip())  # noqa: T201
+
+    for f in fields(cls):
+        typ = "[" + str(f.type) + "]"
+        doc = f.metadata.get("doc", "")
+        default = f.default
+        print(f"{f.name:<20} {typ:<12} default={default}")  # noqa: T201
+        print(f"    {doc}")  # noqa: T201

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dataclasses import field
 from pytams.config import MergePolicy
 
 
@@ -9,5 +10,13 @@ class SamplerConfig:
     __section__ = "sampler"
     __merge_policy__ = MergePolicy.IMMUTABLE
 
-    strategy: str = "ams"
-    deterministic: bool = False
+    strategy: str = field(
+        default="ams",
+        metadata={
+            "doc": "Sampling strategy to use, either 'ams' or 'montecarlo'.",
+        },
+    )
+
+    deterministic: bool = field(
+        default=False, metadata={"doc": "Use deterministic sampling, seeding all RNGs. fmodel must also do so."}
+    )

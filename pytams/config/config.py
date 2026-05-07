@@ -10,8 +10,37 @@ class RuntimeConfig:
     __section__ = "runtime"
     __merge_policy__ = MergePolicy.REPLACE
 
-    loglevel: str = "INFO"
-    logfile: str | None = None
-    walltime: float = 86400
-    plot_diagnostics: bool = False
-    diagnostics: list[str] = field(default_factory=list)
+    loglevel: str = field(
+        default="INFO",
+        metadata={
+            "doc": "Logging level",
+        },
+    )
+
+    logfile: str | None = field(
+        default=None,
+        metadata={
+            "doc": "Logging file",
+        },
+    )
+
+    walltime: float = field(
+        default=86400,
+        metadata={
+            "doc": "Maximum walltime in seconds",
+        },
+    )
+
+    plot_diagnostics: bool = field(
+        default=False,
+        metadata={
+            "doc": "Diagnose ensemble by plotting scores",
+        },
+    )
+
+    diagnostics: list[str] = field(
+        default_factory=list,
+        metadata={
+            "doc": "List of diagnostics to compute",
+        },
+    )

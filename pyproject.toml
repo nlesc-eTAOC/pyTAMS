@@ -72,6 +72,7 @@ exec = [
 tams_init_model = "pytams.bin:tams_template_model"
 tams_check = "pytams.bin:tams_alive"
 tams_run = "pytams.bin:tams_run"
+tams_help = "pytams.bin:tams_input_help"
 
 [project.entry-points."pytams.strategies"]
 ams = "pytams.strategies.ams"

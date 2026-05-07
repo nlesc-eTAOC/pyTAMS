@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dataclasses import field
 from pytams.config import MergePolicy
 
 
@@ -9,7 +10,12 @@ class MCConfig:
     __section__ = "montecarlo"
     __merge_policy__ = MergePolicy.IMMUTABLE
 
-    ntrajectories: int = -1
+    ntrajectories: int = field(
+        default=-1,
+        metadata={
+            "doc": "Number of trajectories to generate",
+        },
+    )
 
     def validate(self) -> None:
         """Validate MC configuration."""
