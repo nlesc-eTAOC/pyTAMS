@@ -46,6 +46,7 @@ dev = [
     "pytest-dependency",
     "ruff",
     "mypy",
+    "types-PyYAML",
     "sphinx",
     "furo",
     "sphinx-autoapi",
