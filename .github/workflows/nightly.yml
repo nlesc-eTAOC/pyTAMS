@@ -55,7 +55,7 @@ jobs:
         run: |
           cd examples/OrnsteinUhlenbeck
           sed -i "s#K = 10#K = 3#g" tams_ou1dim.py
-          python tams_ou1dim.py
+          python sample_ou1dim.py
 
 
   doublewell:
@@ -82,7 +82,7 @@ jobs:
         run: |
           cd examples/DoubleWell2D
           sed -i "s#K = 10#K = 3#g" tams_dw2dim.py
-          python tams_dw2dim.py
+          python sample_dw2dim.py
 
   bichannel:
     name: BiChannel (${{ matrix.python-version }})
@@ -108,7 +108,7 @@ jobs:
         run: |
           cd examples/BiChannel2D
           sed -i "s#K = 10#K = 3#g" tams_bichannel.py
-          python tams_bichannel.py
+          python sample_bichannel.py
 
 
   boussinesq:
@@ -136,4 +136,4 @@ jobs:
           cd examples/Boussinesq
           sed -i "s#epsilon = 0.01#epsilon = 0.06#g" input.toml
           sed -i "s#end_time = 20.0#end_time = 10.0#g" input.toml
-          python tams_boussinesq2d.py
+          python sample_boussinesq2d.py
