@@ -19,7 +19,7 @@ A C++ version of the Boussinesq model, showing how to couple
 A 2D double well overdamped diffusion process, used for validation of
 the core algorithm.
 
-## MOC
+## MOC --> Need update after #PR173 (V.J.D)
 A box model of the Atlantic ocean, providing an example of somewhat
 more complex models than the overdamped diffusion processes.
 
