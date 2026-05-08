@@ -1,9 +1,13 @@
-[tams]
+[ams]
 ntrajectories = 20
 nsplititer = 1000
+
+[sampler]
+strategy = "ams"
+
+[runtime]
 loglevel = "INFO"
 walltime = 7200.0
-diagnostics = true
 
 [trajectory]
 end_time = 20.0
@@ -20,12 +24,14 @@ score_method = "PODdecomp"
 pod_data_file = "./POD_decomp_InstModes.nc"
 pod_d0 = 1.0
 score_time_dep = true
+score_time_horizon = 20.0
 score_time_scale = 0.5
+step_size = 0.01
 
 [runner]
 type = "asyncio"
-nworker_init=5
-nworker_iter=2
+nworkers_init=2
+nworkers_iter=2
 
 [database]
 path = "2DBoussinesq_POD.tdb"

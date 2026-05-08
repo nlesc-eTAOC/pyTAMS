@@ -1,9 +1,15 @@
-[tams]
+[ams]
 ntrajectories = 20
 nsplititer = 1000
+
+[sampler]
+strategy = "ams"
+
+[runtime]
 loglevel = "INFO"
 walltime = 7200.0
-diagnostics = true
+plot_diagnostics = true
+diagnostics = ["testd"]
 
 [trajectory]
 end_time = 20.0
@@ -14,18 +20,25 @@ sparse_freq = 10
 [model]
 size_M = 40
 size_N = 80
-epsilon = 0.01
+epsilon = 0.03
 K = 7
 score_method = "BaarsJCP"
 edge_state_file = "stateEDGE_beta_0p1.npy"
 delta_stoch = 0.05
 score_time_dep = true
+score_time_horizon = 20.0
 score_time_scale = 0.5
+step_size = 0.01
 
 [runner]
 type = "asyncio"
-nworker_init=5
-nworker_iter=2
+nworkers_init=2
+nworkers_iter=2
 
 [database]
 path = "2DBoussinesq_Baars.tdb"
+
+[testd]
+score_min = 0.0
+score_max = 1.0
+n_levels = 21

@@ -1,4 +1,5 @@
 """Boussinesq 2D model core physics module."""
+
 import logging
 import matplotlib.pyplot as plt
 import numpy as np

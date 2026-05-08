@@ -1,4 +1,5 @@
 """Boussinesq 2D pyTAMS concrete implementation."""
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -7,7 +8,8 @@ import numpy as np
 import scipy as sp
 from boussinesq_core import BoussinesqCore
 from podscore import PODScore
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
+from pytams.core import Snapshot
 
 _logger = logging.getLogger(__name__)
 
@@ -37,20 +39,19 @@ class Boussinesq2D(ForwardModelBaseClass):
     def _init_model(self, m_id: int, params: dict[Any, Any]) -> None:
         """Initialize the model."""
         # Parse parameters
-        subparms = params.get("model", {})
-        self._M = subparms.get("size_M", 40)  # Horizontals
-        self._N = subparms.get("size_N", 80)  # Verticals
-        self._eps = subparms.get("epsilon", 0.01)  # Noise level
-        self._K = subparms.get("K", 7)  # Number of forcing modes = 2*K
-        self._delta_stoch = subparms.get("delta_stoch", 0.05)  # Noise depth
-        self._stop_noise_time = subparms.get("stop_noise", -1.0)
+        self._M = params.get("size_M", 40)  # Horizontals
+        self._N = params.get("size_N", 80)  # Verticals
+        self._eps = params.get("epsilon", 0.01)  # Noise level
+        self._K = params.get("K", 7)  # Number of forcing modes = 2*K
+        self._delta_stoch = params.get("delta_stoch", 0.05)  # Noise depth
+        self._stop_noise_time = params.get("stop_noise", -1.0)
 
         # Hosing parameters
-        self._hosing_shape = subparms.get("hosing_shape", "tanh")
-        self._hosing_rate = subparms.get("hosing_rate", 0.0)
-        self._hosing_start = subparms.get("hosing_start", 0.0)
-        self._hosing_end = subparms.get("hosing_end", -1.0)
-        self._hosing_start_val = subparms.get("hosing_start_val", 0.0)
+        self._hosing_shape = params.get("hosing_shape", "tanh")
+        self._hosing_rate = params.get("hosing_rate", 0.0)
+        self._hosing_start = params.get("hosing_start", 0.0)
+        self._hosing_end = params.get("hosing_end", -1.0)
+        self._hosing_start_val = params.get("hosing_start_val", 0.0)
 
         # Asymmetry parameter
         self._beta = 0.1
@@ -61,30 +62,30 @@ class Boussinesq2D(ForwardModelBaseClass):
 
         # Score function parameters
         self._score_builder = None
-        self._score_method = subparms.get("score_method", "default")
-        self._time_dep_score = subparms.get("score_time_dep", False)
+        self._score_method = params.get("score_method", "default")
+        self._time_dep_score = params.get("score_time_dep", False)
         if self._score_method == "PODdecomp":
-            self._pod_data_file = subparms.get("pod_data_file", None)
-            self._score_pod_d0 = subparms.get("pod_d0", None)
-            self._score_pod_ndim = subparms.get("pod_ndim", 8)
+            self._pod_data_file = params.get("pod_data_file")
+            self._score_pod_d0 = params.get("pod_d0")
+            self._score_pod_ndim = params.get("pod_ndim", 8)
         elif self._score_method == "BaarsJCP":
-            self._edge_state_file = subparms.get("edge_state_file", None)
+            self._edge_state_file = params.get("edge_state_file")
 
         if self._time_dep_score:
-            self._score_tfinal = params.get("trajectory", {}).get("end_time", 0.001)
-            self._score_tscale = subparms.get("score_time_scale", 1.0)
+            self._score_tfinal = params.get("score_time_horizon", 0.001)
+            self._score_tscale = params.get("score_time_scale", 1.0)
 
         self._initialize_score_function()
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
-        if subparms["deterministic"]:
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
 
         # Initialize the Boussinesq model
-        dt = params.get("trajectory", {}).get("step_size", 0.001)
+        dt = params.get("step_size", 0.001)
         self._B = BoussinesqCore(self._M, self._N, dt)
         self._B.make_salinity_forcing(self._beta)
         self._B.init_salt_stoch_noise(self._B.zz, self._K, self._eps, self._delta_stoch)
@@ -308,8 +309,9 @@ class Boussinesq2D(ForwardModelBaseClass):
         if self._score_method == "default":
             psi_north = np.mean(self._state_arrays[3, 28:34, 34:46], axis=(0, 1))
 
-            xi_zero = (np.sqrt((psi_north - self._psi_north_on)**2.0) /
-                       np.sqrt((self._psi_north_off - self._psi_north_on)**2.0))
+            xi_zero = np.sqrt((psi_north - self._psi_north_on) ** 2.0) / np.sqrt(
+                (self._psi_north_off - self._psi_north_on) ** 2.0
+            )
 
         if self._score_method == "PODdecomp":
             if self._score_builder is None:
@@ -356,6 +358,26 @@ class Boussinesq2D(ForwardModelBaseClass):
             return xi_zero * (1.0 - np.exp((self._time - self._score_tfinal) / self._score_tscale) * (1.0 - xi_zero))
 
         return xi_zero
+
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot,
+        new_snap: Snapshot,
+    ) -> Any:
+        """Diagnostic hook.
+
+        Args:
+            dlabel: the label of the diagnostic calling the hook
+            tid: the ID of the trjaectory calling
+            score_level: the score level crossed and triggering the call
+            old_snap: the snapshot at the beginning of the step
+            new_snap: the snapshot at the end of the step
+        """
+        _, _, _, _, _ = (dlabel, tid, score_level, old_snap, new_snap)
+        return self._state_arrays[3, :, :]
 
     def check_convergence(self, step: int, time: float, current_score: float, target_score: float) -> bool:
         """Check if the model has converged.
