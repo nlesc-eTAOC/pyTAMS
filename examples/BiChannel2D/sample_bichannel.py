@@ -33,6 +33,6 @@ if __name__ == "__main__":
         print(f"[{i}] : {probability}")  # noqa: T201
 
         if plot_ensemble:
-            plot_in_landscape(fmodel, sampler.database(), i)
+            plot_in_landscape(fmodel, sampler.database, i)
 
     print(f"Averaged transition P_K: {probabilities.mean()}, RE: {np.sqrt(probabilities.var()) / probabilities.mean()}")  # noqa : T201
