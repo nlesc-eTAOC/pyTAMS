@@ -83,11 +83,17 @@ Monte Carlo computationally infeasible, motivating the use of variance
 reduction and specialized rare-event sampling techniques such as importance
 sampling, splitting, or rare-event-focused Markov chain Monte Carlo methods.
 
-Trajectory-adaptive multilevel sampling
----------------------------------------
+Adaptive multilevel splitting
+-----------------------------
 
-Trajectory-Adaptive Multilevel Sampling TAMS (`Lestang et al. <https://doi.org/10.1088/1742-5468/aab856>`_) is
-a rare event technique of the Importance Splitting (IS) family, derived from Adaptive Multilevel Sampling (AMS)
+.. warning::
+   Under development
+
+Trajectory-adaptive multilevel splitting
+----------------------------------------
+
+Trajectory-Adaptive Multilevel Splitting TAMS (`Lestang et al. <https://doi.org/10.1088/1742-5468/aab856>`_) is
+a rare event technique of the Importance Splitting (IS) family, derived from Adaptive Multilevel Splitting (AMS)
 (see for instance the perspective on AMS by `Cerou et al. <https://doi.org/10.1063/1.5082247>`_).
 AMS (`Cerou and Guyader <https://www.tandfonline.com/doi/abs/10.1080/07362990601139628>`_) was designed with
 transition between metastable states in mind. Using the previously introduced notations,

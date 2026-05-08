@@ -12,21 +12,22 @@
 Validation
 ==========
 
-Even if the core of the `pyTAMS` algorithm is not particularly complex, details of
+Even if the core of the `pyREVS` algorithms is not particularly complex, details of
 the implementation can lead to systematic biases on the rare event probability
 estimator, especially when the event :math:`\mathcal{E}` probability becomes
 `very` rare (:math:`P(\mathcal{E}) < 10^{-6}`).
 
-In this section we validate `pyTAMS` implementation on a couple of simple,
+In this section we validate `pyREVS` implementation on a couple of simple,
 low dimensional cases and since the algorithm is decoupled from the physics
 of the model, the validity extends to more complex physics model for which
-no theoretical data is available.
+no theoretical data is available. We mostly focus on the validity of the
+TAMS sampling strategy.
 
 1D Ornstein-Uhlenbeck process
 -----------------------------
 
 The simple case of a one dimensional Ornstein-Uhlenbeck (OU) process is part of
-`pyTAMS` examples suite. It is an interesting case to consider since
+`pyREVS` examples suite. It is an interesting case to consider since
 `Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
 algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
 process does not feature multistability, but we are interested in predicting
@@ -72,9 +73,9 @@ that the current implementation is able to correctly estimate rare events, down 
 2D double well case
 -------------------
 
-The case of the 2 dimensional double well (readily available in `pyTAMS` examples)
+The case of the 2 dimensional double well (readily available in `pyREVS` examples)
 has been extensively studied by `Baars <BaarsThesis>`_
-and we will use Baars data as reference for `pyTAMS` results.
+and we will use Baars data as reference for `pyREVS` results.
 
 Specifically, let's look at the transition probability from one well to the other
 within a time horizon :math:`T_a` decreasing from 10 to 2 time units. We will run
@@ -92,7 +93,7 @@ estimator. Following `Baars <BaarsThesis>`_, we also use the 25-75 interquartile
 to give an indication of the estimator quality (standard confidence interval are not
 appropriate for near-zero distributions).
 
-:numref:`fig-Valid_DoubleWell2D` shows `pyTAMS` :math:`\overline{P}_K` in the range of values of
+:numref:`fig-Valid_DoubleWell2D` shows `pyREVS` :math:`\overline{P}_K` in the range of values of
 :math:`T_a` considered, along with the IQR given by the shaded area and results
 from `Baars <BaarsThesis>`_.
 
@@ -105,9 +106,8 @@ from `Baars <BaarsThesis>`_.
    : Transition probability estimate :math:`\overline{P}_K` at several
    values of :math:`T_a` in the 2D double well case
 
-The agreement between the two datasets is good, even though the accuracy of the `pyTAMS`
+The agreement between the two datasets is good, even though the accuracy of the `pyREVS`
 results are expected to be lower due to the relatively small :math:`N` and :math:`K` used
 compared to `Baars <BaarsThesis>`_. As :math:`T_a` decreases, the IQR become less symmetric
 around :math:`\overline{P}_K`, mostly due to the choice of a `static` score function which
 causes TAMS to stall if the transition is initiated too close to :math:`T_a`.
-
