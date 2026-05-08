@@ -8,7 +8,7 @@ from messaging import MessageType
 from messaging import TwoWayPipe
 from messaging import exit_msg
 from messaging import trigger_save_msg
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
 
@@ -32,12 +32,11 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
         self._m_id = m_id
 
         # Parse parameters
-        subparms = params.get("model", {})
-        self._M = subparms.get("size_M", 40)  # Horizontals
-        self._N = subparms.get("size_N", 80)  # Verticals
-        self._K = subparms.get("K", 4)  # Number of forcing modes = 2*K
-        self._eps = subparms.get("epsilon", 0.05)  # Noise level
-        self._exec = subparms.get("exec", None)
+        self._M = params.get("size_M", 40)  # Horizontals
+        self._N = params.get("size_N", 80)  # Verticals
+        self._K = params.get("K", 4)  # Number of forcing modes = 2*K
+        self._eps = params.get("epsilon", 0.05)  # Noise level
+        self._exec = params.get("exec")
         self._exec_cmd = [
             self._exec,
             "-M",
@@ -58,7 +57,7 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
 
         # Initialize random number generator
         # If deterministic run, set seed from the traj id
-        if subparms["deterministic"]:
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
@@ -68,7 +67,7 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
             self._workdir.mkdir()
 
         # The state is a path to a npy file on disk
-        self._state = subparms.get("init_state", None)
+        self._state = params.get("init_state")
 
     def get_current_state(self) -> Any:
         """Return the current state of the model.
@@ -200,4 +199,3 @@ class Boussinesq2DModelCpp(ForwardModelBaseClass):
     def name(cls) -> str:
         """Return the model name."""
         return "2DBoussinesqModelCpp"
-
