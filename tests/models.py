@@ -1,8 +1,8 @@
 import time
 from typing import Any
 import numpy as np
-from pytams.fmodel import ForwardModelBaseClass
-from pytams.snapshot import Snapshot
+from pytams.core import ForwardModelBaseClass
+from pytams.core import Snapshot
 
 
 class SimpleFModel(ForwardModelBaseClass):

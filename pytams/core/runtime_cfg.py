@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
-from .core import MergePolicy
+from .config import MergePolicy
 
 
 @dataclass(frozen=True)

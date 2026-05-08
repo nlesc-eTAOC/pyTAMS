@@ -4,13 +4,13 @@ from dataclasses import FrozenInstanceError
 from math import isclose
 from pathlib import Path
 import pytest
-from pytams.config import Config
-from pytams.diagnostic import DiagnosticAnalyst
-from pytams.fmodel import ForwardModelBaseClass
-from pytams.snapshot import Snapshot
+from pytams.core import Config
+from pytams.core import ForwardModelBaseClass
+from pytams.core import Snapshot
+from pytams.diagnostics import DiagnosticAnalyst
 from pytams.trajectory import Trajectory
 from pytams.trajectory import TrajectoryConfig
-from pytams.utils import moving_avg
+from pytams.utils.utils import moving_avg
 from tests.dwmodel import DoubleWellModel
 from tests.models import SimpleFModel
 

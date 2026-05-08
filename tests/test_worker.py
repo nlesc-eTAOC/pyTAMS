@@ -5,12 +5,12 @@ import logging
 from math import isclose
 from pathlib import Path
 import pytest
-from pytams.config import Config
-from pytams.config import RuntimeConfig
-from pytams.sqldb import TrajDB
+from pytams.core import Config
+from pytams.core import RuntimeConfig
+from pytams.core import CoreDB
 from pytams.trajectory import Trajectory
 from pytams.trajectory import TrajectoryConfig
-from pytams.utils import setup_logger
+from pytams.utils.utils import setup_logger
 from pytams.runner import ms_worker
 from pytams.runner import pool_worker
 from tests.dwmodel import DoubleWellModel
@@ -33,7 +33,7 @@ def test_run_pool_worker_with_sql():
     """Advance trajectory through pool_worker with SQL."""
     fmodel = SimpleFModel
     cfg = Config({"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}})
-    poolfile = TrajDB("./test.db")
+    poolfile = CoreDB("./test.db")
     t_test = Trajectory(0, 1.0, fmodel, cfg.load(TrajectoryConfig))
     poolfile.add_trajectory("dummy.xml", t_test.get_metadata())
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
@@ -92,7 +92,7 @@ def test_run_ms_worker_with_sql():
     """Branch and advance trajectory through ms_worker."""
     fmodel = SimpleFModel
     cfg = Config({"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}})
-    poolfile = TrajDB("./test.db")
+    poolfile = CoreDB("./test.db")
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = Trajectory(0, 0.5, fmodel, cfg.load(TrajectoryConfig))
     t_test.advance()

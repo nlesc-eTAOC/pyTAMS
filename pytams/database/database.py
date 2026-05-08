@@ -17,20 +17,20 @@ import cloudpickle
 import matplotlib.pyplot as plt
 import numpy as np
 import toml
-from pytams.config import Config
-from pytams.sqldb import DiagDB
-from pytams.sqldb import TrajDB
+from pytams.core import Config
+from pytams.core import CoreDB
+from pytams.diagnostics import DiagDB
 from pytams.trajectory import Trajectory
 from pytams.trajectory import TrajectoryConfig
 from pytams.trajectory.trajectory import form_trajectory_id
-from pytams.utils import get_module_local_import
-from pytams.xmlutils import new_element
-from pytams.xmlutils import xml_to_dict
+from pytams.utils.utils import get_module_local_import
+from pytams.utils.xmlutils import new_element
+from pytams.utils.xmlutils import xml_to_dict
 from .config import DatabaseConfig
 
 if TYPE_CHECKING:
-    from pytams.fmodel import ForwardModelBaseClass
-    from .base_extension import StrategyDatabaseExtension
+    from pytams.core import ForwardModelBaseClass
+    from .extension import StrategyDatabaseExtension
 
 _logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class Database(Generic[T_Noise, T_State]):
 
         # Trajectory ensemble: persistent SQL database
         self._sql_name: str = ""
-        self._sql_db: TrajDB | None = None
+        self._sql_db: CoreDB | None = None
 
         # Diagnostics
         self._diag_configs: dict[str, Config] | None = None
@@ -308,9 +308,9 @@ class Database(Generic[T_Noise, T_State]):
             self._sql_name = f".sqldb_tams_{np.random.default_rng().integers(0, 999999):06d}.db"
 
         if self._read_only:
-            self._sql_db = TrajDB(self.pool_file(), ro_mode=True)
+            self._sql_db = CoreDB(self.pool_file(), ro_mode=True)
         else:
-            self._sql_db = TrajDB(self.pool_file())
+            self._sql_db = CoreDB(self.pool_file())
 
     def attach_extension(self, ext: StrategyDatabaseExtension) -> None:
         """Attach an extension to the database."""
@@ -581,11 +581,11 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._sql_name
 
-    def get_pool_db(self) -> TrajDB | None:
+    def get_pool_db(self) -> CoreDB | None:
         """Get the pool SQL database handle."""
         return self._sql_db
 
-    def _require_pool_db(self) -> TrajDB:
+    def _require_pool_db(self) -> CoreDB:
         """Internal accessor to the SQL database handle.
 
         Raises:
@@ -735,17 +735,17 @@ class Database(Generic[T_Noise, T_State]):
         """
         return self._require_pool_db().get_total_computed_steps()
 
-    def get_rareevent_probability(self) -> float:
-        """Return the rare-event probability.
+    def get_event_probability(self) -> float:
+        """Return the event probability.
 
-        Default to a Monte-Carlo rare-event probability if
+        Default to a Monte-Carlo event probability if
         no strategy extension is attached to the database.
 
         Return:
-            rare-event probability
+            the event probability
         """
         if self._strategy_extension is not None:
-            return self._strategy_extension.get_rareevent_probability()
+            return self._strategy_extension.get_event_probability()
 
         return self.count_converged_traj() / self.n_traj()
 

@@ -1,7 +1,7 @@
 """Tests for the pytams.xmlutils class."""
 import numpy as np
 import pytest
-import pytams.xmlutils as pxml
+import pytams.utils.xmlutils as pxml
 import datetime
 
 

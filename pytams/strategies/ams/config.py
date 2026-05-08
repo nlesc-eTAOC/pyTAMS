@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
-from pytams.config import MergePolicy
+from pytams.core import MergePolicy
 
 
 @dataclass(frozen=True)

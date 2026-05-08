@@ -3,16 +3,16 @@
 import logging
 from pathlib import Path
 from typing import Any
-from pytams.config import Config
-from pytams.config import RuntimeConfig
+from pytams.core import Config
+from pytams.core import RuntimeConfig
 from pytams.database import Database
 from pytams.database import DatabaseCoreSpec
-from pytams.database import MCDatabaseExtension
 from pytams.runner import RunnerConfig
 from pytams.runner import make_runner
 from pytams.runner import pool_worker
-from pytams.strategies.base_strategy import BaseSamplingStrategy
+from pytams.strategies.base import BaseSamplingStrategy
 from .config import MCConfig
+from .extension import MCDatabaseExtension
 
 _logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class MonteCarlo(BaseSamplingStrategy):
         # Generate the initial trajectory ensemble
         self.generate_trajectory_ensemble(tdb)
 
-        return tdb.get_rareevent_probability()
+        return tdb.get_event_probability()
 
     def _execute_sampling(self, database: Database, plot_diags: bool) -> None:
         """Shallow wrapper to enable sampler."""

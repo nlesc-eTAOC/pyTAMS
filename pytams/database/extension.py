@@ -1,4 +1,4 @@
-"""A base extension class for specific strategies."""
+"""A protocol database extension class for specific strategies."""
 
 from typing import Protocol
 
@@ -18,6 +18,6 @@ class StrategyDatabaseExtension(Protocol):
         """Deserialize the extension."""
         raise NotImplementedError
 
-    def get_rareevent_probability(self) -> float:
-        """Return the rare-event probability."""
+    def get_event_probability(self) -> float:
+        """Return the event probability."""
         raise NotImplementedError

@@ -20,11 +20,11 @@ from .sqlmanager import BaseSQLManager
 _logger = logging.getLogger(__name__)
 
 
-class TrajBase(DeclarativeBase):
+class CoreBase(DeclarativeBase):
     """A base class for the tables."""
 
 
-class Trajectory(TrajBase):
+class Trajectory(CoreBase):
     """A table storing the active trajectories."""
 
     __tablename__ = "trajectories"
@@ -35,7 +35,7 @@ class Trajectory(TrajBase):
     status: Mapped[str] = mapped_column(default="idle", nullable=False)
 
 
-class ArchivedTrajectory(TrajBase):
+class ArchivedTrajectory(CoreBase):
     """A table storing the archived trajectories."""
 
     __tablename__ = "archived_trajectories"
@@ -48,7 +48,7 @@ class ArchivedTrajectory(TrajBase):
 valid_statuses = ["locked", "idle", "completed"]
 
 
-class TrajDB(BaseSQLManager):
+class CoreDB(BaseSQLManager):
     """A database holding pyREVS trajectories.
 
     Allows atomic access to an SQL database from all
@@ -70,7 +70,7 @@ class TrajDB(BaseSQLManager):
             in_memory: a bool to trigger in-memory creation
             ro_mode: a bool to trigger read-only access to the database
         """
-        super().__init__(file_name, TrajBase.metadata, in_memory, ro_mode)
+        super().__init__(file_name, CoreBase.metadata, in_memory, ro_mode)
 
     def add_trajectory(self, traj_file: str, metadata: dict) -> None:
         """Add a new trajectory to the DB.

@@ -4,10 +4,10 @@ import shutil
 from pathlib import Path
 import pytest
 import toml
-from pytams.config import Config
-from pytams.database import AMSDatabaseExtension
+from pytams.core import Config
+from pytams.strategies.ams.extension import AMSDatabaseExtension
 from pytams.database import Database
-from pytams.database import prepare_database_path
+from pytams.utils.dbutils import prepare_database_path
 from pytams.sampler import build_sampler
 from tests.dwmodel import DoubleWellModel
 

@@ -9,7 +9,7 @@ from typing import Generic
 from typing import TypeVar
 from typing import cast
 from typing import final
-from pytams.snapshot import Snapshot
+from .snapshot import Snapshot
 
 _logger = getLogger(__name__)
 

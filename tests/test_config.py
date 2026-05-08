@@ -1,6 +1,6 @@
 from pathlib import Path
 import toml
-from pytams.config import Config
+from pytams.core import Config
 from pytams.sampler.system_config import SystemConfig
 
 

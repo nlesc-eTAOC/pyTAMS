@@ -7,11 +7,11 @@ from typing import TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-from pytams.sqldb import AMSDB
-from pytams.sqldb import TrajDB
+from pytams.core import CoreDB
+from pytams.database import Database
+from pytams.database import StrategyDatabaseExtension
 from pytams.trajectory import Trajectory
-from .base_extension import StrategyDatabaseExtension
-from .database import Database
+from .sql import AMSDB
 
 _logger = logging.getLogger(__name__)
 
@@ -78,10 +78,10 @@ class AMSDatabaseExtension(StrategyDatabaseExtension):
             raise RuntimeError(err_msg)
         return self._ams_db
 
-    def _req_tdb_db(self) -> TrajDB:
+    def _req_tdb_db(self) -> CoreDB:
         pool_db = self._tdb.get_pool_db()
         if pool_db is None:
-            err_msg = "TrajDB has not been initialized ! Database is not ready"
+            err_msg = "CoreDB has not been initialized ! Database is not ready"
             _logger.exception(err_msg)
             raise RuntimeError(err_msg)
         return pool_db
@@ -228,8 +228,8 @@ class AMSDatabaseExtension(StrategyDatabaseExtension):
         # Update the diagDB in the core database
         self._tdb.update_diagnostic_weights(tweight)
 
-    def get_rareevent_probability(self) -> float:
-        """Return the rare-event probability."""
+    def get_event_probability(self) -> float:
+        """Return the event probability."""
         if self._tdb.count_terminated_traj() < self._tdb.n_traj():
             return 0.0
 

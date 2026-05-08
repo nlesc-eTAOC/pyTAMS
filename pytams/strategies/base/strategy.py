@@ -14,7 +14,7 @@ from typing import final
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pytams.config import Config
+    from pytams.core import Config
     from pytams.database import Database
 
 _logger = logging.getLogger(__name__)

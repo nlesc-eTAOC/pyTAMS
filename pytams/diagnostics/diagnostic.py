@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.config import Config
-from pytams.snapshot import Snapshot
-from pytams.sqldb import DiagDB
+from pytams.core import Config
+from pytams.core import Snapshot
+from .diagdb import DiagDB
 
 _logger = logging.getLogger(__name__)
 

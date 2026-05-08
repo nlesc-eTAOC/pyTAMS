@@ -5,18 +5,18 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.config import Config
-from pytams.config import RuntimeConfig
-from pytams.database import AMSDatabaseExtension
+from pytams.core import Config
+from pytams.core import RuntimeConfig
 from pytams.database import Database
 from pytams.database import DatabaseCoreSpec
 from pytams.runner import RunnerConfig
 from pytams.runner import make_runner
 from pytams.runner import ms_worker
 from pytams.runner import pool_worker
-from pytams.strategies.base_strategy import BaseSamplingStrategy
-from pytams.utils import get_min_scored
+from pytams.strategies.base import BaseSamplingStrategy
+from pytams.utils.utils import get_min_scored
 from .config import AMSConfig
+from .extension import AMSDatabaseExtension
 
 _logger = logging.getLogger(__name__)
 
@@ -418,7 +418,7 @@ class AMS(BaseSamplingStrategy):
             _logger.warning(warn_msg)
             return -1.0
 
-        rare_event_probability = tdb.get_rareevent_probability()
+        rare_event_probability = tdb.get_event_probability()
 
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)

@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import sessionmaker
-from .coredb import TrajBase
+from pytams.core import CoreBase
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class SplittingIterations(TrajBase):
+class SplittingIterations(CoreBase):
     """A table storing the splitting iterations."""
 
     __tablename__ = "splitting_iterations"
@@ -65,7 +65,7 @@ class AMSDB:
         self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
         self._file_name: str = engine.url.database if engine.url.database else "ams.db"
 
-        TrajBase.metadata.create_all(self._engine)
+        CoreBase.metadata.create_all(self._engine)
 
     @contextmanager
     def session_scope(self) -> Generator[Session, None, None]:

@@ -6,12 +6,12 @@ import logging
 from pathlib import Path
 from typing import Any
 import toml
-from pytams.config import Config
-from pytams.config import RuntimeConfig
+from pytams.core import Config
+from pytams.core import RuntimeConfig
 from pytams.database import Database
-from pytams.database import prepare_database_path
-from pytams.strategies.base_strategy import BaseSamplingStrategy
+from pytams.strategies.base import BaseSamplingStrategy
 from pytams.utils import setup_logger
+from pytams.utils.dbutils import prepare_database_path
 from .system_config import SystemConfig
 
 _logger = logging.getLogger(__name__)

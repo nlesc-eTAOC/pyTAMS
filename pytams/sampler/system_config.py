@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
 import toml
-from pytams.config import Config
-from pytams.config import RuntimeConfig
-from pytams.config.core import collect_sections
-from pytams.config.core import merge_config
-from pytams.config.core import print_config_help
+from pytams.core import Config
+from pytams.core import RuntimeConfig
+from pytams.core.config import collect_sections
+from pytams.core.config import merge_config
+from pytams.core.config import print_config_help
 from pytams.database import DatabaseConfig
 from pytams.runner import RunnerConfig
 from pytams.strategies.ams import AMSConfig

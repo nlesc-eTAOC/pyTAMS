@@ -16,17 +16,17 @@ from typing import TypeVar
 from typing import cast
 import numpy as np
 import numpy.typing as npt
-from pytams.diagnostic import DiagnosticPlugin
-from pytams.diagnostic import diagnosticfactory
-from pytams.snapshot import Snapshot
-from pytams.sqldb import DiagDB
-from pytams.xmlutils import dict_to_xml
-from pytams.xmlutils import make_xml_snapshot
-from pytams.xmlutils import read_xml_snapshot
+from pytams.core import Snapshot
+from pytams.diagnostics import DiagDB
+from pytams.diagnostics import DiagnosticPlugin
+from pytams.diagnostics import diagnosticfactory
+from pytams.utils.xmlutils import dict_to_xml
+from pytams.utils.xmlutils import make_xml_snapshot
+from pytams.utils.xmlutils import read_xml_snapshot
 
 if TYPE_CHECKING:
-    from pytams.config import Config
-    from pytams.fmodel import ForwardModelBaseClass
+    from pytams.core import Config
+    from pytams.core import ForwardModelBaseClass
     from .config import TrajectoryConfig
 
 _logger = logging.getLogger(__name__)

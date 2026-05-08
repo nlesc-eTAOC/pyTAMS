@@ -3,11 +3,11 @@
 import argparse
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
 from pytams.sampler import build_sampler
 from pytams.sampler.system_config import SystemConfig
-from pytams.utils import generate_subclass
-from pytams.utils import import_forward_model
+from pytams.utils.utils import generate_subclass
+from pytams.utils.utils import import_forward_model
 
 
 def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:

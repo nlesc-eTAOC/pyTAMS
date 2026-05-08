@@ -18,7 +18,7 @@ from sqlalchemy import update
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from .sqlmanager import BaseSQLManager
+from pytams.core.sqlmanager import BaseSQLManager
 
 _logger = logging.getLogger(__name__)
 

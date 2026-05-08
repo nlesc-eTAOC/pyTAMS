@@ -3,10 +3,10 @@
 import pickle
 from pathlib import Path
 import pytest
-from pytams.config import Config
-from pytams.sqldb import DiagDB
-from pytams.diagnostic import diagnosticfactory
-from pytams.snapshot import Snapshot
+from pytams.core import Config
+from pytams.core import Snapshot
+from pytams.diagnostics import DiagDB
+from pytams.diagnostics import diagnosticfactory
 from tests.models import SimpleFModel
 
 

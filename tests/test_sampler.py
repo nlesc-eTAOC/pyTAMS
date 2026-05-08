@@ -6,9 +6,8 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.database import Database
-from pytams.sampler import RareEventSampler
 from pytams.sampler import build_sampler
-from pytams.utils import is_mac_os
+from pytams.utils.utils import is_mac_os
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
@@ -63,7 +62,7 @@ def test_simple_model_sampler():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
 
@@ -85,7 +84,7 @@ def test_simple_model_sampler_with_diags():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 1.0
     Path("input.toml").unlink(missing_ok=True)
     Path("./diagDB.db").unlink(missing_ok=True)
@@ -183,7 +182,7 @@ def test_simple_model_tams_with_db():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     del sampler
     assert re_proba == 1.0
     shutil.rmtree("simpleModelTest.tdb")
@@ -208,7 +207,7 @@ def test_simple_model_tams_with_db_access():
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
     tdb = sampler.database
-    assert tdb.get_rareevent_probability() == 1
+    assert tdb.get_event_probability() == 1
     del sampler
     del tdb
     shutil.rmtree("simpleModelTest.tdb")
@@ -255,14 +254,14 @@ def test_simple_model_twice_tams():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 1.0
     del sampler
     # Re-init TAMS and run to test competing database
     # on disk.
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 1.0
     del sampler
     ndb = 0
@@ -312,7 +311,7 @@ def test_sample_doublewell():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba >= 0.2
     Path("input.toml").unlink(missing_ok=True)
 
@@ -335,7 +334,7 @@ def test_doublewell_save_tams():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba >= 0.2
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -359,7 +358,7 @@ def test_doublewell_deterministic_tams():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     if is_mac_os():
         assert re_proba == 0.5416298076191378
     else:
@@ -417,7 +416,7 @@ def test_doublewell_2_workers_tams():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 0.6925339958244802
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -452,7 +451,7 @@ def test_doublewell_2_workers_restore_sampler():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba == 0.6925339958244802
     Path("input.toml").unlink(missing_ok=True)
     del sampler
@@ -477,7 +476,7 @@ def test_doublewell_very_slow_model():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
     del sampler
@@ -503,7 +502,7 @@ def test_doublewell_slow_model_stop():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -528,7 +527,7 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     assert re_proba <= 0.0
     del sampler
     Path("input.toml").unlink(missing_ok=True)
@@ -580,7 +579,7 @@ def test_doublewell_slow_tams_restore_more_split():
         toml.dump(params_dict, f)
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     del sampler
     assert re_proba == 0.1251225103143388
 
@@ -590,7 +589,7 @@ def test_doublewell_slow_tams_restore_more_split():
 
     sampler = build_sampler(fmodel_t=fmodel, a_args=["-ov"])
     sampler.run()
-    re_proba = sampler.database.get_rareevent_probability()
+    re_proba = sampler.database.get_event_probability()
     # Not sure why this particular test is platform dependent
     if is_mac_os():
         assert re_proba == 0.1391287278743694
