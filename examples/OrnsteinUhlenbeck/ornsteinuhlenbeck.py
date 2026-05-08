@@ -1,7 +1,7 @@
 import typing
 from typing import Any
 import numpy as np
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
 
 
 class OrnsteinUhlenbeck(ForwardModelBaseClass):
@@ -25,10 +25,10 @@ class OrnsteinUhlenbeck(ForwardModelBaseClass):
             params: an optional dict containing parameters
         """
         # Theta: the inverse time scale
-        self._theta = params.get("model", {}).get("theta", 1.0)
+        self._theta = params.get("theta", 1.0)
 
         # The noise parameter
-        self._epsilon = params.get("model", {}).get("epsilon", 0.5)
+        self._epsilon = params.get("epsilon", 0.5)
 
         # The resulting standard deviation of the process
         # distribution
@@ -42,7 +42,7 @@ class OrnsteinUhlenbeck(ForwardModelBaseClass):
         self._state = np.random.default_rng().normal(scale=self._sigma)
 
         # Initialize the RNG
-        if params["model"]["deterministic"]:
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()

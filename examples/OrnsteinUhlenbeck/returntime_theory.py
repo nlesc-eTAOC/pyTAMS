@@ -24,6 +24,7 @@ def stat_mean_first_passage_time_theory(a: float, x0: float, theta: float, epsil
     Return:
         the return time of x(t) > a
     """
+    _ = x0
     k = np.sqrt(theta / (2.0 * epsilon))
 
     def exppot_in(z: npt.NDArray[np.number], sign: float = -1.0) -> npt.NDArray[np.number]:

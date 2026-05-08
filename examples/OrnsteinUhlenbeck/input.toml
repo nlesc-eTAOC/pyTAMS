@@ -1,7 +1,12 @@
-[tams]
+[ams]
 ntrajectories = 32
 nsplititer = 5000
-loglevel = "WARNING"
+
+[sampler]
+strategy = "ams"
+
+[runtime]
+loglevel = "INFO"
 
 [trajectory]
 end_time = 5.0
@@ -12,8 +17,3 @@ targetscore = 4.24264068712
 [model]
 theta = 1.0 
 epsilon = 0.50
-
-[runner]
-type = "asyncio"
-nworker_init=1
-nworker_iter=1
