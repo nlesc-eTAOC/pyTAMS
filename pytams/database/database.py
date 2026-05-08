@@ -294,10 +294,6 @@ class Database(Generic[T_Noise, T_State]):
         if self.to_disk():
             self._write_metadata()
 
-    def update_ntraj(self, ntraj: int) -> None:
-        """Update the number of trajectories in the database."""
-        self._ntraj = ntraj
-
     def init_traj_pool(self) -> None:
         """Initialize the trajectory pool."""
         # If an in-memory database is requested, a temporary (hidden)
@@ -464,6 +460,14 @@ class Database(Generic[T_Noise, T_State]):
             DB name
         """
         return self._name
+
+    def strategy(self) -> str:
+        """Accessor to DB strategy.
+
+        Return:
+            DB strategy
+        """
+        return self._strategy
 
     def to_disk(self) -> bool:
         """Check if the database is stored on disk."""
