@@ -54,7 +54,7 @@ jobs:
       - name: Run OrnsteinUhlenbeck
         run: |
           cd examples/OrnsteinUhlenbeck
-          sed -i "s#K = 10#K = 3#g" tams_ou1dim.py
+          sed -i "s#K = 10#K = 3#g" sample_ou1dim.py
           python sample_ou1dim.py
 
 
@@ -81,7 +81,7 @@ jobs:
       - name: Run doublewell
         run: |
           cd examples/DoubleWell2D
-          sed -i "s#K = 10#K = 3#g" tams_dw2dim.py
+          sed -i "s#K = 10#K = 3#g" sample_dw2dim.py
           python sample_dw2dim.py
 
   bichannel:
@@ -107,7 +107,7 @@ jobs:
       - name: Run BiBchannel
         run: |
           cd examples/BiChannel2D
-          sed -i "s#K = 10#K = 3#g" tams_bichannel.py
+          sed -i "s#K = 10#K = 3#g" sample_bichannel.py
           python sample_bichannel.py
 
 
