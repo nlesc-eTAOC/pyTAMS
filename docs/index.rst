@@ -14,6 +14,12 @@ two stable states of a multi-stable system.
 where integrating the model can take hours to days on supercomputers and using a naive Monte-Carlo
 approach is impractical.
 
+.. warning::
+   PR#173 introduced significant changes to the source code and API
+   that are not yet fully documented.
+
+
+
 Installation:
 -------------
 

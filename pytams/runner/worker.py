@@ -8,14 +8,14 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from pytams.trajdb import TrajDB
+from pytams.core import CoreDB
 from pytams.trajectory import Trajectory
-from pytams.trajectory import WallTimeLimitError
+from pytams.trajectory.trajectory import WallTimeLimitError
 
 _logger = logging.getLogger(__name__)
 
 
-def update_trajectory_in_sql(traj: Trajectory, trajdb: TrajDB | None = None, db_path: str | None = None) -> None:
+def update_trajectory_in_sql(traj: Trajectory, trajdb: CoreDB | None = None, db_path: str | None = None) -> None:
     """Wrapper for update SQL trajectory info.
 
     Args:
@@ -31,7 +31,7 @@ def update_trajectory_in_sql(traj: Trajectory, trajdb: TrajDB | None = None, db_
 
 
 def traj_advance_with_exception(
-    traj: Trajectory, walltime: float, trajdb: TrajDB | None = None, db_path: str | None = None
+    traj: Trajectory, walltime: float, trajdb: CoreDB | None = None, db_path: str | None = None
 ) -> Trajectory:
     """Advance a trajectory with exception handling.
 
@@ -97,7 +97,7 @@ def pool_worker(
         # Try to lock the trajectory in the DB
         trajdb = None
         if trajdb_path:
-            trajdb = TrajDB(trajdb_path)
+            trajdb = CoreDB(trajdb_path)
             get_to_work = trajdb.lock_trajectory(traj.id(), allow_completed_lock=True)
             if not get_to_work:
                 return traj
@@ -138,7 +138,7 @@ def ms_worker(
 
     trajdb = None
     if trajdb_path:
-        trajdb = TrajDB(trajdb_path)
+        trajdb = CoreDB(trajdb_path)
 
     if wall_time > 0.0:
         # Try to lock the trajectory in the DB

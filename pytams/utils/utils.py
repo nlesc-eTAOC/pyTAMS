@@ -1,9 +1,10 @@
-"""A set of utility functions for TAMS."""
+"""A set of utility functions for pyREVS."""
 
 import ast
 import importlib.util
 import inspect
 import logging
+import re
 import sys
 import textwrap
 from abc import ABCMeta
@@ -27,14 +28,15 @@ def is_mac_os() -> bool:
     return system.startswith("dar")
 
 
-def setup_logger(params: dict[Any, Any]) -> None:
+def setup_logger(loglevel: str, logfile: str | None = None) -> None:
     """Setup the logger parameters.
 
     Args:
-        params: a dictionary of parameters
+        loglevel: logging level
+        logfile: optional logging file
     """
     # Set logging level
-    log_level_str = params["tams"].get("loglevel", "INFO").upper()
+    log_level_str = loglevel.upper()
     log_level = getattr(logging, log_level_str, logging.INFO)
 
     # Set formatter
@@ -50,7 +52,7 @@ def setup_logger(params: dict[Any, Any]) -> None:
     root_logger.handlers.clear()
 
     # Query log file
-    log_file = params["tams"].get("logfile")
+    log_file = logfile
 
     # Set console handler: warning+ if logfile provided
     # full log otherwise
@@ -158,7 +160,7 @@ def get_module_local_import(module_name: str) -> list[str]:
             all_modules.append(node.module)
 
     # Return only those whose file is in the current folder
-    # or from the 'examples' folder of pyTAMS
+    # or from the 'examples' folder of pyREVS
     return [
         m
         for m in all_modules
@@ -198,7 +200,7 @@ def import_forward_model(file: str, abc_cls: ABCMeta) -> type[ABCMeta]:
 
     mod = importlib.util.module_from_spec(spec)
 
-    # Need to add the module path so that TAMS's worker
+    # Need to add the module path so that pyREVS's worker
     # can find the class.
     sys.path.append(Path(file).parent.as_posix())
 
@@ -211,7 +213,7 @@ def import_forward_model(file: str, abc_cls: ABCMeta) -> type[ABCMeta]:
         if inspect.isclass(obj) and issubclass(obj, abc_cls) and obj is not abc_cls:
             if fmodel_class is not None and fmodel_class is not obj:
                 err_msg = (
-                    f"pyTAMS can only define one {abc_cls.__name__} subclass: "
+                    f"pyREVS can only define one {abc_cls.__name__} subclass: "
                     f"both {fmodel_class.__name__} and {obj.__name__} found in {file}!"
                 )
                 _logger.exception(err_msg)
@@ -219,32 +221,76 @@ def import_forward_model(file: str, abc_cls: ABCMeta) -> type[ABCMeta]:
             fmodel_class = obj
 
     if fmodel_class is None:
-        err_msg = f"pyTAMS could not locate subclass of {abc_cls.__name__} in {module}"
+        err_msg = f"pyREVS could not locate subclass of {abc_cls.__name__} in {module}"
         _logger.exception(err_msg)
         raise RuntimeError(err_msg)
 
     return fmodel_class
 
 
-def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None:
+def clean_signature(sig: inspect.Signature) -> str:
+    """Converts a signature to a string and removes TypeVar tildes.
+
+    Args:
+        sig: the method signature
+
+    Returns:
+        str
+    """
+    sig_str = str(sig)
+    # This regex looks for a tilde followed by a word (the TypeVar name)
+    # and replaces it with just the name.
+    return re.sub(r"~(\w+)", r"\1", sig_str)
+
+
+def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str, include_optional: bool = False) -> None:
     """Generate a subclass skeleton.
 
     Implementing all abstract methods from `abc_cls`, written to `file_path`.
+    The function is overall not tied to any particular ABC except in handling
+    types, where types specific to pyREVS are imported.
 
     Args:
         abc_cls: an ABC
         class_name: the new subclass name
         file_path: where to write the subclass
+        include_optional: whether to include optional (non final) functions
     """
     # Identify abstract methods
     abstract_methods = {
         name: value for name, value in abc_cls.__dict__.items() if getattr(value, "__isabstractmethod__", False)
     }
 
+    # Add optional methods
+    if include_optional:
+        nonfinal_methods = {
+            name: value
+            for name, value in abc_cls.__dict__.items()
+            if (
+                inspect.isfunction(value)
+                and not getattr(value, "__final__", False)
+                and not getattr(value, "__isabstractmethod__", False)
+            )
+        }
+
     # Build import line
     module_name = abc_cls.__module__
     abc_name = abc_cls.__name__
-    import_lines = [f"from {module_name} import {abc_name}\n", "import typing\n", "from typing import Any\n\n\n"]
+    import_lines = [
+        f"from {module_name} import {abc_name}\n",
+        "import typing\n",
+        "from typing import Any\n",
+        "from typing import TypeVar\n",
+    ]
+    if include_optional:
+        import_lines.append("from pytams.snapshot import Snapshot\n")
+    import_lines.append("\n\n")
+
+    # Append lines for type hints
+    for typevar in abc_cls.__dict__["__parameters__"]:
+        stripped_typevar = typevar.__name__
+        import_lines.append(f'{stripped_typevar} = TypeVar("{stripped_typevar}")\n')
+    import_lines.append("\n\n")
 
     # Build class header
     lines = [*import_lines, f"class {class_name}({abc_name}):\n"]
@@ -256,9 +302,10 @@ def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None
         # Generate each required method with preserved signature
         for name, func in abstract_methods.items():
             sig = inspect.signature(func)
+            clean_sig = clean_signature(sig)
             doc = inspect.getdoc(func)
 
-            lines.append(f"    def {name}{sig}:\n")
+            lines.append(f"    def {name}{clean_sig}:\n")
             if doc:
                 # Indent docstring correctly
                 doc_clean = textwrap.indent('"""' + doc + '\n"""', " " * 8)
@@ -267,6 +314,11 @@ def generate_subclass(abc_cls: ABCMeta, class_name: str, file_path: str) -> None
                 lines.append('        """TODO: implement method."""\n')
 
             lines.append("        # Implement concrete method body\n\n")
+
+        if include_optional:
+            for func in nonfinal_methods.values():
+                src = inspect.getsource(func)
+                lines.append(f"{src}\n\n")
 
     # Add the name class method
     lines.append("    @classmethod\n")

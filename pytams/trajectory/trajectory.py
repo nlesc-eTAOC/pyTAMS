@@ -7,6 +7,7 @@ import logging
 import shutil
 import time
 import xml.etree.ElementTree as ET
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -15,16 +16,18 @@ from typing import TypeVar
 from typing import cast
 import numpy as np
 import numpy.typing as npt
-from pytams.diagdb import DiagDB
-from pytams.diagnostic import DiagnosticPlugin
-from pytams.diagnostic import diagnosticfactory
-from pytams.snapshot import Snapshot
-from pytams.xmlutils import dict_to_xml
-from pytams.xmlutils import make_xml_snapshot
-from pytams.xmlutils import read_xml_snapshot
+from pytams.core import Snapshot
+from pytams.diagnostics import DiagDB
+from pytams.diagnostics import DiagnosticPlugin
+from pytams.diagnostics import diagnosticfactory
+from pytams.utils.xmlutils import dict_to_xml
+from pytams.utils.xmlutils import make_xml_snapshot
+from pytams.utils.xmlutils import read_xml_snapshot
 
 if TYPE_CHECKING:
-    from pytams.fmodel import ForwardModelBaseClass
+    from pytams.core import Config
+    from pytams.core import ForwardModelBaseClass
+    from .config import TrajectoryConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -82,7 +85,6 @@ class Trajectory(Generic[T_Noise, T_State]):
     from an ancestor.
 
     Attributes:
-        _parameters_full : the full parameters dictionary
         _tid : the trajectory index
         _checkFile : the trajectory checkpoint file
         _workdir : the model working directory
@@ -105,8 +107,11 @@ class Trajectory(Generic[T_Noise, T_State]):
         traj_id: int,
         weight: float,
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]] | None,
-        parameters: dict[Any, Any],
+        traj_cfg: TrajectoryConfig,
+        diag_configs: dict[str, Config] | None = None,
+        model_params: dict[str, Any] | None = None,
         workdir: Path | None = None,
+        deterministic: bool = False,
         frozen: bool = False,
     ) -> None:
         """Initialize a trajectory.
@@ -115,19 +120,17 @@ class Trajectory(Generic[T_Noise, T_State]):
             traj_id: a int for the trajectory index
             weight: the trajectory weight in the ensemble
             fmodel_t: the forward model type
-            parameters: a dictionary of input parameters
+            traj_cfg: the trajectory configuration
+            diag_configs: a dict with diagnostic configurations
+            model_params: the model configuration
             workdir: an optional working directory
+            deterministic: whether the trajectory is deterministic
             frozen: whether the trajectory is frozen (no fmodel)
         """
-        # Stash away the full parameters dict
-        self._parameters_full: dict[Any, Any] = parameters
-
-        # Check that the step size is provided
-        traj_params = parameters.get("trajectory", {})
-        if "step_size" not in traj_params:
-            err_msg = "Trajectory 'step_size' must be specified in the input file !"
-            _logger.error(err_msg)
-            raise ValueError
+        # Stash away the configuration(s)
+        self._traj_cfg = traj_cfg
+        self._model_params = model_params
+        self._deterministic = deterministic
 
         # The workdir is a runtime parameter, not saved in the chkfile.
         self._tid: int = traj_id
@@ -143,13 +146,8 @@ class Trajectory(Generic[T_Noise, T_State]):
         # or an entirely different time scale.
         self._step: int = 0
         self._t_cur: float = 0.0
-        self._t_end: float = traj_params.get("end_time", -1.0)
-        self._dt: float = traj_params.get("step_size")
-
-        # Trajectory convergence is defined by a target score, with
-        # the score provided by the forward model, mapping the model state to
-        # a s \in [0,1]. A default value of 0.95 is provided.
-        self._convergedVal: float = traj_params.get("targetscore", 0.95)
+        self._t_end: float = traj_cfg.end_time
+        self._dt: float = traj_cfg.step_size
 
         # List of snapshots
         self._snaps: list[Snapshot[T_Noise, T_State]] = []
@@ -166,9 +164,6 @@ class Trajectory(Generic[T_Noise, T_State]):
         # to memory constraint (both in-memory and on-disk). Sparse state can
         # be specified. Finally, writing a chkfile to disk at each step might
         # incur a performance hit and is by default disabled.
-        self._sparse_state_int: int = traj_params.get("sparse_freq", 1)
-        self._sparse_state_beg: int = traj_params.get("sparse_start", 0) + 1
-        self._write_chkfile_all: bool = traj_params.get("chkfile_dump_all", False)
         self._checkFile: Path = Path(f"{self.idstr()}.xml")
 
         # Each trajectory has its own instance of the forward model
@@ -176,13 +171,14 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._fmodel = None
         else:
             self._fmodel = fmodel_t(
-                self._tid * (self.max_nbranch + 1) + self.get_nbranching(), parameters, self._workdir
+                self._tid * (self.max_nbranch + 1) + self.get_nbranching(), deterministic, model_params, self._workdir
             )
 
         # Diagnostics
         # They are initialize upon the first call so that
         # the diagnostic database access is not pickled in the task
-        self._has_diagnostics = self._check_for_diag_request()
+        self._has_diagnostics = diag_configs is not None
+        self._diag_configs: dict[str, Config] | None = diag_configs
         self._diagplugins: list[DiagnosticPlugin] = []
         self._ddb: DiagDB | None = None
         self._initialized_diags = False
@@ -286,7 +282,9 @@ class Trajectory(Generic[T_Noise, T_State]):
             score = self._one_step()
 
             # Check for termination/convergence
-            self._has_converged = self._fmodel.check_convergence(self._step, self._t_cur, score, self._convergedVal)
+            self._has_converged = self._fmodel.check_convergence(
+                self._step, self._t_cur, score, self._traj_cfg.targetscore
+            )
             self._has_terminated = self._fmodel.check_termination(self._step, self._t_cur, nstep_end, end_time, score)
 
             # Handle diagnostics
@@ -363,7 +361,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         # Trigger storing the end state of the current time step
         # if the next trajectory snapshot needs it
-        need_end_state = (self._sparse_state_beg + self._step + 1) % self._sparse_state_int == 0
+        need_end_state = (self._traj_cfg.sparse_start + 1 + self._step + 1) % self._traj_cfg.sparse_freq == 0
 
         try:
             dt = self._fmodel.advance(self._dt, need_end_state)
@@ -382,7 +380,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         # Append a snapshot at the beginning of the time step
         self._append_snapshot(score)
 
-        if self._write_chkfile_all:
+        if self._traj_cfg.chkfile_dump_all:
             self.store()
 
         self._score_max = max(self._score_max, score)
@@ -392,26 +390,20 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         return score
 
-    def _check_for_diag_request(self) -> bool:
-        """Check if any diagnostics are requested in the parameters.
-
-        Returns:
-            A boolean indicating if diagnostics are requested
-        """
-        diag_list = self._parameters_full.get("tams", {}).get("diagnostics", [])
-        # Return True only if the list exists and has at least one entry
-        return isinstance(diag_list, list) and len(diag_list) > 0
-
     def _setup_diagnostics(self) -> None:
         """Setup the diagnostic."""
         if self._fmodel is not None:
+            if self._diag_configs is None:
+                self._initialized_diags = True
+                return
+
             if self._workdir == Path.cwd():
                 self._ddb = DiagDB("./diagDB.db")
             else:
                 db_path = self._workdir.parents[1] / "./diagDB.db"
                 self._ddb = DiagDB(db_path.absolute().as_posix())
             self._diagplugins = diagnosticfactory(
-                self._parameters_full,
+                self._diag_configs,
                 self.unique_id(),
                 self._weight,
                 self._workdir,
@@ -455,7 +447,9 @@ class Trajectory(Generic[T_Noise, T_State]):
         """Append the current snapshot to the trajectory list."""
         # Append the current snapshot to the trajectory list
         if self._fmodel:
-            need_state = (self._sparse_state_beg + self._step) % self._sparse_state_int == 0 or self._step == 0
+            need_state = (
+                self._traj_cfg.sparse_start + 1 + self._step
+            ) % self._traj_cfg.sparse_freq == 0 or self._step == 0
             self._snaps.append(
                 Snapshot[T_Noise, T_State](
                     time=self._t_cur,
@@ -470,7 +464,9 @@ class Trajectory(Generic[T_Noise, T_State]):
         cls,
         metadata: dict[str, Any],
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
-        parameters: dict[Any, Any],
+        traj_cfg: TrajectoryConfig,
+        diag_configs: dict[str, Config] | None = None,
+        model_params: dict[str, Any] | None = None,
         workdir: Path | None = None,
         frozen: bool = False,
     ) -> Trajectory[T_Noise, T_State]:
@@ -479,8 +475,11 @@ class Trajectory(Generic[T_Noise, T_State]):
             traj_id=metadata["id"],
             weight=metadata["weight"],
             fmodel_t=fmodel_t,
-            parameters=parameters,
+            traj_cfg=traj_cfg,
+            diag_configs=diag_configs,
+            model_params=model_params,
             workdir=workdir,
+            deterministic=metadata["deterministic"],
             frozen=frozen,
         )
 
@@ -501,7 +500,9 @@ class Trajectory(Generic[T_Noise, T_State]):
         checkfile: Path,
         metadata: dict[str, Any],
         fmodel_t: type[ForwardModelBaseClass[T_Noise, T_State]],
-        parameters: dict[Any, Any],
+        traj_cfg: TrajectoryConfig,
+        diag_configs: dict[str, Config] | None = None,
+        model_params: dict[str, Any] | None = None,
         workdir: Path | None = None,
         frozen: bool = False,
     ) -> Trajectory[T_Noise, T_State]:
@@ -512,7 +513,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             raise FileNotFoundError
 
         rest_traj: Trajectory[T_Noise, T_State] = Trajectory.init_from_metadata(
-            metadata, fmodel_t, parameters, workdir, frozen
+            metadata, fmodel_t, traj_cfg, diag_configs, model_params, workdir, frozen
         )
 
         # Read in trajectory data
@@ -615,7 +616,10 @@ class Trajectory(Generic[T_Noise, T_State]):
             traj_id=rst_traj.id(),
             weight=weight,
             fmodel_t=fmodel_t,
-            parameters=from_traj._parameters_full,
+            traj_cfg=from_traj._traj_cfg,
+            diag_configs=from_traj._diag_configs,
+            model_params=from_traj._model_params,
+            deterministic=from_traj._deterministic,
             workdir=new_workdir,
         )
 
@@ -724,7 +728,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             write_metadata_json: an optional boolean to also write the metadata json dict
         """
         root = ET.Element(self.idstr())
-        root.append(dict_to_xml("params", self._parameters_full["trajectory"]))
+        root.append(dict_to_xml("params", asdict(self._traj_cfg)))
         snaps_xml = ET.SubElement(root, "snapshots")
         for k in range(len(self._snaps)):
             snaps_xml.append(
@@ -774,7 +778,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         self._score_max = new_score_max
         if self._fmodel:
             self._has_converged = self._fmodel.check_convergence(
-                self._step, self._t_cur, self._score_max, self._convergedVal
+                self._step, self._t_cur, self._score_max, self._traj_cfg.targetscore
             )
             if self._has_converged:
                 self._has_terminated = True
@@ -891,6 +895,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             "score_max": float(self._score_max),
             "length": self.get_length(),
             "nstep_compute": self._computed_steps,
+            "deterministic": self._deterministic,
             "branching_history": self._branching_history,
         }
 
@@ -924,6 +929,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             "score_max": float(mstr["score_max"]),
             "length": int(mstr["length"]),
             "nstep_compute": int(mstr["nstep_compute"]),
+            "deterministic": mstr["deterministic"],
             "branching_history": cast("list[int]", mstr["branching_history"]),
         }
 

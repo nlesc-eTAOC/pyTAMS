@@ -15,11 +15,12 @@ from dask.distributed import WorkerPlugin
 from dask_jobqueue import SLURMCluster
 from typing_extensions import Self
 from pytams.utils import setup_logger
-from pytams.worker import worker_async
+from .worker import worker_async
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from dask.distributed import Worker
+    from .config import RunnerConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -27,9 +28,10 @@ _logger = logging.getLogger(__name__)
 class WorkerLoggerPlugin(WorkerPlugin):
     """A plugin to configure logging on each worker."""
 
-    def __init__(self, params: dict[Any, Any]) -> None:
+    def __init__(self, loglevel: str, logfile: str | None) -> None:
         """Init function pass in the params dict."""
-        self._params = params
+        self._loglevel = loglevel
+        self._logfile = logfile
 
     def setup(self, worker: Worker) -> None:
         """Configure logging on the worker.
@@ -39,7 +41,7 @@ class WorkerLoggerPlugin(WorkerPlugin):
         """
         # Configure logging on each worker
         _ = worker
-        setup_logger(self._params)
+        setup_logger(self._loglevel, self._logfile)
 
 
 class RunnerError(Exception):
@@ -52,9 +54,11 @@ class BaseRunner(metaclass=ABCMeta):
     @abstractmethod
     def __init__(
         self,
-        params: dict,
-        sync_wk: Callable,
+        runner_cfg: RunnerConfig,
+        worker_fn: Callable,
         n_workers: int = 1,
+        loglevel: str = "INFO",
+        logfile: str | None = None,
     ):
         """A dummy init method."""
 
@@ -89,7 +93,6 @@ class AsIORunner(BaseRunner):
     back into result queue.
 
     Attributes:
-        _params: a copy of the parameters dict
         _queue: an asyncio.Queue() to place the tasks in
         _rqueue: an asyncio.Queue() where the results are returned
         _n_workers: the number of workers in the runner
@@ -102,23 +105,29 @@ class AsIORunner(BaseRunner):
 
     def __init__(
         self,
-        params: dict,
-        sync_wk: Callable,
+        runner_cfg: RunnerConfig,
+        worker_fn: Callable,
         n_workers: int = 1,
+        loglevel: str = "INFO",
+        logfile: str | None = None,
     ):
-        """Init the task runner.
+        """Init the asyncio task runner.
 
         Args:
-            params: a dictionary of parameters
-            sync_wk: a synchronous worker function
+            runner_cfg: a RunnerConfig dataclass
+            worker_fn: a synchronous worker function
             async_wk: an asynchronous worker function
             n_workers: number of workers
+            loglevel: optional logging level
+            logfile: optional logging file
         """
-        self._params = params
+        _ = runner_cfg
+        self._loglevel = loglevel
+        self._logfile = logfile
         self._queue: asyncio.Queue[Any] = asyncio.Queue()
         self._rqueue: asyncio.Queue[Any] = asyncio.Queue()
         self._n_workers: int = n_workers
-        self._sync_worker = sync_wk
+        self._sync_worker = worker_fn
         self._async_worker = worker_async
         self._loop: asyncio.AbstractEventLoop | None = None
         self._executor: concurrent.futures.Executor | None = None
@@ -161,7 +170,7 @@ class AsIORunner(BaseRunner):
         """
         if not self._workers:
             self._executor = concurrent.futures.ProcessPoolExecutor(
-                max_workers=self._n_workers, initializer=setup_logger, initargs=(self._params,)
+                max_workers=self._n_workers, initializer=setup_logger, initargs=(self._loglevel, self._logfile)
             )
             self._workers = [
                 asyncio.create_task(self._async_worker(self._queue, self._rqueue, self._executor))
@@ -226,28 +235,34 @@ class DaskRunner(BaseRunner):
 
     def __init__(
         self,
-        params: dict,
-        sync_wk: Callable,
+        runner_cfg: RunnerConfig,
+        worker_fn: Callable,
         n_workers: int = 1,
+        loglevel: str = "INFO",
+        logfile: str | None = None,
     ):
         """Start the Dask cluster and client.
 
         Args:
-            params: a dictionary with params
-            sync_wk: a synchronous worker function
+            runner_cfg: a RunnerConfig dataclass
+            worker_fn: a synchronous worker function
             async_wk: an asynchronous worker function
             n_workers: number of workers
+            loglevel: optional logging level
+            logfile: optional logging file
         """
-        dask_dict = params.get("dask", {})
-        self.dask_backend = dask_dict.get("backend", "local")
+        dask_cfg = runner_cfg.dask_config
         self._n_workers: int = n_workers
-        self._sync_worker = sync_wk
+        self._sync_worker = worker_fn
         self._tlist: list[Any] = []
-        if self.dask_backend == "local":
+
+        backend = dask_cfg.backend
+        if backend == "local":
             self.client = Client(threads_per_worker=1, n_workers=self._n_workers)
             self.cluster = None
-        elif self.dask_backend == "slurm":
-            self.slurm_config_file = dask_dict.get("slurm_config_file", None)
+
+        elif backend == "slurm":
+            self.slurm_config_file = dask_cfg.slurm_config_file
             if self.slurm_config_file:
                 if not Path(self.slurm_config_file).exists():
                     err_msg = f"Specified slurm_config_file do not exists: {self.slurm_config_file}"
@@ -261,23 +276,18 @@ class DaskRunner(BaseRunner):
                 )
                 self.cluster = SLURMCluster()
             else:
-                self.dask_queue = dask_dict.get("queue", "regular")
-                self.dask_ntasks = dask_dict.get("ntasks_per_job", 1)
-                self.dask_ntasks_per_node = dask_dict.get("ntasks_per_node", self.dask_ntasks)
-                self.dask_nworker_ncore = dask_dict.get("ncores_per_worker", 1)
-                self.dask_prologue = dask_dict.get("job_prologue", [])
-                self.dask_walltime = dask_dict.get("worker_walltime", "04:00:00")
+                ntasks_per_node = dask_cfg.ntasks_per_node if dask_cfg.ntasks_per_node > 0 else dask_cfg.ntasks_per_job
                 self.cluster = SLURMCluster(
-                    queue=self.dask_queue,
-                    cores=self.dask_nworker_ncore,
+                    queue=dask_cfg.queue,
+                    cores=dask_cfg.ncores_per_worker,
                     memory="144GB",
-                    walltime=self.dask_walltime,
+                    walltime=dask_cfg.worker_walltime,
                     processes=1,
                     interface="ib0",
-                    job_script_prologue=self.dask_prologue,
+                    job_script_prologue=dask_cfg.job_prologue,
                     job_extra_directives=[
-                        f"--ntasks={self.dask_ntasks}",
-                        f"--tasks-per-node={self.dask_ntasks_per_node}",
+                        f"--ntasks={dask_cfg.ntasks_per_job}",
+                        f"--tasks-per-node={ntasks_per_node}",
                         "--exclusive",
                     ],
                     job_directives_skip=["--cpus-per-task=", "--mem"],
@@ -285,12 +295,12 @@ class DaskRunner(BaseRunner):
             self.cluster.scale(jobs=self._n_workers)
             self.client = Client(self.cluster)
         else:
-            err_msg = f"Unknown [dask] backend: {self.dask_backend}"
+            err_msg = f"Unknown [dask] backend: {backend}"
             _logger.exception(err_msg)
             raise RunnerError(err_msg)
 
         # Setup the worker logging
-        self.client.register_plugin(WorkerLoggerPlugin(params))
+        self.client.register_plugin(WorkerLoggerPlugin(loglevel, logfile))
 
     def __enter__(self) -> Self:
         """To enable use of with."""
@@ -337,16 +347,42 @@ class DaskRunner(BaseRunner):
         return self._n_workers
 
 
-def get_runner_type(params: dict) -> type[BaseRunner]:
-    """Create an engine from parameters."""
-    runner_map = {
-        "dask": DaskRunner,
-        "asyncio": AsIORunner,
-    }
-    runner_str = params.get("runner", {}).get("type").lower()
-    if runner_str not in runner_map:
-        err_msg = f"Unable to get {runner_str} runner."
-        _logger.exception(err_msg)
-        raise RunnerError(err_msg)
+def make_runner(
+    runner_cfg: RunnerConfig,
+    worker_fn: Callable,
+    is_pool_worker: bool = False,
+    loglevel: str = "INFO",
+    logfile: str | None = None,
+) -> BaseRunner:
+    """Factory that instantiates a configured runner.
 
-    return runner_map[runner_str]
+    Args:
+        runner_cfg: a config mapping for the runner
+        worker_fn: a worker function
+        is_pool_worker: True if the worker is a pool worker
+        loglevel: logging level
+        logfile: logging file
+    """
+    runner_type = runner_cfg.type.lower()
+
+    runner_map: dict[str, type[BaseRunner]] = {
+        "asyncio": AsIORunner,
+        "dask": DaskRunner,
+    }
+
+    n_workers = runner_cfg.nworkers_init if is_pool_worker else runner_cfg.nworkers_iter
+
+    if runner_type not in runner_map:
+        err_msg = f"Unknown runner type: {runner_type}"
+        _logger.exception(err_msg)
+        raise ValueError(err_msg)
+
+    runner_cls = runner_map[runner_type]
+
+    return runner_cls(
+        runner_cfg=runner_cfg,
+        worker_fn=worker_fn,
+        n_workers=n_workers,
+        loglevel=loglevel,
+        logfile=logfile,
+    )

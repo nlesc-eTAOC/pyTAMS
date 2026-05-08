@@ -46,6 +46,7 @@ dev = [
     "pytest-dependency",
     "ruff",
     "mypy",
+    "types-PyYAML",
     "sphinx",
     "furo",
     "sphinx-autoapi",
@@ -72,6 +73,11 @@ exec = [
 tams_init_model = "pytams.bin:tams_template_model"
 tams_check = "pytams.bin:tams_alive"
 tams_run = "pytams.bin:tams_run"
+tams_help = "pytams.bin:tams_input_help"
+
+[project.entry-points."pytams.strategies"]
+ams = "pytams.strategies.ams"
+montecarlo = "pytams.strategies.montecarlo"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -97,7 +103,7 @@ output-format = "concise"
 extend-exclude = ["docs", "examples", "tests"]
 
 [tool.ruff.lint.pylint]
-max-args = 8
+max-args = 10
 
 [tool.ruff.lint]
 # Allow unused variables when underscore-prefixed.

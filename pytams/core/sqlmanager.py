@@ -6,7 +6,6 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
-from sqlalchemy import MetaData
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,6 +13,8 @@ from sqlalchemy.orm import sessionmaker
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from sqlalchemy import MetaData
+    from sqlalchemy.engine import Engine
 
 _logger = logging.getLogger(__name__)
 
@@ -75,6 +76,14 @@ class BaseSQLManager:
             the database name, empty string if in-memory
         """
         return self._file_name
+
+    def engine(self) -> Engine:
+        """Access the DB engine.
+
+        Returns:
+            the database engine
+        """
+        return self._engine
 
     def close(self) -> None:
         """Dispose of the engine and clear connections."""
