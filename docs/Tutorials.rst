@@ -475,7 +475,7 @@ Bi-channel problem
 ------------------
 
 In this tutorial, you will explore transitions in the bi-channel/triple wells, two-dimensional
-dynamical system. This system is regularly used for testing rare event algorithm, see for instance
+dynamical system. This system is regularly used for testing rare event algorithms, see for instance
 `Brehier et al. <https://www.jstor.org/stable/44249972>`_. In contrast with the 1D double well tutorial,
 we will use the implementation already available in `pyREVS` examples and focus on using the algorithm
 to explore the system behavior.
@@ -547,14 +547,14 @@ parameters.
 
 .. code-block:: python
 
-    def _init_model(self, m_id: int, params: dict[typing.Any, typing.Any]) -> None:
-    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
+    def _init_model(self, m_id: int, params: dict[str, typing.Any]) -> None:
+    def _advance(self, step: int, time: float, dt: float, noise: T_Noise, need_end_state: bool) -> float:
     def potential(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
     def drift(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
-    def get_current_state(self) -> Any:
-    def set_current_state(self, state: Any) -> None:
+    def get_current_state(self) -> T_State:
+    def set_current_state(self, state: T_State) -> None:
     def score(self) -> float:
-    def make_noise(self) -> Any:
+    def make_noise(self) -> T_Noise:
 
 The state is a Numpy array with two elements and the noise dimension is also :math:`m=2`.
 The model also uses an Euler-Murayama scheme to advance in time and the score function is the
@@ -582,14 +582,19 @@ Let's now focus on running TAMS. As mentioned above, this case features two path
 from :math:`\mathcal{A} = X_A = (x_A,y_A) = (-1,0)` to :math:`\mathcal{B} = X_B = (x_B,y_B) = (1,0)`. We will start
 with running TAMS using :math:`N=32` and up to :math:`J=1000` iteration. The time horizon is
 set to :math:`T_a = 20` and the stopping criterion delimiting :math:`\mathcal{B}` is :math:`\xi_b = 1.05`.
-All of these parameter can be set in the ``input.toml`` file:
+All of these parameter can be set in the ``input.toml`` file (differs from default in the repository !):
 
 
 .. code-block:: python
 
-    [tams]
+    [ams]
     ntrajectories = 32
     nsplititer = 1000
+
+    [sampler]
+    strategy = "ams"
+
+    [runtime]
     loglevel = "WARNING"
 
     [trajectory]
@@ -607,14 +612,14 @@ All of these parameter can be set in the ``input.toml`` file:
 
 Note that the log level here was decreased to ``WARNING`` in order to minimize standard output clutering
 when running TAMS multiple times. Let's now look at the short script provided for running TAMS with the
-bi-channel model ``tams_bichannel.py``:
+bi-channel model ``sample_bichannel.py``:
 
 .. code-block:: python
 
   import numpy as np           
   from bichannel2d import BiChannel2D
   from bichannel2d import plot_in_landscape
-  from pytams.tams import TAMS 
+  from pytams.sampler import build_sampler
   
   if __name__ == "__main__":   
       # For convenience
@@ -628,12 +633,13 @@ bi-channel model ``tams_bichannel.py``:
 
       # Run the model several times
       for i in range(K):
-          # Initialize the algorithm object
-          tams = TAMS(fmodel_t=fmodel)
+          # Initialize the sampler
+          sampler = build_sampler(fmodel_t=fmodel)
 
-          # Run TAMS and report
+          # Sample and report
           try:
-              probability = tams.compute_probability()
+              sampler.run()
+              probability = sampler.database.get_event_probability()
           except RuntimeError as e:
               print(e) # noqa: T201
               continue
@@ -641,7 +647,7 @@ bi-channel model ``tams_bichannel.py``:
           print(f"[{i}] : {probability}") # noqa: T201
 
           if plot_ensemble:
-              plot_in_landscape(fmodel, tams.get_database(), i)
+              plot_in_landscape(fmodel, sampler.database, i)
 
       print(f"Averaged transition P_K: {probabilities.mean()}, RE: {np.sqrt(probabilities.var()) / probabilities.mean()}")  # noqa : T201  
 
@@ -652,7 +658,7 @@ Let's run the script:
 
 .. code-block:: shell
 
-   python tams_bichannel.py
+   python sample_bichannel.py
 
 
 Depending on the platform you are using, it will take a few minutes to run.
@@ -755,19 +761,19 @@ the transition probability estimator quality.
 
    : Evolution of :math:`P_K` with :math:`K` repetitions of the TAMS algorithm.
 
-Accessing the TAMS database
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Accessing the database
+~~~~~~~~~~~~~~~~~~~~~~
 
-So far, we have performed multiple runs of TAMS but have had limited access to the welth of data
+So far, we have performed multiple runs of pyREVS but have had limited access to the welth of data
 generated during the course of the algorithm. Looking back into the previous section, we have
-used TAMS data to visualize the trajectory ensemble on the potential landscape.
-The TAMS database object can be accessed during or after a TAMS run using:
+used the data to visualize the trajectory ensemble on the potential landscape.
+The `pyREVS` database object can be accessed during or after a sampling run using:
 
 .. code-block:: python
 
-    tdb = tams.get_database()
+    tdb = sampler.database
 
-where ``tams`` is an instance of the TAMS object. In the example script used above, the database
+where ``sampler`` is an instance of the Sampler object. In the example script used above, the database
 object is send to the function constructing the plot: the ``plot_in_landscape`` function
 in ``bichannel2d.py``. The few lines of code used to access the data in the database are reported
 below:
@@ -780,11 +786,12 @@ below:
        state_y = np.array([s[1][1] for s in t.get_state_list()])
 
 Here we loop on the list of `active` trajectories ``tdb.traj_list()``, i.e. the ensemble
-of :math:`N` trajectories active at the current iteration of the algorithm. We then used Python
+of :math:`N` trajectories active at the current iteration of the algorithm. Note that when
+using a Monte-Carlo sampling strategy, only active trajectory are available. We then used Python
 list comprehension to go through the trajectory and extract a Numpy array of the system state
 components :math:`x` and :math:`y`.
 
-In our previous TAMS runs, we could no longer access the database after exiting the script
+In our previous sampling runs, we could no longer access the database after exiting the script
 since the data was not saved to disk. Let's now run one more time the algorithm, allowing to
 create a database on disk. To do so, let's add the appropriate keyword to the input file
 ``input.toml``:
@@ -796,7 +803,7 @@ create a database on disk. To do so, let's add the appropriate keyword to the in
    path = "./db_tams_bichannel.tdb"
 
 
-,update the ``tams_bichannel.py`` script to only run once by changing the value of :math:`K`:
+, update the ``sample_bichannel.py`` script to only run once by changing the value of :math:`K`:
 
 
 .. code-block:: python
@@ -808,7 +815,7 @@ and run the script again:
 
 .. code-block:: shell
 
-   python tams_bichannel.py
+   python sample_bichannel.py
 
 Note that saving the database to disk incurs an overhead, which is not negligeable for
 such a small model. Looking into your run folder should now show that a TAMS database
@@ -824,13 +831,13 @@ In a new Python file (e.g. ``load_database.py``):
 
 .. code-block:: python
 
-  from pytams.database import Database
+  from pytams.database import load_database
   from pathlib import Path
 
 
   if __name__ == "__main__":   
       # Load the database from disk
-      tdb = Database.load(Path("./db_tams_bichannel.tdb"))
+      tdb = load_database(Path("./db_tams_bichannel.tdb"))
       tdb.load_data(load_archived_trajectories=True)
 
       # Show the ensemble scores at the last iteration
@@ -838,7 +845,7 @@ In a new Python file (e.g. ``load_database.py``):
 
       # Show the evolution of the ensemble span over
       # the course of TAMS iterations
-      tdb.plot_min_max_span("./ScoreMinMax.png")
+      tdb.extension().plot_min_max_span("./ScoreMinMax.png")
 
       # Go through the active trajectories
       # and display the max score
@@ -847,10 +854,10 @@ In a new Python file (e.g. ``load_database.py``):
 
       # Get the active trajectory list at initial iteration
       # and display the max score
-      for t in tdb.get_trajectory_active_at_k(0):
+      for t in tdb.extension().get_trajectory_active_at_k(0):
           print(f"Trajectory {t.id()} initial max score: {t.score_max()}")
 
-The first line above instantiate the ``Database`` object, but only load metadata from disk. Only data such
+The first line above instantiates the ``Database`` object, but only load metadata from disk. Only data such
 as the number of trajectories, the current index of the TAMS iteration and some trajectories metadata
 (did it converged, what is the maximum of the score function, ...) are available.
 The ``load_data`` function effectively load the entire content of the trajectories in memory. By default
@@ -859,13 +866,18 @@ activating the ``load_archived_trajectories`` flag, we trigger loading the full 
 including the ones discarded during the TAMS iterations.
 A couple of helper functions allow to asses the state of the ensemble by plotting the score functions
 as well as the evolution of the ensemble over the course of the iterations.
-
+One important point to note is the `pyREVS` database has a core component that contains the active and
+possibly archived trajectories. To access data from the ensemble, you can call `tdb.<function>`. For
+data associated with a specific sampling strategy (e.g. TAMS), you need to access the database extension
+with `tdb.extensio().<function>`. In the example above, we plot the ensemble score function through the
+core database function call `tdb.plot_score_functions`, but to plot the evolution of the ensemble over
+the course of the TAMS iterations, we need to use the extension `tdb.extension().plot_min_max_span`.
 
 This is all for this tutorial. We have covered the following points:
 
 - Exploring one of `pyREVS` built-in example
 - Running TAMS multiple times in order to get a better transition probability estimator and uncertainty
-- Accessing, saving and loading the TAMS database
+- Accessing, saving and loading the `pyREVS` database
 
 To go further, modify the change the value of the inverse temperature :math:`\beta` parameter
 and see how that affect the probability of transitioning through the `upper` and `lower` channels,
