@@ -46,14 +46,14 @@ def parse_cl_args(a_args: list[str] | None = None) -> argparse.Namespace:
 def tams_alive() -> None:
     """Check pyTAMS."""
     try:
-        print(f"== pyTAMS v{version('pytams')} :: a rare-event finder tool ==")  # noqa: T201
+        print(f"== pyREVS v{version('pytams')} :: a rare-event finder tool ==")  # noqa: T201
     except PackageNotFoundError:
         print("Package version not found")  # noqa: T201
 
 
 def tams_input_help() -> None:
     """Print a help message for a dataclass."""
-    print("== pyTAMS input file help ==")  # noqa: T201
+    print("== pyREVS input file help ==")  # noqa: T201
     SystemConfig.print_config_help()
 
 

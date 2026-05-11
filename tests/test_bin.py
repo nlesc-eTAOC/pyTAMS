@@ -16,7 +16,7 @@ def test_tams_alive(capsys: pytest.CaptureFixture[str]):
 def test_tams_help(capsys: pytest.CaptureFixture[str]):
     """Test pyREVS help function."""
     tams_input_help()
-    assert "pyTAMS input file help" in capsys.readouterr().out
+    assert "pyREVS input file help" in capsys.readouterr().out
 
 def test_tams_template_model():
     """Test TAMS new model init function."""
