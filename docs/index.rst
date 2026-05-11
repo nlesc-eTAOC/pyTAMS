@@ -15,8 +15,10 @@ where integrating the model can take hours to days on supercomputers and using a
 approach is impractical.
 
 .. warning::
-   PR#173 introduced significant changes to the source code and API
-   that are not yet fully documented.
+   PR#173 introduced significant changes to the source code and API, as well
+   as the scope of the package. The documentation has been mostly updated,
+   but might still refers solely to TAMS or pyTAMS in some locations. Please
+   report any issues to the `GitHub repository <https://github.com/nlesc-eTAOC/pyTAMS>`_
 
 
 
@@ -47,7 +49,7 @@ a simple problem:
 .. code-block:: shell
 
     cd pyTAMS/examples/DoubleWell2D
-    python tams_dw2dim.py
+    python sample_dw2dim.py
 
 otherwise, please read through this documentation and in particular follow the
 :ref:`tutorials Section <sec:tutorials>` to see how to implement your own model within `pyTAMS`.
