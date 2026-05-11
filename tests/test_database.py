@@ -7,6 +7,7 @@ import toml
 from pytams.core import Config
 from pytams.strategies.ams.extension import AMSDatabaseExtension
 from pytams.database import Database
+from pytams.database import load_database
 from pytams.utils.dbutils import prepare_database_path
 from pytams.sampler import build_sampler
 from tests.dwmodel import DoubleWellModel
@@ -213,24 +214,18 @@ def test_explore_tdb():
 @pytest.mark.dependency(depends=["genDB"])
 def test_explore_minmax_tdb():
     """Test loading the TDB."""
-    tdb = Database.load(Path("dwTest.tdb"))
-    tdb.load_data()
-    amsdb = AMSDatabaseExtension()
-    amsdb.initialize_from_database(tdb)
-    amsdb.plot_min_max_span(fname="test_minmax.png")
+    tdb = load_database(Path("dwTest.tdb"))
+    tdb.extension().plot_min_max_span(fname="test_minmax.png")
     Path("./test_minmax.png").unlink(missing_ok=False)
 
 
 @pytest.mark.dependency(depends=["genDB"])
 def test_explore_active_at_k():
     """Test getting the initial active set."""
-    tdb = Database.load(Path("dwTest.tdb"))
+    tdb = load_database(Path("dwTest.tdb"))
     tdb.load_data(load_archived_trajectories=True)
-    amsdb = AMSDatabaseExtension()
-    amsdb.initialize_from_database(tdb)
-    act_trajs = amsdb.get_trajectory_active_at_k(0)
+    act_trajs = tdb.extension().get_trajectory_active_at_k(0)
     assert len(act_trajs) == 50
     assert act_trajs[42].idstr() == "traj000042_0000"
     del tdb
-    del amsdb
     shutil.rmtree("dwTest.tdb")
