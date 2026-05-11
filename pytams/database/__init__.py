@@ -1,3 +1,4 @@
+from .bootstrap import load_database
 from .config import DatabaseConfig
 from .database import Database
 from .database import DatabaseCoreSpec
@@ -8,4 +9,5 @@ __all__ = [
     "DatabaseConfig",
     "DatabaseCoreSpec",
     "StrategyDatabaseExtension",
+    "load_database",
 ]

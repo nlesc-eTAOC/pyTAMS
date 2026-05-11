@@ -7,11 +7,11 @@ Tutorials
 
 This set of tutorials is designed to guide the users through the process
 of encapsulating their stochastic dynamical system into the framework
-of `pyTAMS` in order to smoothly leverage the capabilities of rare
+of `pyREVS` in order to smoothly leverage the capabilities of rare
 event techniques.
 
 With the exception of a few example cases shipped with the code,
-`pyTAMS` will always require the user to formulate her/his problem in
+`pyREVS` will always require the user to formulate her/his problem in
 as little as a few dozens of lines of code, to hundreds if the complexity
 of the model warrants it.
 
@@ -20,7 +20,7 @@ of the model warrants it.
 
 In this first tutorial, our aim is to implement the 1D double well model
 already presented at the end of the :ref:`Theory Section <ssec:theory_1ddw>`. This model
-is not provided out-of-the-box in `pyTAMS` and will be written from scratch.
+is not provided out-of-the-box in `pyREVS` and will be written from scratch.
 
 Background
 ~~~~~~~~~~
@@ -39,13 +39,13 @@ where :math:`f(X_t) = - \nabla V(X_t)` is derived from a symmetric potential:
    V(x) = \frac{1}{4}x^4 - \frac{1}{2}x^2,
 
 :math:`X_t \in \mathbb{R}` is our Markov process, :math:`\epsilon` is the noise scaling parameter and
-:math:`dW_t` a 1D Wiener process. We will use a simple Euler-Maruyama method to advance the system
-in time.
+:math:`dW_t` a 1D Wiener process. A simple Euler-Maruyama method to advance the system
+in time. In this tutorial, we will try Monte-Carlo and TAMS sampling strategies.
 
 Getting set up
 ~~~~~~~~~~~~~~
 
-If you haven't done so yet, let's get the latest version of `pyTAMS` installed on your system.
+If you haven't done so yet, let's get the latest version of `pyREVS` installed on your system.
 In your favorite environment manager, simply use:
 
 .. code-block:: shell
@@ -53,59 +53,59 @@ In your favorite environment manager, simply use:
    pip install pytams
    tams_check
 
-The second line check that `pyTAMS` is effectively installed and should return (with proper version numbers):
+The second line check that `pyREVS` is effectively installed and should return (with proper version numbers):
 
 .. code-block:: shell
 
-   == pyTAMS vX.Y.Z :: a rare-event finder tool ==
+   == pyREVS vX.Y.Z :: a rare-event finder tool ==
 
 Now create a new folder for us to work in:
 
 .. code-block:: shell
 
-   mkdir tams_1d_doublewell
-   cd tams_1d_doublewell
+   mkdir pyrevs_1d_doublewell
+   cd pyrevs_1d_doublewell
 
 Writing the forward model
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Our first task is to implement the SDE provided above in a class that can interact
-with `pyTAMS`. As mentioned in the :ref:`Implementation Section <sec:implementation>`,
+with `pyREVS`. As mentioned in the :ref:`Implementation Section <sec:implementation>`,
 one needs to wrap all the physics of the stochastic model into an Abstract Base Class (ABC).
 
-To make it easier to start this process from scratch, `pyTAMS` provides a helper function:
+To make it easier to start this process from scratch, `pyREVS` provides a helper function:
 
 .. code-block:: shell
 
-    tams_init_model -n doublewell1D
+    pyrevs_init_model -n doublewell1D
 
 
 A local ``doublewell1D.py`` file is created, with a skeleton of your new ``doublewell1D``
-class, inheriting from the `pyTAMS` required ABC and providing the minimal set of methods (functions)
-that are required to run TAMS:
+class, inheriting from the `pyREVS` required ABC and providing the minimal set of methods (functions)
+that are required to run sampling and transition probability estimation:
 
 .. code-block:: python
 
-    def _init_model(self, m_id: int, params: dict[typing.Any, typing.Any]) -> None:
-    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
-    def get_current_state(self) -> Any:
-    def set_current_state(self, state: Any) -> None:
+    def _init_model(self, m_id: int, params: dict[str, typing.Any]) -> None:
+    def _advance(self, step: int, time: float, dt: float, noise: T_Noise, need_end_state: bool) -> float:
+    def get_current_state(self) -> T_State:
+    def set_current_state(self, state: T_State) -> None:
     def score(self) -> float:
-    def make_noise(self) -> Any:
+    def make_noise(self) -> T_Noise:
 
 We will now have to properly fill these six functions. Let's start with ``_init_model`` function,
 which is called by the superclass initializer and allow to initialize model-specific parameters:
 
 .. code-block:: python
 
-    def _init_model(self, m_id: int, params: dict[typing.Any, typing.Any]) -> None:
+    def _init_model(self, m_id: int, params: dict[str, typing.Any]) -> None:
         """ ... """
         # Initialize the model state (a single float here)
         # We always start at -1.0
         self._state = -1.0
 
         # Parse an amplitude factor from the input file
-        self._epsilon = params.get("model",{}).get("epsilon",0.02)
+        self._epsilon = params.get("epsilon",0.02)
 
         # Let's initialize the Random Number Generator (RNG) to use around
         self._rng = np.random.default_rng()
@@ -123,11 +123,11 @@ Let's look at the getter and setter of the model state:
 
 .. code-block:: python
 
-    def get_current_state(self) -> Any:
+    def get_current_state(self) -> T_State:
         """ ... """
         return self._state
 
-    def set_current_state(self, state: Any) -> None:
+    def set_current_state(self, state: T_State) -> None:
         """ ... """
         self._state = state
 
@@ -136,7 +136,7 @@ function writes:
 
 .. code-block:: python
 
-    def make_noise(self) -> Any:
+    def make_noise(self) -> T_Noise:
         """ ... """
         return self._rng.standard_normal(1)[0]
 
@@ -174,7 +174,7 @@ update the model state, defining the drift function as another method of the cla
     return dt
 
 Note that it is important to use the incoming noise ``noise`` and not generate another
-noise within the advance function. This is because `pyTAMS` internally keep track of the
+noise within the advance function. This is because `pyREVS` internally keeps track of the
 noises provided to the advance function, caching them when the model state is sub-sampled for instance.
 Additionally, the advance function must return ``dt`` the actual time step size used by the model.
 For the current model, this is simply the same as the input parameter ``dt``, but some external
@@ -210,7 +210,7 @@ And that is pretty much all you need to have a functioning model class !
 Testing the model
 ~~~~~~~~~~~~~~~~~
 
-Before running TAMS, let's test the model integration within `pyTAMS` framework by running
+Before running the sampler, let's test the model integration within `pyREVS` framework by running
 a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the following:
 
 .. code-block:: python
@@ -218,7 +218,9 @@ a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the
     from pathlib import Path
     import toml
     import matplotlib.pyplot as plt
+    from pytams.core import Config
     from pytams.trajectory import Trajectory
+    from pytams.trajectory import TrajectoryConfig
     from doublewell1D import doublewell1D
 
     if __name__ == "__main__":
@@ -229,8 +231,13 @@ a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the
         with Path("input.toml").open("r") as f:
             input_params = toml.load(f)
 
+        # Setup parameters
+        cfg = Config(input_params)
+        tcfg = cfg.load(TrajectoryConfig)
+        model_params = cfg.section_dict("model")
+
         # Initialize a trajectory object
-        traj = Trajectory(0, 1.0, fmodel, input_params)
+        traj = Trajectory(0, 1.0, fmodel, traj_cfg=tcfg, model_params=model_params)
 
         # Advance the model
         traj.advance()
@@ -240,8 +247,8 @@ a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the
         plt.grid()
         plt.show()
 
-Note that when running TAMS directly, the user does not have to load the input file
-manually. We also need to initialize an input TOML file ``input.toml`` containing the trajectory
+Note that when running the sampler directly, the user does not have to load the input file
+manually and use Config. We also need to initialize an input TOML file ``input.toml`` containing the trajectory
 and model parameters (see :ref:`Usage Section <sec:usage>` for a complete list
 of input keys).
 
@@ -273,17 +280,17 @@ a different trajectory due to randomness).
    Score history for a single trajectory of the 1D double well model  
 
 Feel free to tweak the input parameters to see if you can trigger a transition ! We are
-all set to run TAMS.
+all set to perform our first sampling run.
 
-Running TAMS
-~~~~~~~~~~~~
+Sampling transitions
+~~~~~~~~~~~~~~~~~~~~
 
 Similarly to the short script we wrote above to run a single trajectory, let
-assemble a small script to run TAMS (e.g. in ``tams_dw1D.py``):
+assemble a small script to run the sampler (e.g. in ``sample_dw1D.py``):
 
 .. code-block:: python
 
-    from pytams.tams import TAMS
+    from pytams.sampler import build_sampler
     from doublewell1D import doublewell1D
 
     if __name__ == "__main__":
@@ -291,24 +298,23 @@ assemble a small script to run TAMS (e.g. in ``tams_dw1D.py``):
         fmodel = doublewell1D
 
         # Initialize the algorithm object
-        tams = TAMS(fmodel_t=fmodel)
+        sampler = build_sampler(fmodel_t=fmodel)
 
-        # Run TAMS and report
-        probability = tams.compute_probability()
-        print(f"TAMS converged with a transition probability: {probability}")
-
-        # Show the envolpe of the ensemble over the course
-        # of the algorithm
-        tams._tdb.plot_min_max_span("./doublewell1D_minmax.png")
+        # Sample and report
+        sampler.run()
+        probability = sampler.database.get_event_probability()
+        print(f"pyREVS transition probability: {probability}")
 
 We also need to update the input file with additional parameters relative
-to the algorithm parameters:
+to the algorithm parameters. We will start with a Monte-Carlo sampling approach.
 
 .. code-block:: python
 
-    [tams]
-    ntrajectories = 50
-    nsplititer = 500
+    [sampler]
+    strategy = "montecarlo"
+
+    [montecarlo]
+    ntrajectories = 200
 
     [trajectory]
     end_time = 10.0
@@ -320,20 +326,19 @@ to the algorithm parameters:
 
     [runner]
     type = "asyncio"
-    nworker_init=1
-    nworker_iter=1
+    nworkers_init=1
 
-With above input parameters, the TAMS ensemble will contain 50 members and the algorithm
-will proceed up to a total 500 selection/mutation events. The model is assumed to have
+With above input parameters, the Monte-Carlo ensemble will contain 200 members.
+The model is assumed to have
 transitioned if the score function exceeds :math:`\xi_b = 0.95`. We will run using the
-asyncio runner, with a single worker during the initial ensemble generation and the
-iterarion process. We have reduced the noise level to :math:`\epsilon = 0.04`.
+asyncio runner, with a single worker during the initial ensemble generation.
+We have reduced the noise level to :math:`\epsilon = 0.04`.
 
 Let's now run the script:
 
 .. code-block:: shell
 
-    python tams_dw1D.py
+    python sample_dw1D.py
 
 The algorithm should run for a few seconds, depending on your platform and how fast the
 model transitions. The default log level will report on the algorithm progress during the
@@ -342,24 +347,106 @@ entire process, and reports a final summary of the form:
 .. code-block:: shell
 
             ####################################################
-            # TAMS v0.0.6             trajectory database      #
+            # pyTAMS v1.0.0                                    #
             # Date: 2025-11-26 14:58:21.980592+00:00           #
             # Model: doublewell1D                              #
+            # Sampling strategy: montecarlo                    #
+            ####################################################
+            # Requested # of traj:                         200 #
+            # Number of 'Terminated' trajectories:         200 #
+            # Number of 'Converged' trajectories:            1 #
+            # Current total number of steps:            199792 #
+            ####################################################
+
+If you are lucky, maybe you will have one or two trajectories that transitioned and most
+likely none. Monte-Carlo sampling is included in `pyREVS` for testing purposes and can
+serve as a baseline for comparison with other sampling strategies, but it is very inefficient.
+
+Let's now switch to the TAMS algorithm. In the input file, update the `strategy` in the
+`sampler` section to ``ams`` (TAMS is a variant of AMS):
+
+.. code-block:: python
+
+    [sampler]
+    strategy = "ams"
+
+and replace the `montecarlo` section with an `ams` section:
+
+.. code-block:: python
+
+    [sampler]
+    strategy = "ams"
+
+    [ams]
+    ntrajectories = 50
+    nsplititer = 500
+    variant = "tams"
+
+With above input parameters, the TAMS ensemble will contain 50 members and the algorithm
+will proceed up to a total 500 selection/mutation events.
+
+
+Let's now run the script again:
+
+.. code-block:: shell
+
+    python sample_dw1D.py
+
+This time, the final summary should look something like:
+
+.. code-block:: shell
+
+            ####################################################
+            # pyTAMS v1.0.0                                    #
+            # Date: 2025-11-26 14:58:21.980592+00:00           #
+            # Model: doublewell1D                              #
+            # Sampling strategy: ams                           #
             ####################################################
             # Requested # of traj:                          50 #
-            # Requested # of splitting iter:               500 #
-            # Number of 'Ended' trajectories:               50 #
+            # Number of 'Terminated' trajectories:          50 #
             # Number of 'Converged' trajectories:           50 #
-            # Current splitting iter counter:              325 #
-            # Current total number of steps:            188618 #
-            # Transition probability:    0.0013906155192709678 #
+            # Current total number of steps:            159868 #
             ####################################################
 
-TAMS converged after 325 selection/mutation steps, time at which all 50 trajectories
-exceeded :math:`\xi_b` within the 10 time units window. A total of 188618 model steps
-were taken and the transition probability estimate is :math:`\hat{P} = 1.39e^{-3}`.
+TAMS converged after 296 selection/mutation steps, time at which all 50 trajectories
+exceeded :math:`\xi_b` within the 10 time units window. A total of 159868 model steps
+were taken and the transition probability estimate is :math:`\hat{P} = 2.46e^{-3}`.
+From a sampling perspective, it took 159868 model steps to obtain 50 trajectories that
+transitioned, where Monte-Carlo sampling required 199792 model steps for a single
+trajectory to transition. In order to compare the accuracy of the transition probability,
+we would need to run the TAMS algorithm several times.
 
-In addition, the script above access the TAMS database to show the history of the
+Finally, let's update the sample script to extract more information from the sampling
+run:
+
+.. code-block:: python
+
+    from pytams.sampler import build_sampler
+    from doublewell1D import doublewell1D
+
+    if __name__ == "__main__":
+        # For convenience
+        fmodel = doublewell1D
+
+        # Initialize the algorithm object
+        sampler = build_sampler(fmodel_t=fmodel)
+
+        # Sample and report
+        sampler.run()
+        probability = sampler.database.get_event_probability()
+        print(f"pyREVS transition probability: {probability}")
+
+        # Extract the envelope of the ensemble score function
+        sampler.database.extension().plot_min_max_span("./doublewell1D_minmax.png")
+
+and run the script again:
+
+.. code-block:: shell
+
+    python sample_dw1D.py
+
+
+The updated script above access the `pyREVS` database to show the history of the
 ensemble score functions span (the span of :math:`\mathcal{Q}_{tr}`).
 
 .. figure:: images/minmax_doublewell1D.png
@@ -374,23 +461,23 @@ but many more iterations are needed for the entire ensemble to transition.
 
 This is all for this tutorial. We have covered the following points:
 
-- Getting `pyTAMS`
-- Going from a pen-and-paper SDE to a practical implementation ready for `pyTAMS`
+- Getting `pyREVS`
+- Going from a pen-and-paper SDE to a practical implementation ready for `pyREVS`
 - Testing the model on a single, isolated trajectory
-- Running TAMS
+- Running several sampling strategies
 
-To go further, modify the ``tams_dw1D.py`` script to run TAMS :math:`K` times and
+To go further, modify the ``sample_dw1D.py`` script to run TAMS :math:`K` times and
 provide a better estimate of the transition probability :math:`\overline{P}_K`, as well as
 its relative error. What happens when :math:`\epsilon` is reduced? Can you trigger saving
-the TAMS database to disk?
+the `pyREVS` database to disk?
 
 Bi-channel problem
 ------------------
 
 In this tutorial, you will explore transitions in the bi-channel/triple wells, two-dimensional
-dynamical system. This system is regularly used for testing rare event algorithm, see for instance
+dynamical system. This system is regularly used for testing rare event algorithms, see for instance
 `Brehier et al. <https://www.jstor.org/stable/44249972>`_. In contrast with the 1D double well tutorial,
-we will use the implementation already available in `pyTAMS` examples and focus on using the algorithm
+we will use the implementation already available in `pyREVS` examples and focus on using the algorithm
 to explore the system behavior.
 
 Background
@@ -423,7 +510,7 @@ point.
 Getting set up
 ~~~~~~~~~~~~~~
 
-If you haven't done so yet, let's get `pyTAMS` installed on your system.
+If you haven't done so yet, let's get `pyREVS` installed on your system.
 In order to have access to the example suite, you will need to install the package from sources.
 
 .. code-block:: shell
@@ -433,17 +520,17 @@ In order to have access to the example suite, you will need to install the packa
    pip install -e .
    tams_check
 
-The last line check that `pyTAMS` is effectively installed and should return (with proper version numbers):
+The last line check that `pyREVS` is effectively installed and should return (with proper version numbers):
 
 .. code-block:: shell
 
-   == pyTAMS vX.Y.Z :: a rare-event finder tool ==
+   == pyREVS vX.Y.Z :: a rare-event finder tool ==
 
 Move into the example folder
 
 .. code-block:: shell
 
-   cd pyTAMS/examples/BiChannel2D
+   cd pyREVS/examples/BiChannel2D
 
 
 The Forward Model
@@ -451,7 +538,7 @@ The Forward Model
 
 We will not have to modify the forward model in this tutorial, but it is still interesting
 to have a look at the content of the ``bichannel2d.py`` file. A quick check of the methods
-defined for this model reveals that all the required `@abstractmethod` from the `pyTAMS` ABC are
+defined for this model reveals that all the required `@abstractmethod` from the `pyREVS` ABC are
 provided with a concrete implementations (see Tutorial on 1D double well for more details
 on this point).
 
@@ -460,14 +547,14 @@ parameters.
 
 .. code-block:: python
 
-    def _init_model(self, m_id: int, params: dict[typing.Any, typing.Any]) -> None:
-    def _advance(self, step: int, time: float, dt: float, noise: Any, need_end_state: bool) -> float:
+    def _init_model(self, m_id: int, params: dict[str, typing.Any]) -> None:
+    def _advance(self, step: int, time: float, dt: float, noise: T_Noise, need_end_state: bool) -> float:
     def potential(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
     def drift(cls, x: npt.NDArray[np.number]) -> npt.NDArray[np.number]:
-    def get_current_state(self) -> Any:
-    def set_current_state(self, state: Any) -> None:
+    def get_current_state(self) -> T_State:
+    def set_current_state(self, state: T_State) -> None:
     def score(self) -> float:
-    def make_noise(self) -> Any:
+    def make_noise(self) -> T_Noise:
 
 The state is a Numpy array with two elements and the noise dimension is also :math:`m=2`.
 The model also uses an Euler-Murayama scheme to advance in time and the score function is the
@@ -495,14 +582,19 @@ Let's now focus on running TAMS. As mentioned above, this case features two path
 from :math:`\mathcal{A} = X_A = (x_A,y_A) = (-1,0)` to :math:`\mathcal{B} = X_B = (x_B,y_B) = (1,0)`. We will start
 with running TAMS using :math:`N=32` and up to :math:`J=1000` iteration. The time horizon is
 set to :math:`T_a = 20` and the stopping criterion delimiting :math:`\mathcal{B}` is :math:`\xi_b = 1.05`.
-All of these parameter can be set in the ``input.toml`` file:
+All of these parameter can be set in the ``input.toml`` file (differs from default in the repository !):
 
 
 .. code-block:: python
 
-    [tams]
+    [ams]
     ntrajectories = 32
     nsplititer = 1000
+
+    [sampler]
+    strategy = "ams"
+
+    [runtime]
     loglevel = "WARNING"
 
     [trajectory]
@@ -515,19 +607,19 @@ All of these parameter can be set in the ``input.toml`` file:
 
     [runner]
     type = "asyncio"
-    nworker_init=1
-    nworker_iter=1
+    nworkers_init=1
+    nworkers_iter=1
 
 Note that the log level here was decreased to ``WARNING`` in order to minimize standard output clutering
 when running TAMS multiple times. Let's now look at the short script provided for running TAMS with the
-bi-channel model ``tams_bichannel.py``:
+bi-channel model ``sample_bichannel.py``:
 
 .. code-block:: python
 
   import numpy as np           
   from bichannel2d import BiChannel2D
   from bichannel2d import plot_in_landscape
-  from pytams.tams import TAMS 
+  from pytams.sampler import build_sampler
   
   if __name__ == "__main__":   
       # For convenience
@@ -536,17 +628,18 @@ bi-channel model ``tams_bichannel.py``:
       # Enable TAMS trajectory plots  
       plot_ensemble = True     
 
-      # Number of consecutive TAMS runs
+      # Number of consecutive sampling runs
       K = 10
 
       # Run the model several times
       for i in range(K):
-          # Initialize the algorithm object
-          tams = TAMS(fmodel_t=fmodel)
+          # Initialize the sampler
+          sampler = build_sampler(fmodel_t=fmodel)
 
-          # Run TAMS and report
+          # Sample and report
           try:
-              probability = tams.compute_probability()
+              sampler.run()
+              probability = sampler.database.get_event_probability()
           except RuntimeError as e:
               print(e) # noqa: T201
               continue
@@ -554,18 +647,18 @@ bi-channel model ``tams_bichannel.py``:
           print(f"[{i}] : {probability}") # noqa: T201
 
           if plot_ensemble:
-              plot_in_landscape(fmodel, tams.get_database(), i)
+              plot_in_landscape(fmodel, sampler.database, i)
 
       print(f"Averaged transition P_K: {probabilities.mean()}, RE: {np.sqrt(probabilities.var()) / probabilities.mean()}")  # noqa : T201  
 
-As listed above, the script will perform :math:`K = 10` consecutive TAMS runs and report on the averaged
+As listed above, the script will perform :math:`K = 10` consecutive sampling runs and report on the averaged
 transition probability :math:`P_K` as well as the relative error. In addition, if the ``plot_ensemble`` is activated,
 a figure showing the TAMS trajectory ensemble in the potential landscape will be generated for each run.
 Let's run the script:
 
 .. code-block:: shell
 
-   python tams_bichannel.py
+   python sample_bichannel.py
 
 
 Depending on the platform you are using, it will take a few minutes to run.
@@ -668,19 +761,19 @@ the transition probability estimator quality.
 
    : Evolution of :math:`P_K` with :math:`K` repetitions of the TAMS algorithm.
 
-Accessing the TAMS database
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Accessing the database
+~~~~~~~~~~~~~~~~~~~~~~
 
-So far, we have performed multiple runs of TAMS but have had limited access to the welth of data
+So far, we have performed multiple runs of pyREVS but have had limited access to the welth of data
 generated during the course of the algorithm. Looking back into the previous section, we have
-used TAMS data to visualize the trajectory ensemble on the potential landscape.
-The TAMS database object can be accessed during or after a TAMS run using:
+used the data to visualize the trajectory ensemble on the potential landscape.
+The `pyREVS` database object can be accessed during or after a sampling run using:
 
 .. code-block:: python
 
-    tdb = tams.get_database()
+    tdb = sampler.database
 
-where ``tams`` is an instance of the TAMS object. In the example script used above, the database
+where ``sampler`` is an instance of the Sampler object. In the example script used above, the database
 object is send to the function constructing the plot: the ``plot_in_landscape`` function
 in ``bichannel2d.py``. The few lines of code used to access the data in the database are reported
 below:
@@ -693,11 +786,12 @@ below:
        state_y = np.array([s[1][1] for s in t.get_state_list()])
 
 Here we loop on the list of `active` trajectories ``tdb.traj_list()``, i.e. the ensemble
-of :math:`N` trajectories active at the current iteration of the algorithm. We then used Python
+of :math:`N` trajectories active at the current iteration of the algorithm. Note that when
+using a Monte-Carlo sampling strategy, only active trajectory are available. We then used Python
 list comprehension to go through the trajectory and extract a Numpy array of the system state
 components :math:`x` and :math:`y`.
 
-In our previous TAMS runs, we could no longer access the database after exiting the script
+In our previous sampling runs, we could no longer access the database after exiting the script
 since the data was not saved to disk. Let's now run one more time the algorithm, allowing to
 create a database on disk. To do so, let's add the appropriate keyword to the input file
 ``input.toml``:
@@ -709,22 +803,22 @@ create a database on disk. To do so, let's add the appropriate keyword to the in
    path = "./db_tams_bichannel.tdb"
 
 
-,update the ``tams_bichannel.py`` script to only run once by changing the value of :math:`K`:
+, update the ``sample_bichannel.py`` script to only run once by changing the value of :math:`K`:
 
 
 .. code-block:: python
 
-   # Number of consecutive TAMS runs
+   # Number of consecutive sampling runs
    K = 1
     
 and run the script again:
 
 .. code-block:: shell
 
-   python tams_bichannel.py
+   python sample_bichannel.py
 
 Note that saving the database to disk incurs an overhead, which is not negligeable for
-such a small model. Looking into your run folder should now show that a TAMS database
+such a small model. Looking into your run folder should now show that a `pyREVS` database
 was saved:
 
 .. code-block:: shell
@@ -737,13 +831,13 @@ In a new Python file (e.g. ``load_database.py``):
 
 .. code-block:: python
 
-  from pytams.database import Database
+  from pytams.database import load_database
   from pathlib import Path
 
 
   if __name__ == "__main__":   
       # Load the database from disk
-      tdb = Database.load(Path("./db_tams_bichannel.tdb"))
+      tdb = load_database(Path("./db_tams_bichannel.tdb"))
       tdb.load_data(load_archived_trajectories=True)
 
       # Show the ensemble scores at the last iteration
@@ -751,7 +845,7 @@ In a new Python file (e.g. ``load_database.py``):
 
       # Show the evolution of the ensemble span over
       # the course of TAMS iterations
-      tdb.plot_min_max_span("./ScoreMinMax.png")
+      tdb.extension().plot_min_max_span("./ScoreMinMax.png")
 
       # Go through the active trajectories
       # and display the max score
@@ -760,10 +854,10 @@ In a new Python file (e.g. ``load_database.py``):
 
       # Get the active trajectory list at initial iteration
       # and display the max score
-      for t in tdb.get_trajectory_active_at_k(0):
+      for t in tdb.extension().get_trajectory_active_at_k(0):
           print(f"Trajectory {t.id()} initial max score: {t.score_max()}")
 
-The first line above instantiate the ``Database`` object, but only load metadata from disk. Only data such
+The first line above instantiates the ``Database`` object, but only load metadata from disk. Only data such
 as the number of trajectories, the current index of the TAMS iteration and some trajectories metadata
 (did it converged, what is the maximum of the score function, ...) are available.
 The ``load_data`` function effectively load the entire content of the trajectories in memory. By default
@@ -772,46 +866,51 @@ activating the ``load_archived_trajectories`` flag, we trigger loading the full 
 including the ones discarded during the TAMS iterations.
 A couple of helper functions allow to asses the state of the ensemble by plotting the score functions
 as well as the evolution of the ensemble over the course of the iterations.
-
+One important point to note is the `pyREVS` database has a core component that contains the active and
+possibly archived trajectories. To access data from the ensemble, you can call `tdb.<function>`. For
+data associated with a specific sampling strategy (e.g. TAMS), you need to access the database extension
+with `tdb.extensio().<function>`. In the example above, we plot the trajectory ensemble score function through the
+core database function call `tdb.plot_score_functions`, but to plot the evolution of the ensemble over
+the course of the TAMS iterations, we need to use the extension `tdb.extension().plot_min_max_span`.
 
 This is all for this tutorial. We have covered the following points:
 
-- Exploring one of `pyTAMS` built-in example
+- Exploring one of `pyREVS` built-in example
 - Running TAMS multiple times in order to get a better transition probability estimator and uncertainty
-- Accessing, saving and loading the TAMS database
+- Accessing, saving and loading the `pyREVS` database
 
 To go further, modify the change the value of the inverse temperature :math:`\beta` parameter
 and see how that affect the probability of transitioning through the `upper` and `lower` channels,
 look at the ``Database`` and ``Trajectory`` APIs (`database API <./autoapi/pytams/database/index.html>`_)
-to extract more data from the database and get the most out of your TAMS runs !
+to extract more data from the database and get the most out of your sampling runs !
 
 2D Boussinesq model
 -------------------
 
-So far, the tutorials have been focused on fairly simple models for which `pyTAMS` is practical,
+So far, the tutorials have been focused on fairly simple models for which `pyREVS` is practical,
 but also incurs a computational overhead that might not be justified compared to more simple
-implementation of the algorithm.
+implementation of sampling algorithms.
 
 We will now turn our attention to a more complex model, with :math:`10^4` degrees-of-freedom
-for which `pyTAMS` is specifically designed for. The model is a stochastic partial
+for which `pyREVS` is specifically designed for. The model is a stochastic partial
 differential equation (SPDE) described in `Soons et al. <https://doi.org/10.1017/jfm.2025.248>`_.
-Two versions of this model are available in `pyTAMS` examples and the present tutorial will
+Two versions of this model are available in `pyREVS` examples and the present tutorial will
 focus on the C++ implementation ``examples/BoussinesqCpp`` in order to demonstrate how
-to couple `pyTAMS` with an external software (as might be the case for many user of existing
+to couple `pyREVS` with an external software (as might be the case for many user of existing
 physics models). The interested reader can dig into the ``examples/Boussinesq`` to study the
 implementation of a Python-only version.
 
-One final note to motivate the use of `pyTAMS`: a :math:`10^4` state requires about 80 kB
+One final note to motivate the use of `pyREVS`: a :math:`10^4` state requires about 80 kB
 of memory and considering a model trajectory consists of 4000 individual states, an `active` set of
 :math:`N=20` trajectories requires about 6 GB of memory. This turns out to be only a fraction
 of the full memory requirements of TAMS as the total number of trajectories increases with
 the number of iterations, making it impossible to run TAMS on such a model without
-partially storing data to disk and sub-sampling the states (both native features of `pyTAMS`).
+partially storing data to disk and sub-sampling the states (both native features of `pyREVS`).
 
 Getting set up
 ~~~~~~~~~~~~~~
 
-If you haven't done so yet, let's get `pyTAMS` installed on your system.
+If you haven't done so yet, let's get `pyREVS` installed on your system.
 In order to have access to the example suite, you will need to install the package from sources.
 
 .. code-block:: shell
@@ -821,17 +920,17 @@ In order to have access to the example suite, you will need to install the packa
    pip install -e .
    tams_check
 
-The last line check that `pyTAMS` is effectively installed and should return (with proper version numbers):
+The last line check that `pyREVS` is effectively installed and should return (with proper version numbers):
 
 .. code-block:: shell
 
-   == pyTAMS vX.Y.Z :: a rare-event finder tool ==
+   == pyREVS vX.Y.Z :: a rare-event finder tool ==
 
 Move into the example folder
 
 .. code-block:: shell
 
-   cd pyTAMS/examples/BoussinesqCpp
+   cd pyREVS/examples/BoussinesqCpp
 
 
 BoussinesqCpp Folder content
@@ -854,20 +953,20 @@ as many more files are involved compared to previous tutorials:
      __init__.py
      boussinesq2d.py            # The forward model implementation
      eigen_lapack_interf.h      # Eigen to LAPACK interface C++ header
-     input.toml                 # TAMS input file
+     input.toml                 # pyREVS input file
      messaging.py               # Messaging library, Python side
-     tams_boussinesq2d.py       # Script for running TAMS
+     sample_boussinesq2d.py     # Script for running sampler
 
 There are three main components to this model:
 
 - The model physics is encapsulated in a C++ program (``Boussinesq.h``, ``Boussinesq.cpp``, ``eigen_lapack_interf.h``)
 - An inter-process communication (IPC) module with a C++ (``Messaging.h``) and a Python (``messaging.py``) side
-- The `pyTAMS` ABC concrete implementation for this model (``boussinesq2d.py``)
+- The `pyREVS` ABC concrete implementation for this model (``boussinesq2d.py``)
 
-When coupling an external model to `pyTAMS`, one should consider the possibility of
+When coupling an external model to `pyREVS`, one should consider the possibility of
 maintaining the physics program continuously running in the background to avoid having to start and
 terminate the program repeatedly. In the present case, we implemented a simple IPC that enables running the C++
-in the background all the time while controlling its flow from Python as `pyTAMS` proceeds. This might not
+in the background all the time while controlling its flow from Python as `pyREVS` proceeds. This might not
 always be possible if you do not have access to the physics program source code.
 
 Our aim here is not to dive too much into the C++ side, as the physics implementation is not
@@ -891,13 +990,13 @@ model attributes:
 
 .. code-block:: python
 
-  self._m_id = m_id                               # The unique id of the model instance
-  self._M = subparms.get("size_M", 40)            # Number of grid point in latitude
-  self._N = subparms.get("size_N", 80)            # Number of grid point in depth
-  self._K = subparms.get("K", 7)                  # Number of Fourier modes for the stochastic forcing
-  self._eps = subparms.get("epsilon", 0.05)       # Variance of the Wiener noise process
-  self._exec = subparms.get("exec", None)         # The executable of the external physics program
-  self._exec_cmd = [                              # The command to start the external physics program
+  self._m_id = m_id                             # The unique id of the model instance
+  self._M = params.get("size_M", 40)            # Number of grid point in latitude
+  self._N = params.get("size_N", 80)            # Number of grid point in depth
+  self._K = params.get("K", 7)                  # Number of Fourier modes for the stochastic forcing
+  self._eps = params.get("epsilon", 0.05)       # Variance of the Wiener noise process
+  self._exec = params.get("exec", None)         # The executable of the external physics program
+  self._exec_cmd = [                            # The command to start the external physics program
       self._exec,
       "-M",
       str(self._M),
@@ -910,9 +1009,9 @@ model attributes:
       "--pipe_id",
       str(m_id),
   ]
-  self._proc = None                               # The id of the process of the external program
-  self._pipe = None                               # The IPC (named here pipe as it uses two-way pipes)
-  self._state = subparms.get("init_state", None)  # The model state
+  self._proc = None                             # The id of the process of the external program
+  self._pipe = None                             # The IPC (named here pipe as it uses two-way pipes)
+  self._state = params.get("init_state", None)  # The model state
 
 The model physical parameters are read from the input file (``size_M``, ``size_N``, ``K``, ``epsilon``) and used
 to start the external program along with a path to its executable. The C++ program does not start at this point,
@@ -924,7 +1023,7 @@ Python side, but also communicate that information with the C++ program:
 
 .. code-block:: python
 
-  def set_current_state(self, state: Any) -> None:
+  def set_current_state(self, state: T_State) -> None:
       """Set the model state.
 
       And transfer it to the C++ process if opened
@@ -997,7 +1096,7 @@ If we now take a closer look at the advance function, there are a few notable th
 - Upon the first call to the advance function, the C++ program is started using Python `subprocess`. At
   the same time, the IPC two-way pipe is initialized and the initial condition communicated to the 
   external program.
-- `pyTAMS`'s trajectory API allows to downsample the state stored in the trajectory and the advance function
+- `pyREVS`'s trajectory API allows to downsample the state stored in the trajectory and the advance function
   ``need_end_state`` argument is set to ``True`` when the algorithm expects a state. This is also transferred
   to the C++ program before effectively advancing the model. Depending on how your model handles IO, you can use
   this parameter to make sure a checkpoint file is generated (or possibly suppress a checkpoint file if your
@@ -1021,30 +1120,36 @@ One last function worth noting is ``_clear_model``:
             self._pipe.close()
             self._pipe = None
 
-This function is part of `pyTAMS` forward model ABC but does not *need* to be overwritten by a concrete
+This function is part of `pyREVS` forward model ABC but does not *need* to be overwritten by a concrete
 implementation. It is always called upon completing a trajectory (i.e. reaching the score function target
-value or the final time horizon) and in the current model, it terminates the external C++ program.
+value or an other termination condition) and in the current model, it terminates the external C++ program.
 
-Running TAMS locally
-~~~~~~~~~~~~~~~~~~~~
+Running pyREVS locally
+~~~~~~~~~~~~~~~~~~~~~~
 
-We will now run TAMS with the Boussinesq model. This model is significantly more computationally
-expensive that the other models used in previous tutorial, but it still only takes a few dozens
-minutes to perform a TAMS run on a laptop.
+We will now sample the Boussinesq model transition with TAMS. This model is significantly more computationally
+expensive that the other models used in previous tutorials, but it still only takes a few dozens
+minutes to perform a sampling run on a laptop.
 
 Let's review the content of the input file ``input.toml``:
 
 .. code-block:: python
 
-    [tams]
+    [sampler]
+    strategy = "ams"
+
+    [ams]
     ntrajectories = 20
     nsplititer = 200
+    variant = "tams"
+
+    [runtime]
     loglevel = "INFO"
-    diagnostics = true
+    plot_diagnostics = true
 
 
-The number of ensemble member is set to :math:`N=20` and the maximum of iteration set to :math:`J = 200`.
-We enable diagnostic to ``True`` is order to visualize the evolution of the ensemble during the course
+The number of ensemble members is set to :math:`N=20` and the maximum of iteration set to :math:`J = 200`.
+We enable plot diagnostic to ``True`` is order to visualize the evolution of the ensemble during the course
 of the iterations, as depicted in the last graph of the :ref:`Theory Section <sec:theory>`.
 
 .. code-block:: python
@@ -1081,12 +1186,12 @@ in order to limit the compute time.
 
     [runner]
     type = "dask"
-    nworker_init=2
-    nworker_iter=2
+    nworkers_init=2
+    nworkers_iter=2
 
 When running the model locally, both `asyncio` and `dask` runner are valid options. Here we use Dask by default,
 spawning two workers during the initial ensemble generation and two workers during the TAMS iterations. The
-later parameter effectively means that at least the two trajectories with the lowest value of the maximum score
+later parameter effectively means that at least the two trajectories with the lowest values of the maximum score
 function will be discarded and new trajectory cloned/branched at each TAMS iterations.
 
 .. code-block:: python
@@ -1096,13 +1201,13 @@ function will be discarded and new trajectory cloned/branched at each TAMS itera
 
 Running this model always requires creating a database on disk to store the external model data.
 
-As with previous Tutorials, there a short script in the example folder to launch TAMS:
+As with previous Tutorials, there a short script in the example folder to launch the sampling run:
 
 .. code-block:: shell
 
-    python tams_boussinesq2d.py
+    python sample_boussinesq2d.py
 
-For the sake of keeping this tutorial short, only a single TAMS run is required.
+For the sake of keeping this tutorial short, only a single sampling run is required.
 
 The standard output should look something like:
 
@@ -1110,17 +1215,15 @@ The standard output should look something like:
 
     [INFO] 2025-12-04 22:46:02,769 -
                 ####################################################
-                # TAMS v0.0.6             trajectory database      #
+                # pyTAMS v1.0.0                                    #
                 # Date: 2025-12-04 21:46:02.752567+00:00           #
                 # Model: 2DBoussinesqModelCpp                      #
+                # Strategy: ams                                    #
                 ####################################################
                 # Requested # of traj:                          20 #
-                # Requested # of splitting iter:               500 #
-                # Number of 'Ended' trajectories:                0 #
+                # Number of 'Terminated' trajectories:           0 #
                 # Number of 'Converged' trajectories:            0 #
-                # Current splitting iter counter:                0 #
                 # Current total number of steps:                 0 #
-                # Transition probability:                      0.0 #
                 ####################################################
 
     [INFO] 2025-12-04 22:46:02,785 - Computing 2DBoussinesqModelCpp rare event probability using TAMS
@@ -1169,23 +1272,23 @@ The standard output should look something like:
 Since ``diagnostic`` is set to ``True``, a series of images ``Score_k0****.png`` showing the
 ensemble at each iterations (every two cloning/branching events) is generated.
 
-Running TAMS on a Slurm cluster
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running pyREVS on a Slurm cluster
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the event you have access to an HPC cluster, we will now update the input file to run
-TAMS on a Slurm cluster.
+`pyREVS` on a Slurm cluster.
 
 .. code-block:: python
 
-    [tams]
+    [ams]
     walltime = 7100
 
-    [dask]
+    [runner.dask]
     backend = "slurm"
     worker_walltime = "2:00:00"
     queue = "genoa"
     ntasks_per_job = 1
-    job_prologue = ['module load Python', 'conda activate pyTAMS']
+    job_prologue = ['module load Python', 'conda activate pyREVS']
 
 The default backend of the ``dask`` runner is ``local``, by setting it to ``slurm`` Dask will
 submit the workers as Slurm jobs. The job wall time will be set to 2 hours and be submitted to
@@ -1193,14 +1296,14 @@ the ``genoa`` partition. The algorithm walltime must thus be updated to not exce
 The strings listed in the ``job_prologue`` will be executed before starting the worker and can be
 used to setup your environment.
 
-If your cluster allows it, can launch the TAMS script from the login node (very to no compute is done by the main
-process in TAMS), otherwise you will have to launch the TAMS script from a Slurm batch script.
+If your cluster allows it, can launch the sampling script from the login node (very to no compute is done by the main
+process in `pyREVS`), otherwise you will have to launch the sampling script from a Slurm batch script.
 
 This is all for this tutorial. We have covered the following points:
 
-- Interfacing an external program with `pyTAMS`
-- Triggering diagnostics while running TAMS
-- Using multiple workers and running TAMS on a Slurm cluster
+- Interfacing an external program with `pyREVS`
+- Triggering diagnostics while running TAMS sampling
+- Using multiple workers and running `pyREVS` on a Slurm cluster
 
 To go further, interested users can change the model noise parameters or repeat the experiment
 multiple times. Additionally, the Python version of the Boussinesq model has several custom
