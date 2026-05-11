@@ -1,12 +1,11 @@
-[ams]
-ntrajectories = 25
-nsplititer = 200
+[montecarlo]
+ntrajectories = 50
 
 [sampler]
-strategy = "ams"
+strategy = "montecarlo"
 
 [runtime]
-loglevel = "WARNING"
+loglevel = "INFO"
 
 [trajectory]
 end_time = 10.0
@@ -19,8 +18,3 @@ epsilon = 0.2
 [runner]
 type = "asyncio"
 nworker_init=2
-nworker_iter=1
-
-[database]
-path = "./dw2dim.tdb"
-restart = true

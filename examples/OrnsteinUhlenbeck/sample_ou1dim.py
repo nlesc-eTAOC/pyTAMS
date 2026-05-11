@@ -1,10 +1,10 @@
 import numpy as np
-from DoubleWell2D import Doublewell2D
-from pytams.tams import TAMS
+from ornsteinuhlenbeck import OrnsteinUhlenbeck
+from pytams.sampler import build_sampler
 
 if __name__ == "__main__":
     # For convenience
-    fmodel = Doublewell2D
+    fmodel = OrnsteinUhlenbeck
 
     # Run the model K times
     K = 10
@@ -13,16 +13,18 @@ if __name__ == "__main__":
 
     # Run the model several times
     for i in range(K):
-        # Initialize the algorithm object
-        tams = TAMS(fmodel_t=fmodel)
+        # Initialize the sampler
+        sampler = build_sampler(fmodel_t=fmodel)
 
-        # Run TAMS and report
+        # Sample and report
         try:
-            probability = tams.compute_probability()
+            sampler.run()
+            probability = sampler.database.get_event_probability()
         except RuntimeError as e:
             print(e)  # noqa: T201
             continue
 
         probabilities[i] = probability
+        print(f"[{i}] P_k = {probability}")  # noqa: T201
 
     print(f"Averaged transition P_K: {probabilities.mean()}, RE: {np.sqrt(probabilities.var()) / probabilities.mean()}")  # noqa : T201

@@ -4,8 +4,9 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+from pytams.core import ForwardModelBaseClass
+from pytams.core import Snapshot
 from pytams.database import Database
-from pytams.fmodel import ForwardModelBaseClass
 
 
 class BiChannel2D(ForwardModelBaseClass):
@@ -34,8 +35,8 @@ class BiChannel2D(ForwardModelBaseClass):
         # State a numpy array and initial state
         # close to A
         self._state = np.array([-0.9, 0.1])
-        self._inv_T = params.get("model", {}).get("inv_temperature", 6.67)
-        if params["model"]["deterministic"]:
+        self._inv_T = params.get("inv_temperature", 6.67)
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
@@ -128,8 +129,8 @@ class BiChannel2D(ForwardModelBaseClass):
         """
         a = np.array([-1.0, 0.0])
         b = np.array([1.0, 0.0])
-        da = np.sqrt(np.sum((self._state - a) ** 2, axis=0))
-        dab = np.sqrt(np.sum((a - b) ** 2, axis=0))
+        da = np.sqrt(np.sum((self._state[0] - a[0]) ** 2, axis=0))
+        dab = np.sqrt(np.sum((a[0] - b[0]) ** 2, axis=0))
         return da / dab
 
     def make_noise(self) -> npt.NDArray[np.number]:
@@ -141,6 +142,23 @@ class BiChannel2D(ForwardModelBaseClass):
             The model next noise increment
         """
         return self._rng.standard_normal(2)
+
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot,
+        new_snap: Snapshot,
+    ) -> None:
+        """Concrete implementation of the diag.
+
+        For testing purposes, return the entire state, score-weighted
+        between old and new.
+        """
+        _, _, _, _ = dlabel, tid, score_level, old_snap
+        old_factor = (score_level - old_snap.score) / (new_snap.score - old_snap.score)
+        return  old_factor * old_snap.state + (1 - old_factor) * new_snap.state
 
     @classmethod
     def name(cls) -> str:

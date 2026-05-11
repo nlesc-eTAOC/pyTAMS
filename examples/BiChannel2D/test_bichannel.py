@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import toml
 from bichannel2d import BiChannel2D
+from pytams.core import Config
 from pytams.trajectory import Trajectory
+from pytams.trajectory import TrajectoryConfig
 
 if __name__ == "__main__":
     # For convenience
@@ -14,11 +16,16 @@ if __name__ == "__main__":
     with Path("input.toml").open("r") as f:
         input_params = toml.load(f)
 
+    # Setup parameters
+    cfg = Config(input_params)
+    tcfg = cfg.load(TrajectoryConfig)
+    model_params = cfg.section_dict("model")
+
     # Initialize a trajectory object
-    traj = Trajectory(0, 1.0, fmodel, input_params)
+    traj = Trajectory(traj_id=0, weight=1.0, fmodel_t=fmodel, traj_cfg=tcfg, model_params=model_params)
 
     # Advance the model
-    traj.advance()
+    traj.advance(nstep_end=500000)
 
     x_range = np.linspace(-1.6, 1.6, 101)
     y_range = np.linspace(-1.6, 2.6, 132)

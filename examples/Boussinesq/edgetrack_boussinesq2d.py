@@ -1,4 +1,5 @@
 """A short script to track edge state in Boussinesq model."""
+
 import shutil
 from pathlib import Path
 import numpy as np

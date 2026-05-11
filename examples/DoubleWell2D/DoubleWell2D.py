@@ -2,7 +2,8 @@ import typing
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
+from pytams.core import Snapshot
 
 
 class Doublewell2D(ForwardModelBaseClass):
@@ -27,9 +28,9 @@ class Doublewell2D(ForwardModelBaseClass):
             m_id: the model instance unique identifier
             params: an optional dict containing parameters
         """
-        self._state = np.array([-1.0, 0.0])
-        self._epsilon = params.get("model", {}).get("epsilon", 1.0)
-        if params["model"]["deterministic"]:
+        self._state = np.array([-0.95, 0.0])
+        self._epsilon = params.get("epsilon", 1.0)
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
@@ -119,6 +120,43 @@ class Doublewell2D(ForwardModelBaseClass):
             The model next noise increment
         """
         return self._rng.standard_normal(2)
+
+    # def check_termination(self, step: int, time: float, nstep_end: int, time_end: float, current_score: float) -> bool:
+    #    """Check if the trajectory is terminated.
+
+    #    This default implementation checks if the current time or
+    #    step is below the provided end time and end step.
+    #    This is proper when running TAMS sampling, but not AMS or other methods.
+
+    #    Args:
+    #        step: the current step counter
+    #        time: the time of the simulation
+    #        nstep_end: the maximum number of steps to advance
+    #        time_end: the end time of the advance
+    #        current_score: the current score
+    #    """
+    #    r_state_a = np.sqrt(np.sum(self._state**2))
+    #    return self._state[0] <= -0.95
+
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot,
+        new_snap: Snapshot,
+    ) -> Any:
+        """Diagnostic hook.
+
+        Args:
+            dlabel: the label of the diagnostic calling the hook
+            tid: the ID of the trjaectory calling
+            score_level: the score level crossed and triggering the call
+            old_snap: the snapshot at the beginning of the step
+            new_snap: the snapshot at the end of the step
+        """
+        _, _ = dlabel, tid
+        return old_snap.state[1] + (new_snap.score - score_level) * (new_snap.state[1] - old_snap.state[1])
 
     @classmethod
     def name(cls) -> str:

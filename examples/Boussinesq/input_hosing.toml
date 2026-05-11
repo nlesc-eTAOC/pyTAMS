@@ -1,6 +1,8 @@
-[tams]
+[ams]
 ntrajectories = 20
 nsplititer = 1000
+
+[runtime]
 loglevel = "INFO"
 walltime = 7200.0
 diagnostics = true

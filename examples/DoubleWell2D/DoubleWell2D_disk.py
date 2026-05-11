@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.fmodel import ForwardModelBaseClass
+from pytams.core import ForwardModelBaseClass
 
 
 class Doublewell2DDisk(ForwardModelBaseClass):
@@ -34,10 +34,6 @@ class Doublewell2DDisk(ForwardModelBaseClass):
             m_id: the model instance unique identifier
             params: an optional dict containing parameters
         """
-        if not params.get("database", {}).get("path"):
-            err_msg = "Database path needed for disk-based 2D double well model."
-            raise RuntimeError(err_msg)
-
         self._db_path = self._workdir.parents[1]
         if not Path(self._workdir).exists():
             Path(self._workdir).mkdir()
@@ -45,8 +41,8 @@ class Doublewell2DDisk(ForwardModelBaseClass):
         # The state is a str, the state_data a numpy array
         self._state_data = None
         self._state = self.init_condition()
-        self._epsilon = params.get("model", {}).get("epsilon", 1.0)
-        if params["model"]["deterministic"]:
+        self._epsilon = params.get("epsilon", 1.0)
+        if self._deterministic:
             self._rng = np.random.default_rng(m_id)
         else:
             self._rng = np.random.default_rng()
@@ -58,7 +54,7 @@ class Doublewell2DDisk(ForwardModelBaseClass):
         """
         state_file = "init_state.npy"
         state_path = Path(self._workdir / state_file)
-        self._state_data = np.array([-1.0, 0.0])
+        self._state_data = np.array([-0.95, 0.0])
         np.save(state_path, self._state_data)
         return state_path.relative_to(self._db_path).as_posix()
 

@@ -5,19 +5,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import toml
 from ornsteinuhlenbeck import OrnsteinUhlenbeck
+from pytams.core import Config
 from pytams.trajectory import Trajectory
+from pytams.trajectory import TrajectoryConfig
 
 if __name__ == "__main__":
     fmodel = OrnsteinUhlenbeck
+
     with Path("./input_stationary.toml").open("r") as f:
         input_params = toml.load(f)
 
-    traj = Trajectory(0, 1.0, fmodel, input_params)
+    # Setup parameters
+    cfg = Config(input_params)
+    tcfg = cfg.load(TrajectoryConfig)
+    model_params = cfg.section_dict("model")
+
+    traj = Trajectory(traj_id=0, weight=1.0, fmodel_t=fmodel, traj_cfg=tcfg, model_params=model_params)
     traj.advance()
 
     # Stationary distribution has standard deviation:
-    theta = input_params["model"]["theta"]
-    epsilon = input_params["model"]["epsilon"]
+    theta = model_params["theta"]
+    epsilon = model_params["epsilon"]
     sigma = np.sqrt(epsilon / theta)
 
     # Compute stationary P_s

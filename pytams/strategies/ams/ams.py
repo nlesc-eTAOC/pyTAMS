@@ -446,7 +446,7 @@ class AMS(BaseSamplingStrategy):
             raise RuntimeError(err_msg)
 
         proba = self.compute_probability(database, plot_diags)
-        inf_msg = f"Rare event probability: {proba}"
+        inf_msg = f"Event probability: {proba}"
         _logger.info(inf_msg)
 
     def initialize_database_schema(self, database: Database, diag_configs: dict[str, Config] | None) -> None:

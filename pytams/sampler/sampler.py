@@ -227,3 +227,12 @@ class RareEventSampler:
     def database(self) -> Database:
         """Access the sampling database."""
         return self._db
+
+    def __del__(self) -> None:
+        """Destructor.
+
+        It is mostly useful on Windows systems.
+        """
+        # Force deletion of database
+        if hasattr(self, "_db"):
+            del self._db

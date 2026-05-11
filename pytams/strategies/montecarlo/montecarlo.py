@@ -129,7 +129,7 @@ class MonteCarlo(BaseSamplingStrategy):
         inf_msg = f"Computing {self._fmodel_t.name()} rare event probability using MonteCarlo"
         _logger.info(inf_msg)
 
-        self.compute_probability(database)
+        proba = self.compute_probability(database)
 
         # Plot trajectory database scores
         if plot_diags:
@@ -140,6 +140,8 @@ class MonteCarlo(BaseSamplingStrategy):
             database.plot_score_functions(pltfile)
 
         database.info()
+        inf_msg = f"Event probability: {proba}"
+        _logger.info(inf_msg)
 
     def initialize_database_schema(self, database: Database, diag_configs: dict[str, Config] | None) -> None:
         """Initialize database core state."""
