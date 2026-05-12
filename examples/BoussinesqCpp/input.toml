@@ -1,11 +1,17 @@
-[tams]
+[sampler]
+strategy = "ams"
+
+[ams]
 ntrajectories = 20
 nsplititer = 200
+variant = "tams"
+end_time = 20.0
+
+[runtime]
 loglevel = "INFO"
-diagnostics = true
+plot_diagnostics = true
 
 [trajectory]
-end_time = 20.0
 step_size = 0.005
 targetscore = 0.95
 sparse_freq = 10
@@ -20,8 +26,8 @@ K = 7
 
 [runner]
 type = "dask"
-nworker_init=2
-nworker_iter=2
+nworkers_init=2
+nworkers_iter=2
 
 [database]
 path = "2DBoussinesqCpp.tdb"

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     model_params = cfg.section_dict("model")
 
     traj = Trajectory(traj_id=0, weight=1.0, fmodel_t=fmodel, traj_cfg=tcfg, model_params=model_params)
-    traj.advance()
+    traj.advance(t_end=1000000.0)
 
     # Stationary distribution has standard deviation:
     theta = model_params["theta"]

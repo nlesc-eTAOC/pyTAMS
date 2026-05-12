@@ -1,6 +1,8 @@
 [ams]
 ntrajectories = 25
 nsplititer = 200
+variant = "tams"
+end_time = 10.0
 
 [sampler]
 strategy = "ams"
@@ -9,7 +11,6 @@ strategy = "ams"
 loglevel = "WARNING"
 
 [trajectory]
-end_time = 10.0
 step_size = 0.01
 targetscore = 0.95
 

@@ -25,7 +25,7 @@ if __name__ == "__main__":
     traj = Trajectory(traj_id=0, weight=1.0, fmodel_t=fmodel, traj_cfg=tcfg, model_params=model_params)
 
     # Advance the model
-    traj.advance(nstep_end=500000)
+    traj.advance(t_end=10.0)
 
     x_range = np.linspace(-1.6, 1.6, 101)
     y_range = np.linspace(-1.6, 2.6, 132)
