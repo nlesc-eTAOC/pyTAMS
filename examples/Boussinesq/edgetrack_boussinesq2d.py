@@ -6,14 +6,14 @@ import numpy as np
 import toml
 from boussinesq2d import Boussinesq2D
 from edgetracking_algorithm import edgetracking
-from pytams.utils import setup_logger
+from pyrevs.utils import setup_logger
 
 if __name__ == "__main__":
     fmodel = Boussinesq2D
     with Path("input_edge.toml").open("r") as f:
         input_params = toml.load(f)
 
-    # Use pyTAMS internal logger setup
+    # Use pyREVS internal logger setup
     setup_logger(input_params)
 
     on_state = np.load("stateON_beta_0p1.npy", allow_pickle=True)

@@ -1,20 +1,20 @@
-"""Tests for the pyREVS.worker functions."""
+"""Tests for the pyrevs.worker functions."""
 
 import datetime
 import logging
 from math import isclose
 from pathlib import Path
 import pytest
-from pytams.core import Config
-from pytams.core import CoreDB
-from pytams.core import RuntimeConfig
-from pytams.runner import ms_worker
-from pytams.runner import pool_worker
-from pytams.trajectory import Trajectory
-from pytams.trajectory import TrajectoryConfig
-from pytams.utils.utils import setup_logger
-from pytams.strategies.base import TimeTerminationCriterion
-from pytams.strategies.base import LowScoreTerminationCriterion
+from pyrevs.core import Config
+from pyrevs.core import CoreDB
+from pyrevs.core import RuntimeConfig
+from pyrevs.runner import ms_worker
+from pyrevs.runner import pool_worker
+from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory import TrajectoryConfig
+from pyrevs.utils.utils import setup_logger
+from pyrevs.strategies.base import TimeTerminationCriterion
+from pyrevs.strategies.base import LowScoreTerminationCriterion
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel

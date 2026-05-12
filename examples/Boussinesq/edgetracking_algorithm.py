@@ -5,7 +5,7 @@ from typing import Any
 import netCDF4
 import numpy as np
 import numpy.typing as npt
-from pytams.trajectory import Trajectory
+from pyrevs.trajectory import Trajectory
 
 _logger = logging.getLogger(__name__)
 

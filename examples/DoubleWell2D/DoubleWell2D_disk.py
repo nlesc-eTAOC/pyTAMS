@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.core import ForwardModelBaseClass
+from pyrevs.core import ForwardModelBaseClass
 
 
 class Doublewell2DDisk(ForwardModelBaseClass):

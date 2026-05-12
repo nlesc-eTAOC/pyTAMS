@@ -55,7 +55,7 @@ The long trajectory used in producing :numref:`fig-Distrib_OU1D` is processed us
 method to provide an estimate of :math:`\hat{r}(a)`
 and the theoretical :math:`r(a)` in also given by equation A6 of `Lestang et al. <LestangTAMS>`_.
 The graph :numref:`fig-ReturnTime_OU1D` shows the return time in abscissa and the value of :math:`a` in ordonate for all
-three methods. The agreements between `pyTAMS` and the theoretical value of the return time demonstrate
+three methods. The agreements between `pyREVS` and the theoretical value of the return time demonstrate
 that the current implementation is able to correctly estimate rare events, down to very probability
 (:math:`P(\mathcal{E}) < 10^{-10}`)
 

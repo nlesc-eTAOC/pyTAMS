@@ -5,10 +5,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import toml
 from boussinesq2d import Boussinesq2D
-from pytams.core import Config
-from pytams.trajectory import Trajectory
-from pytams.trajectory import TrajectoryConfig
-from pytams.utils import setup_logger
+from pyrevs.core import Config
+from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory import TrajectoryConfig
+from pyrevs.utils import setup_logger
 
 _logger = logging.getLogger(__name__)
 

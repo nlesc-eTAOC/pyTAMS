@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import toml
 from ornsteinuhlenbeck import OrnsteinUhlenbeck
-from pytams.core import Config
-from pytams.trajectory import Trajectory
-from pytams.trajectory import TrajectoryConfig
+from pyrevs.core import Config
+from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory import TrajectoryConfig
 
 if __name__ == "__main__":
     fmodel = OrnsteinUhlenbeck
@@ -35,14 +35,14 @@ if __name__ == "__main__":
     x = np.linspace(-5 * sigma, 5 * sigma, nbin)
     Ps = np.sqrt(1.0 / (2.0 * np.pi * sigma**2)) * np.exp(-0.5 * x * x / (sigma**2))
 
-    # Binning pyTAMS trajectory
+    # Binning pyREVS trajectory
     dx = (xmax - xmin) / nbin
     cbins = np.linspace(-5 * sigma - dx / 2, 5 * sigma + dx / 2, nbin + 1)
     counts, bins = np.histogram(traj.get_score_array(), bins=cbins, density=True)
 
     plt.figure(figsize=(6, 4))
     plt.plot(x / sigma, Ps, linewidth=0.8, color="k", label="Theory")
-    plt.plot(x / sigma, counts, linewidth=0.8, color="r", label="pyTAMS")
+    plt.plot(x / sigma, counts, linewidth=0.8, color="r", label="pyREVS")
     plt.grid(linestyle="dotted")
     plt.legend(fontsize="x-large")
     plt.xlabel(r"$x/\sigma$", fontsize="large")

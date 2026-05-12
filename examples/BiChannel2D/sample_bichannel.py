@@ -1,7 +1,7 @@
 import numpy as np
 from bichannel2d import BiChannel2D
 from bichannel2d import plot_in_landscape
-from pytams.sampler import build_sampler
+from pyrevs.sampler import build_sampler
 
 if __name__ == "__main__":
     # For convenience

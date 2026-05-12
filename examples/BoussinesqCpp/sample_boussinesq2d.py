@@ -1,6 +1,6 @@
 import numpy as np
 from boussinesq2d import Boussinesq2DModelCpp
-from pytams.sampler import build_sampler
+from pyrevs.sampler import build_sampler
 
 if __name__ == "__main__":
     # For convenience

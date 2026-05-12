@@ -1,12 +1,12 @@
-"""Tests for the pytams.diagnostics class."""
+"""Tests for the pyrevs.diagnostics class."""
 
 import pickle
 from pathlib import Path
 import pytest
-from pytams.core import Config
-from pytams.core import Snapshot
-from pytams.diagnostics import DiagDB
-from pytams.diagnostics import diagnosticfactory
+from pyrevs.core import Config
+from pyrevs.core import Snapshot
+from pyrevs.diagnostics import DiagDB
+from pyrevs.diagnostics import diagnosticfactory
 from tests.models import SimpleFModel
 
 

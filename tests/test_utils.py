@@ -1,7 +1,7 @@
-"""Tests for the pytams.utils class."""
+"""Tests for the pyrevs.utils class."""
 
 import pytest
-from pytams.utils.utils import get_module_local_import
+from pyrevs.utils.utils import get_module_local_import
 from tests.models import SimpleFModel
 
 
