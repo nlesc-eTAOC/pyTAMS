@@ -1,5 +1,6 @@
 [montecarlo]
 ntrajectories = 50
+end_time = 10.0
 
 [sampler]
 strategy = "montecarlo"
@@ -8,7 +9,6 @@ strategy = "montecarlo"
 loglevel = "INFO"
 
 [trajectory]
-end_time = 10.0
 step_size = 0.01
 targetscore = 0.95
 

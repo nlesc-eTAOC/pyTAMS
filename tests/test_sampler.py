@@ -20,9 +20,10 @@ def test_init_sampler():
         toml.dump(
             {
                 "sampler": {"strategy": "ams"},
-                "ams": {"ntrajectories": 500, "nsplititer": 200},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001}
-            }, f
+                "ams": {"ntrajectories": 500, "nsplititer": 200, "end_time": 0.02},
+                "trajectory": {"step_size": 0.001},
+            },
+            f,
         )
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     assert sampler.database.n_traj() == 500
@@ -54,9 +55,9 @@ def test_simple_model_sampler():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 0.02},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
@@ -75,9 +76,9 @@ def test_simple_model_sampler_with_diags():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING", "diagnostics": ["testd"]},
-                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams"},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 0.02},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15},
                 "testd": {"n_levels": 11},
             },
             f,
@@ -97,9 +98,9 @@ def test_failing_model_sampler():
         toml.dump(
             {
                 "sampler": {"strategy": "ams", "loglevel": "WARNING"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "end_time": 0.1},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 0.1, "step_size": 0.005, "targetscore": 0.75},
+                "trajectory": {"step_size": 0.005, "targetscore": 0.75},
             },
             f,
         )
@@ -118,9 +119,15 @@ def test_simple_model_init_ensemble_stage_tams(caplog: pytest.LogCaptureFixture)
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200, "init_ensemble_only": True},
+                "ams": {
+                    "ntrajectories": 100,
+                    "nsplititer": 200,
+                    "variant": "tams",
+                    "end_time": 0.02,
+                    "init_ensemble_only": True,
+                },
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
+                "trajectory": {"step_size": 0.001, "targetscore": 1.15},
             },
             f,
         )
@@ -138,10 +145,16 @@ def test_simple_model_init_ensemble_stage_and_continue_tams():
     params_dict = {
         "sampler": {"strategy": "ams"},
         "runtime": {"loglevel": "INFO"},
-        "ams": {"ntrajectories": 10, "nsplititer": 200, "init_ensemble_only": True},
+        "ams": {
+            "ntrajectories": 10,
+            "nsplititer": 200,
+            "variant": "tams",
+            "end_time": 0.02,
+            "init_ensemble_only": True,
+        },
         "runner": {"type": "asyncio"},
         "database": {"path": "simpleModelTest.tdb"},
-        "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 1.15},
+        "trajectory": {"step_size": 0.001, "targetscore": 1.15},
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
@@ -173,10 +186,10 @@ def test_simple_model_tams_with_db():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 0.02},
                 "runner": {"type": "dask"},
                 "database": {"path": "simpleModelTest.tdb"},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
             },
             f,
         )
@@ -197,10 +210,10 @@ def test_simple_model_tams_with_db_access():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 0.02},
                 "runner": {"type": "dask"},
                 "database": {"path": "simpleModelTest.tdb"},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15, "chkfile_dump_all": True},
             },
             f,
         )
@@ -222,11 +235,12 @@ def test_simple_model_mc_slurm_fail():
             {
                 "sampler": {"strategy": "montecarlo"},
                 "runtime": {"loglevel": "DEBUG"},
-                "montecarlo": {"ntrajectories": 100},
-                "runner": {"type": "dask",
-                           "dask": {"backend": "slurm", "slurm_config_file": "dummy.yaml"},
-                           },
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
+                "montecarlo": {"ntrajectories": 100, "end_time": 0.02},
+                "runner": {
+                    "type": "dask",
+                    "dask": {"backend": "slurm", "slurm_config_file": "dummy.yaml"},
+                },
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
@@ -245,10 +259,10 @@ def test_simple_model_twice_tams():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "WARNING", "logfile": "test.log"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 0.02},
                 "runner": {"type": "asyncio"},
                 "database": {"path": "simpleModelTest.tdb", "restart": True},
-                "trajectory": {"end_time": 0.02, "step_size": 0.001, "targetscore": 0.15},
+                "trajectory": {"step_size": 0.001, "targetscore": 0.15},
             },
             f,
         )
@@ -283,9 +297,9 @@ def test_stalling_simplemodel_tams():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "ERROR"},
-                "ams": {"ntrajectories": 100, "nsplititer": 200},
+                "ams": {"ntrajectories": 100, "nsplititer": 200, "variant": "tams", "end_time": 1.0},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 1.0, "step_size": 0.01, "targetscore": 1.1},
+                "trajectory": {"step_size": 0.01, "targetscore": 1.1},
             },
             f,
         )
@@ -302,10 +316,10 @@ def test_sample_doublewell():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 200},
+                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 6.0},
                 "runner": {"type": "dask"},
                 "model": {"noise_amplitude": 0.8},
-                "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.8},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.8},
             },
             f,
         )
@@ -324,11 +338,11 @@ def test_doublewell_save_tams():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 200},
+                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 10.0},
                 "runner": {"type": "dask"},
                 "database": {"path": "dwTest.tdb"},
                 "model": {"noise_amplitude": 0.8},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.3},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.3},
             },
             f,
         )
@@ -349,10 +363,10 @@ def test_doublewell_deterministic_tams():
             {
                 "sampler": {"strategy": "ams", "deterministic": True},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 100, "nsplititer": 400},
+                "ams": {"ntrajectories": 100, "nsplititer": 400, "variant": "tams", "end_time": 10.0},
                 "runner": {"type": "asyncio"},
                 "model": {"noise_amplitude": 0.8},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.8},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.8},
             },
             f,
         )
@@ -380,10 +394,12 @@ def test_doublewell_deterministic_sampler_with_pltdiags(caplog: pytest.LogCaptur
                 "ams": {
                     "ntrajectories": 5,
                     "nsplititer": 5,
+                    "variant": "tams",
+                    "end_time": 10.0,
                 },
                 "runner": {"type": "asyncio"},
                 "model": {"noise_amplitude": 0.4},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.8},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.8},
             },
             f,
         )
@@ -406,11 +422,11 @@ def test_doublewell_2_workers_tams():
             {
                 "sampler": {"strategy": "ams", "deterministic": True},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 400},
+                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0},
                 "runner": {"type": "dask", "nworkers_init": 2, "nworkers_iter": 2},
                 "model": {"noise_amplitude": 0.8},
                 "database": {"path": "dwTest.tdb", "archive_discarded": True},
-                "trajectory": {"end_time": 5.0, "step_size": 0.01, "targetscore": 0.5},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.5},
             },
             f,
         )
@@ -441,11 +457,11 @@ def test_doublewell_2_workers_restore_sampler():
             {
                 "sampler": {"strategy": "ams", "deterministic": True},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 400},
+                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0},
                 "runner": {"type": "dask", "nworkers_init": 2, "nworkers_iter": 2},
                 "model": {"noise_amplitude": 0.8},
                 "database": {"path": "dwTest.tdb", "archive_discarded": True},
-                "trajectory": {"end_time": 5.0, "step_size": 0.01, "targetscore": 0.5},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.5},
             },
             f,
         )
@@ -466,10 +482,10 @@ def test_doublewell_very_slow_model():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 3.0},
-                "ams": {"ntrajectories": 10, "nsplititer": 400},
+                "ams": {"ntrajectories": 10, "nsplititer": 400, "variant": "tams", "end_time": 10.0},
                 "database": {"path": "vslowdwTest.tdb"},
                 "runner": {"type": "dask"},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.7},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.7},
                 "model": {"slow_factor": 0.01, "noise_amplitude": 0.1},
             },
             f,
@@ -492,10 +508,10 @@ def test_doublewell_slow_model_stop():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 3.0},
-                "ams": {"ntrajectories": 10, "nsplititer": 400},
+                "ams": {"ntrajectories": 10, "nsplititer": 400, "variant": "tams", "end_time": 8.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
@@ -517,10 +533,10 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 8.0, "loglevel": "INFO"},
-                "ams": {"ntrajectories": 10, "nsplititer": 400},
+                "ams": {"ntrajectories": 10, "nsplititer": 400, "variant": "tams", "end_time": 8.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
@@ -544,10 +560,10 @@ def test_doublewell_slow_tams_restore_during_splitting(caplog: pytest.LogCapture
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"walltime": 2.0, "loglevel": "INFO"},
-                "ams": {"ntrajectories": 10, "nsplititer": 400},
+                "ams": {"ntrajectories": 10, "nsplititer": 400, "variant": "tams", "end_time": 8.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio"},
-                "trajectory": {"end_time": 8.0, "step_size": 0.01, "targetscore": 0.9},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.9},
                 "model": {"slow_factor": 0.0005, "noise_amplitude": 0.1},
             },
             f,
@@ -569,10 +585,10 @@ def test_doublewell_slow_tams_restore_more_split():
     params_dict = {
         "sampler": {"strategy": "ams", "deterministic": True},
         "runtime": {"walltime": 20.0},
-        "ams": {"ntrajectories": 20, "nsplititer": 20},
+        "ams": {"ntrajectories": 20, "nsplititer": 20, "variant": "tams", "end_time": 6.0},
         "database": {"path": "dwTest.tdb"},
         "runner": {"type": "asyncio", "nworkers_init": 2, "nworkers_iter": 1},
-        "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
+        "trajectory": {"step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
     }
     with Path("input.toml").open("w") as f:

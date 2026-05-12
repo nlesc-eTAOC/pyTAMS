@@ -40,7 +40,7 @@ where :math:`f(X_t) = - \nabla V(X_t)` is derived from a symmetric potential:
 
 :math:`X_t \in \mathbb{R}` is our Markov process, :math:`\epsilon` is the noise scaling parameter and
 :math:`dW_t` a 1D Wiener process. A simple Euler-Maruyama method to advance the system
-in time. In this tutorial, we will try Monte-Carlo and TAMS sampling strategies.
+in time. In this tutorial, we will try Monte-Carlo, TAMS as well as AMS sampling strategies.
 
 Getting set up
 ~~~~~~~~~~~~~~
@@ -101,8 +101,8 @@ which is called by the superclass initializer and allow to initialize model-spec
     def _init_model(self, m_id: int, params: dict[str, typing.Any]) -> None:
         """ ... """
         # Initialize the model state (a single float here)
-        # We always start at -1.0
-        self._state = -1.0
+        # We always start at near -1.0
+        self._state = -0.97
 
         # Parse an amplitude factor from the input file
         self._epsilon = params.get("epsilon",0.02)
@@ -239,8 +239,8 @@ a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the
         # Initialize a trajectory object
         traj = Trajectory(0, 1.0, fmodel, traj_cfg=tcfg, model_params=model_params)
 
-        # Advance the model
-        traj.advance()
+        # Advance the model up to 10 time units
+        traj.advance(t_end=10.0)
 
         # Plain plot the trajectory score history
         plt.plot(traj.get_time_array(), traj.get_score_array())
@@ -255,7 +255,6 @@ of input keys).
 .. code-block:: python
 
   [trajectory]
-  end_time = 10.0
   step_size = 0.01
 
   [model]
@@ -284,6 +283,10 @@ all set to perform our first sampling run.
 
 Sampling transitions
 ~~~~~~~~~~~~~~~~~~~~
+
+Let's now use `pyREVS` to sample transition between the two wells. In particular, we are
+asking: what is the probability of a transition from well A (left) to well B (right) before
+a given time horizon :math:`T_a = 10` ?
 
 Similarly to the short script we wrote above to run a single trajectory, let
 assemble a small script to run the sampler (e.g. in ``sample_dw1D.py``):
@@ -315,9 +318,9 @@ to the algorithm parameters. We will start with a Monte-Carlo sampling approach.
 
     [montecarlo]
     ntrajectories = 200
+    end_time = 10.0
 
     [trajectory]
-    end_time = 10.0
     step_size = 0.01
     targetscore = 0.95
 
@@ -374,13 +377,11 @@ and replace the `montecarlo` section with an `ams` section:
 
 .. code-block:: python
 
-    [sampler]
-    strategy = "ams"
-
     [ams]
     ntrajectories = 50
     nsplititer = 500
     variant = "tams"
+    end_time = 10.0
 
 With above input parameters, the TAMS ensemble will contain 50 members and the algorithm
 will proceed up to a total 500 selection/mutation events.
@@ -416,7 +417,7 @@ transitioned, where Monte-Carlo sampling required 199792 model steps for a singl
 trajectory to transition. In order to compare the accuracy of the transition probability,
 we would need to run the TAMS algorithm several times.
 
-Finally, let's update the sample script to extract more information from the sampling
+Let's update the sample script to extract more information from the sampling
 run:
 
 .. code-block:: python
@@ -459,12 +460,61 @@ ensemble score functions span (the span of :math:`\mathcal{Q}_{tr}`).
 We can this that in this high noise setting, one trajectory rapidly reaches :math:`\mathcal{B}`,
 but many more iterations are needed for the entire ensemble to transition.
 
+Our final task will now focus on using AMS. With AMS, we are no longer interested in transition before
+a given time horizon, but rather: what is the probability that a model path exiting well A transitions
+to well B before returning to well A ?
+
+To switch to sampling this particular probability, we do not need to update the forward model.
+You might have noticed that in the model initializer (``__init__`` function), we have set the initial
+condition close to well A, but not exactly at well A: i.e. ``x0 = -0.97`` and not ``x0 = -1.0``.
+As such our initial condition corresponds to a trajectory that is close to A, or exiting well A.
+
+Let's update the input file to enable AMS:
+
+.. code-block:: python
+
+    [ams]
+    ntrajectories = 50
+    nsplititer = 500
+    variant = "ams"
+    min_score = 0.01
+
+With the above input parameters, the termination criterion is set such that return to well A corresponds
+to a score function value below 0.01. We can keep the ensemble envelope diagnostic in our sample script, but
+let's also add another diagnostics allowing to monitor the ensemble during the AMS iterations:
+
+.. code-block:: python
+
+    [runtime]
+    plot_diagnostics = true
+
+With the ``plot_diagnostics`` parameter set to ``True``, `pyREVS` will plot the ensemble score functions
+at every AMS iteration. Let's run the script again:
+
+.. code-block:: shell
+
+    python sample_dw1D.py
+
+The resulting transition probability is much lower than the one obtained with TAMS, which highlights
+the fact that the two methods are tracking very different quantities. Using the numerous images generated
+by `pyREVS` over the course of the algorithm enable to create an animation of the ensemble evolution:
+
+.. figure:: images/ams_doublewell1D.gif
+   :name: AMS_DoubleWell1D
+   :align: center
+   :width: 70%
+
+   Evolution of the AMS trajectories ensemble (:math:`N = 50`, :math:`l_j = 1`)
+   over the course the algorithm iterations.
+
+You can compare the ensemble behavior with the one depicted in the Theory section.
+
 This is all for this tutorial. We have covered the following points:
 
 - Getting `pyREVS`
 - Going from a pen-and-paper SDE to a practical implementation ready for `pyREVS`
 - Testing the model on a single, isolated trajectory
-- Running several sampling strategies
+- Running several sampling strategies, depending on the probability of interest.
 
 To go further, modify the ``sample_dw1D.py`` script to run TAMS :math:`K` times and
 provide a better estimate of the transition probability :math:`\overline{P}_K`, as well as
@@ -590,6 +640,8 @@ All of these parameter can be set in the ``input.toml`` file (differs from defau
     [ams]
     ntrajectories = 32
     nsplititer = 1000
+    variant = "tams"
+    end_time = 20.0
 
     [sampler]
     strategy = "ams"
@@ -598,7 +650,6 @@ All of these parameter can be set in the ``input.toml`` file (differs from defau
     loglevel = "WARNING"
 
     [trajectory]
-    end_time = 20.0
     step_size = 0.01
     targetscore = 1.05
 
@@ -1142,6 +1193,7 @@ Let's review the content of the input file ``input.toml``:
     ntrajectories = 20
     nsplititer = 200
     variant = "tams"
+    end_time = 20.0
 
     [runtime]
     loglevel = "INFO"
@@ -1155,7 +1207,6 @@ of the iterations, as depicted in the last graph of the :ref:`Theory Section <se
 .. code-block:: python
 
     [trajectory]
-    end_time = 20.0
     step_size = 0.005
     targetscore = 0.95
     sparse_freq = 10

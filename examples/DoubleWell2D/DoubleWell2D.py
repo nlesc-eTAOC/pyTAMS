@@ -28,7 +28,7 @@ class Doublewell2D(ForwardModelBaseClass):
             m_id: the model instance unique identifier
             params: an optional dict containing parameters
         """
-        self._state = np.array([-0.95, 0.0])
+        self._state = np.array([-0.92, 0.0])
         self._epsilon = params.get("epsilon", 1.0)
         if self._deterministic:
             self._rng = np.random.default_rng(m_id)

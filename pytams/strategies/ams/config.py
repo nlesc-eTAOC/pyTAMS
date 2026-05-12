@@ -34,6 +34,18 @@ class AMSConfig:
             "doc": "Whether or not to stop after initializing the trajectory ensemble",
         },
     )
+    end_time: float = field(
+        default=-1.0,
+        metadata={
+            "doc": "The end time of the trajectory (TAMS)",
+        },
+    )
+    min_score: float | None = field(
+        default=None,
+        metadata={
+            "doc": "The minimum score of the trajectory (AMS)",
+        },
+    )
 
     def validate(self) -> None:
         """Validate AMS configuration."""
@@ -43,4 +55,20 @@ class AMSConfig:
 
         if self.nsplititer <= 0:
             err_msg = " AMSConfig.nsplititer must be > 0"
+            raise ValueError(err_msg)
+
+        if self.variant not in ["tams", "ams", "hams"]:
+            err_msg = " AMSConfig.variant must be one of ['tams', 'ams', 'hams']"
+            raise ValueError(err_msg)
+
+        if self.variant == "tams" and self.end_time <= 0.0:
+            err_msg = " AMSConfig.end_time must be > 0 for TAMS"
+            raise ValueError(err_msg)
+
+        if self.variant == "ams" and self.min_score is None:
+            err_msg = " AMSConfig.min_score must be set for AMS"
+            raise ValueError(err_msg)
+
+        if self.variant == "hams" and (self.min_score is None or self.end_time <= 0.0):
+            err_msg = " AMSConfig.min_score and end_time must be set for HAMS"
             raise ValueError(err_msg)

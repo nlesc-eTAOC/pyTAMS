@@ -1,5 +1,4 @@
 [trajectory]
-end_time = 1000000.0
 step_size = 0.01
 targetscore = 10.0
 

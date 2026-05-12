@@ -16,6 +16,7 @@ def test_get_local_import_fail():
     with pytest.raises(ValueError):
         _ = get_module_local_import("dummy_module_name")
 
+
 def test_get_local_import_fail_stdlib():
     """Test get local import function with a module from stdlib."""
     with pytest.raises(FileNotFoundError):

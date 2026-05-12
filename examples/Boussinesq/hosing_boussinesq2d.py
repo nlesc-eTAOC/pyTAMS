@@ -25,7 +25,7 @@ if __name__ == "__main__":
     model_params = cfg.section_dict("model")
 
     traj = Trajectory(traj_id=0, weight=1.0, fmodel_t=fmodel, traj_cfg=tcfg, model_params=model_params)
-    traj.advance()
+    traj.advance(t_end=120.0)
     traj.store(Path("./hysteresis_traj.xml"))
 
     plt.plot(traj.get_time_array(), traj.get_score_array())

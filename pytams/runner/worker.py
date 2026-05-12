@@ -1,16 +1,22 @@
 """A set of functions used by TAMS workers."""
 
+from __future__ import annotations
 import asyncio
-import concurrent.futures
 import datetime
 import functools
 import logging
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from pytams.core import CoreDB
 from pytams.trajectory import Trajectory
 from pytams.trajectory.trajectory import WallTimeLimitError
+
+if TYPE_CHECKING:
+    import concurrent.futures
+    from collections.abc import Callable
+    from pytams.strategies.base import TerminationCriterion
+
 
 _logger = logging.getLogger(__name__)
 
@@ -31,12 +37,17 @@ def update_trajectory_in_sql(traj: Trajectory, trajdb: CoreDB | None = None, db_
 
 
 def traj_advance_with_exception(
-    traj: Trajectory, walltime: float, trajdb: CoreDB | None = None, db_path: str | None = None
+    traj: Trajectory,
+    termination_criteria: list[TerminationCriterion],
+    walltime: float,
+    trajdb: CoreDB | None = None,
+    db_path: str | None = None,
 ) -> Trajectory:
     """Advance a trajectory with exception handling.
 
     Args:
         traj: a trajectory
+        termination_criteria: a list of termination criterion for the advance call
         walltime: the time limit to advance the trajectory
         trajdb: a handle to the SQL database
         db_path: an optional path to the run database
@@ -45,7 +56,7 @@ def traj_advance_with_exception(
         The updated trajectory
     """
     try:
-        traj.advance(walltime=walltime)
+        traj.advance(walltime=walltime, termination_criteria=termination_criteria)
 
     except WallTimeLimitError:
         warn_msg = f"Trajectory {traj.idstr()} advance ran out of time !"
@@ -74,12 +85,17 @@ def traj_advance_with_exception(
 
 
 def pool_worker(
-    traj: Trajectory, end_date: datetime.date, trajdb_path: str | None = None, db_path: str | None = None
+    traj: Trajectory,
+    termination_criteria: list[TerminationCriterion],
+    end_date: datetime.date,
+    trajdb_path: str | None = None,
+    db_path: str | None = None,
 ) -> Trajectory:
     """A worker to generate each initial trajectory.
 
     Args:
         traj: a trajectory
+        termination_criteria: a list of termination criterion for the advance call
         end_date: the time limit to advance the trajectory
         trajdb_path: an optional path to the SQL database
         db_path: an optional path to the run database
@@ -105,7 +121,7 @@ def pool_worker(
         inf_msg = f"Advancing {traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
-        traj = traj_advance_with_exception(traj, wall_time, trajdb, db_path)
+        traj = traj_advance_with_exception(traj, termination_criteria, wall_time, trajdb, db_path)
 
     return traj
 
@@ -115,6 +131,7 @@ def ms_worker(
     rst_traj: Trajectory,
     min_val: float,
     new_weight: float,
+    termination_criteria: list[TerminationCriterion],
     end_date: datetime.date,
     trajdb_path: str | None = None,
     db_path: str | None = None,
@@ -126,6 +143,7 @@ def ms_worker(
         rst_traj: the trajectory being restarted
         min_val: the value of the score function to restart from
         new_weight: the weight of the new child trajectory
+        termination_criteria: a list of termination criterion for the advance call
         end_date: the time limit to advance the trajectory
         trajdb_path: a path to the SQL database
         db_path: an optional path to the run database
@@ -158,7 +176,7 @@ def ms_worker(
         # Update the database to point to the latest one.
         update_trajectory_in_sql(traj, trajdb, db_path)
 
-        return traj_advance_with_exception(traj, wall_time, trajdb, db_path)
+        return traj_advance_with_exception(traj, termination_criteria, wall_time, trajdb, db_path)
 
     traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
 

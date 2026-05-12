@@ -5,11 +5,10 @@ from pathlib import Path
 import pytest
 import toml
 from pytams.core import Config
-from pytams.strategies.ams.extension import AMSDatabaseExtension
 from pytams.database import Database
 from pytams.database import load_database
-from pytams.utils.dbutils import prepare_database_path
 from pytams.sampler import build_sampler
+from pytams.utils.dbutils import prepare_database_path
 from tests.dwmodel import DoubleWellModel
 
 
@@ -38,7 +37,7 @@ def test_init_empty_tdb_inmemory():
 def test_init_empty_tdb():
     """Test init database on disk."""
     fmodel = DoubleWellModel
-    cfg= Config({"database": {"path": "dwTest.tdb"}})
+    cfg = Config({"database": {"path": "dwTest.tdb"}})
     tdb = Database.create(fmodel, cfg)
     assert tdb.name() == "dwTest.tdb"
     # Necessary on Windows
@@ -77,7 +76,7 @@ def test_init_and_load_empty_tdb():
 
     # Create: note that when not using the sampler.build_database helper
     # one need to manually create the input_params.toml
-    cfg= Config({"database": {"path": "dwTest.tdb"}})
+    cfg = Config({"database": {"path": "dwTest.tdb"}})
     tdb = Database.create(fmodel, cfg)
     with Path("dwTest.tdb/input_params.toml").open("w") as f:
         toml.dump({"database": {"path": "dwTest.tdb"}}, f)
@@ -98,11 +97,11 @@ def test_generate_and_load_tdb():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "INFO"},
-                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams"},
+                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 10.0},
                 "database": {"path": "dwTest.tdb"},
                 "runner": {"type": "asyncio", "nworkers_init": 2, "nworkers_iter": 1},
                 "model": {"noise_amplitude": 0.8},
-                "trajectory": {"end_time": 10.0, "step_size": 0.01, "targetscore": 0.51},
+                "trajectory": {"step_size": 0.01, "targetscore": 0.51},
             },
             f,
         )

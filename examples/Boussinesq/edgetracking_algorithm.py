@@ -42,7 +42,8 @@ def mapper(fmodel: Any, input_params: dict[Any, Any], state: npt.NDArray[np.numb
     traj._fmodel.set_current_state((traj._fmodel._netcdf_state_path, "state_init"))
 
     # Advance the model to the final time specified in toml file
-    traj.advance()
+    # Note that the end_time is specified in the ams section.
+    traj.advance(t_end=input_params["ams"]["end_time"])
     # Delete temporary workdir
     shutil.rmtree(f"./.edge_tmp/tmp_wkdir{suffix}")
 

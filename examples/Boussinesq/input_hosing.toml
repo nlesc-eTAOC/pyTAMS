@@ -1,6 +1,8 @@
 [ams]
 ntrajectories = 20
 nsplititer = 1000
+variant = "tams"
+end_time = 120.0
 
 [runtime]
 loglevel = "INFO"
@@ -8,7 +10,6 @@ walltime = 7200.0
 diagnostics = true
 
 [trajectory]
-end_time = 120.0
 step_size = 0.005
 targetscore = 1.95
 sparse_freq = 10
