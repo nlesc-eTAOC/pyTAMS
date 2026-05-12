@@ -82,3 +82,19 @@ class LowScoreTerminationCriterion(TerminationCriterion):
         """Check if the trajectory should terminate."""
         _ = trajectory
         return model.score() <= self._score_threshold
+
+
+class ModelTerminationCriterion(TerminationCriterion):
+    """Termination criterion based on model.
+
+    Will trigger termination if the forward model has decides to.
+    """
+
+    def should_terminate(
+        self,
+        model: ForwardModelBaseClass[T_Noise, T_State],
+        trajectory: Trajectory,
+    ) -> bool:
+        """Check if the trajectory should terminate."""
+        _ = trajectory
+        return model.check_termination(trajectory.current_step(), trajectory.current_time())

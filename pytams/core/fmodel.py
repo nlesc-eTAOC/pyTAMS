@@ -258,24 +258,21 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
         _ = (step, time)
         return current_score >= target_score
 
-    def check_termination(self, step: int, time: float, nstep_end: int, time_end: float, current_score: float) -> bool:
-        """Check if the trajectory is terminated.
+    def check_termination(self, step: int, time: float) -> bool:
+        """Check for trajectory termination.
 
-        This default implementation checks if the current time or
-        step is below the provided end time and end step.
-        This is proper when running TAMS sampling, but not AMS or other methods.
+        This default always return False. The user can override
+        this method to implement a different termination criterion.
+        Note that simple termination criteria (e.g. end_time, score_min) are
+        handled elsewhere. This function should be used for more complex
+        termination criteria, e.g. entering a given region of the model phase space.
 
         Args:
             step: the current step counter
             time: the time of the simulation
-            nstep_end: the maximum number of steps to advance
-            time_end: the end time of the advance
-            current_score: the current score
         """
-        _ = current_score
-        step_termination = step >= nstep_end if nstep_end > 0 else False
-        time_termination = time >= time_end if time_end > 0.0 else False
-        return step_termination or time_termination
+        _, _ = (step, time)
+        return False
 
     def _clear_model(self) -> Any:
         """Clear the concrete forward model internals."""

@@ -805,7 +805,8 @@ class Trajectory(Generic[T_Noise, T_State]):
                 self._has_terminated = True
             else:
                 self._has_terminated = self._fmodel.check_termination(
-                    self._step, self._t_cur, -1, -1.0, self._score_max
+                    self._step,
+                    self._t_cur,
                 )
         else:
             self._has_converged = False
@@ -819,6 +820,10 @@ class Trajectory(Generic[T_Noise, T_State]):
     def current_time(self) -> float:
         """Return the current trajectory time."""
         return self._t_cur
+
+    def current_step(self) -> int:
+        """Return the current trajectory step."""
+        return self._step
 
     def step_size(self) -> float:
         """Return the time step size."""
