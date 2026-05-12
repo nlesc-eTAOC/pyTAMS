@@ -27,6 +27,7 @@ from pytams.utils.xmlutils import read_xml_snapshot
 if TYPE_CHECKING:
     from pytams.core import Config
     from pytams.core import ForwardModelBaseClass
+    from pytams.strategies.base import TerminationCriterion
     from .config import TrajectoryConfig
 
 _logger = logging.getLogger(__name__)
@@ -240,7 +241,13 @@ class Trajectory(Generic[T_Noise, T_State]):
         """
         return form_trajectory_id(self._tid, self.get_nbranching())
 
-    def advance(self, nstep_end: int = -1, t_end: float = -1.0, walltime: float = 1.0e12) -> None:
+    def advance(
+        self,
+        termination_criteria: list[TerminationCriterion],
+        nstep_end: int = -1,
+        t_end: float = -1.0,
+        walltime: float = 1.0e12,
+    ) -> None:
         """Advance the trajectory to a prescribed end time.
 
         This is the main time loop of the trajectory object.
@@ -255,6 +262,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             nstep_end: the number of steps to advance
             t_end: the end time of the advance
             walltime: a walltime limit to advance the model to t_end
+            termination_criteria: a list of termination criterion
 
         Returns:
             None
@@ -272,10 +280,12 @@ class Trajectory(Generic[T_Noise, T_State]):
         start_time = time.monotonic()
         end_time = self._calculate_end_time(t_end)
 
-        # Termination depends on runtime arguments of the advance function.
-        # Re-evaluate before we move forward.
+        # Termination from sampling strategy termination criteria
+        # or from runtime arguments (end time, nstep_end)
         # (A previous call to advance with other arguments might have switched the boolean)
-        self._has_terminated = self._fmodel.check_termination(self._step, self._t_cur, nstep_end, end_time, -1.0)
+        self._has_terminated = any(
+            c.should_terminate(self._fmodel, self) for c in termination_criteria
+        ) or self._runtime_termination(end_time, nstep_end)
 
         while not (self._has_terminated or self._has_converged):
             # Do a single model step
@@ -285,7 +295,9 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._has_converged = self._fmodel.check_convergence(
                 self._step, self._t_cur, score, self._traj_cfg.targetscore
             )
-            self._has_terminated = self._fmodel.check_termination(self._step, self._t_cur, nstep_end, end_time, score)
+            self._has_terminated = any(
+                c.should_terminate(self._fmodel, self) for c in termination_criteria
+            ) or self._runtime_termination(end_time, nstep_end)
 
             # Handle diagnostics
             self._update_diagnostics()
@@ -312,6 +324,12 @@ class Trajectory(Generic[T_Noise, T_State]):
             warn_msg = f"{self.idstr()} ran out of time in advance()"
             _logger.warning(warn_msg)
             raise WallTimeLimitError(warn_msg)
+
+    def _runtime_termination(self, end_time: float, nstep_end: int) -> bool:
+        """Returns True if the trajectory should terminate from the runtime arguments."""
+        step_termination = self._step >= nstep_end if nstep_end > 0 else False
+        time_termination = self._t_cur >= end_time if end_time > 0.0 else False
+        return step_termination or time_termination
 
     def _calculate_end_time(self, t_end: float) -> float:
         """Returns the earliest positive end time, or -1.0 if none exist.
