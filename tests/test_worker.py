@@ -160,7 +160,7 @@ def test_run_ms_worker_advanceerror():
     cfg = Config({"trajectory": {"end_time": 1.0, "step_size": 0.001, "targetscore": 0.75}})
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=1.0)
     t_test = Trajectory(1, 0.5, fmodel, cfg.load(TrajectoryConfig))
-    t_test.advance(t_end = 0.01)
+    t_test.advance(t_end=0.01)
     rst_test = Trajectory(5, 0.5, fmodel, cfg.load(TrajectoryConfig))
     with pytest.raises(RuntimeError):
         _ = ms_worker(t_test, rst_test, 0.04, 1.0, [], enddate)
