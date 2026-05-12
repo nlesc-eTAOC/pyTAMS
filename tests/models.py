@@ -1,6 +1,6 @@
 from typing import Any
-from pytams.core import ForwardModelBaseClass
-from pytams.core import Snapshot
+from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
 
 
 class SimpleFModel(ForwardModelBaseClass):

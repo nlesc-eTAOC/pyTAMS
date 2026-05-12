@@ -4,9 +4,9 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-from pytams.core import ForwardModelBaseClass
-from pytams.core import Snapshot
-from pytams.database import Database
+from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
+from pyrevs.database import Database
 
 
 class BiChannel2D(ForwardModelBaseClass):

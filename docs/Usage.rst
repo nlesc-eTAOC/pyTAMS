@@ -16,7 +16,7 @@ lines of code in say `mysamplingrun.py`:
 
 .. code-block:: python
 
-  from pytams.sampler import build_sampler
+  from pyrevs.sampler import build_sampler
   from myproblem import my_problem_class
   
   if __name__ == "__main__":
@@ -132,7 +132,7 @@ data structures of the code:
 
   The ``runner`` manages scheduling the worker tasks over the course of the algorithm. Currently, two
   runner types are supported: ``asyncio`` is a light runner based on `the asyncio library <https://docs.python.org/3/library/asyncio.html>`_
-  more suited when running `pyTAMS` locally (or within the scope of a Slurm job), and ``dask``
+  more suited when running `pyREVS` locally (or within the scope of a Slurm job), and ``dask``
   leverage `Dask <https://www.dask.org/>`_ and is required when deploying a large `pyREVS` run on a
   cluster.
   [TODO] The ``nworkers_init`` and ``nworkers_iter`` set the number of workers, i.e. number of parallel 
@@ -203,8 +203,8 @@ from the sampling runs itself. To do so, in a separate Python script, one can:
 .. code-block:: python
 
   from pathlib import Path
-  from pytams.utils import setup_logger
-  from pytams.database import load_database
+  from pyrevs.utils import setup_logger
+  from pyrevs.database import load_database
 
   if __name__ == "__main__":
       # Ensure we catch loading errors
@@ -225,7 +225,7 @@ Upon loading the data, a summary of the database state is logged to screen, e.g.
     [INFO] 2025-09-09 11:41:08,481 - 200 trajectories loaded
     [INFO] 2025-09-09 11:41:12,018 -
             ####################################################
-            # pyTAMS v1.0.0                                    #
+            # pyREVS v1.0.0                                    #
             # Date: 2025-09-09 09:30:13.998659+00:00           #
             # Model: DoubleWellModel3D                         #
             # Strategy: ams                                    #
@@ -237,4 +237,4 @@ Upon loading the data, a summary of the database state is logged to screen, e.g.
             # Current total number of steps:            463247 #
             ####################################################
 
-One can then access the data in the database using the `database API <./autoapi/pytams/database/index.html>`_.
+One can then access the data in the database using the `database API <./autoapi/pyrevs/database/index.html>`_.

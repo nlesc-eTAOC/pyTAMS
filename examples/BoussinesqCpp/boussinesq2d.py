@@ -8,7 +8,7 @@ from messaging import MessageType
 from messaging import TwoWayPipe
 from messaging import exit_msg
 from messaging import trigger_save_msg
-from pytams.core import ForwardModelBaseClass
+from pyrevs.core import ForwardModelBaseClass
 
 _logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 import pytest
-from pytams.core import Config
-from pytams.sampler.system_config import SystemConfig
+from pyrevs.core import Config
+from pyrevs.sampler.system_config import SystemConfig
 
 
 def test_instantiate_sysconfig():

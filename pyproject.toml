@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pytams"
+name = "pyrevs"
 version = "1.0.0"
 authors = [
     { name = "Lucas Esclapez", email = "l.esclapez@esciencecenter.nl" }
@@ -20,11 +20,11 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
-description = "An implementation of the trajectory-adaptive multilevel splitting (TAMS) method."
+description = "A package for exploring rare-events in high-dimensional dynamical systems"
 keywords = ["Rare events", "Stochastic systems", "Multilevel splitting"]
 license = {file = "LICENSE"}
 readme = {file = "README.md", content-type = "text/markdown"}
-urls = {Repository = "https://github.com/nlesc-eTAOC/pyTAMS", Documentation = "https://nlesc-etaoc.github.io/pyTAMS/", Issues = "https://github.com/nlesc-eTAOC/pyTAMS/issues"}
+urls = {Repository = "https://github.com/nlesc-eTAOC/pyREVS", Documentation = "https://nlesc-etaoc.github.io/pyREVS/", Issues = "https://github.com/nlesc-eTAOC/pyREVS/issues"}
 requires-python = ">=3.10"
 dependencies = [
   "toml",
@@ -70,21 +70,21 @@ exec = [
 ]
 
 [project.scripts]
-tams_init_model = "pytams.bin:tams_template_model"
-tams_check = "pytams.bin:tams_alive"
-tams_run = "pytams.bin:tams_run"
-tams_help = "pytams.bin:tams_input_help"
+pyrevs_init_model = "pyrevs.bin:template_model"
+pyrevs_check = "pyrevs.bin:alive"
+pyrevs_run = "pyrevs.bin:sampling_run"
+pyrevs_help = "pyrevs.bin:input_help"
 
-[project.entry-points."pytams.strategies"]
-ams = "pytams.strategies.ams"
-montecarlo = "pytams.strategies.montecarlo"
+[project.entry-points."pyrevs.strategies"]
+ams = "pyrevs.strategies.ams"
+montecarlo = "pyrevs.strategies.montecarlo"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["pytams"]
+source = ["pyrevs"]
 command_line = "-m pytest"
 
 [tool.tox]
@@ -143,7 +143,7 @@ fixable = ["A", "B", "C", "D", "E", "F", "I"]
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pytams"]
+known-first-party = ["pyrevs"]
 force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
@@ -164,16 +164,16 @@ module = ["toml","dask_jobqueue","cloudpickle"]
 ignore_missing_imports = true
 
 [tool.setuptools.package-data]
-pytams = ["py.typed"]
+pyrevs = ["py.typed"]
 
 #[tool.setuptools.packages.find]
-#where = ["pytams"]
+#where = ["pyrevs"]
 
 [tool.bumpversion]
 current_version = "1.0.0"
 
 [[tool.bumpversion.files]]
-filename = "pytams/__init__.py"
+filename = "pyrevs/__init__.py"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"

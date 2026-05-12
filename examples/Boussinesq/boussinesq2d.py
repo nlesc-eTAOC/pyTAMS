@@ -1,4 +1,4 @@
-"""Boussinesq 2D pyTAMS concrete implementation."""
+"""Boussinesq 2D pyREVS concrete implementation."""
 
 import logging
 from pathlib import Path
@@ -8,8 +8,8 @@ import numpy as np
 import scipy as sp
 from boussinesq_core import BoussinesqCore
 from podscore import PODScore
-from pytams.core import ForwardModelBaseClass
-from pytams.core import Snapshot
+from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
 
 _logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Boussinesq2D(ForwardModelBaseClass):
     The core model state is a 3D numpy array of vorticity, salinity,
     temperature and streamfunction (4x(M+1)x(N+1)).
 
-    The model state (explosed to pyTAMS) is a tuple with a path to
+    The model state (explosed to pyREVS) is a tuple with a path to
     a netCDF file and the name of the field in the file, but
     this class also keeps the last version of the state in memory.
 

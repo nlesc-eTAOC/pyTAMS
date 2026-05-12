@@ -1,11 +1,11 @@
-"""Tests for the pytams.sqlpool class."""
+"""Tests for the pyrevs.sqlpool class."""
 
 from pathlib import Path
 import numpy as np
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from pytams.core import CoreDB
-from pytams.strategies.ams.sql import AMSDB
+from pyrevs.core import CoreDB
+from pyrevs.strategies.ams.sql import AMSDB
 
 
 def test_createdb():

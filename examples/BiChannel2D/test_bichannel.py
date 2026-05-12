@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import toml
 from bichannel2d import BiChannel2D
-from pytams.core import Config
-from pytams.trajectory import Trajectory
-from pytams.trajectory import TrajectoryConfig
+from pyrevs.core import Config
+from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory import TrajectoryConfig
 
 if __name__ == "__main__":
     # For convenience

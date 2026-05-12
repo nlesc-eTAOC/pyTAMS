@@ -1,5 +1,5 @@
 import pytest
-from pytams.utils.utils import is_windows_os
+from pyrevs.utils.utils import is_windows_os
 
 
 @pytest.fixture(scope="session")

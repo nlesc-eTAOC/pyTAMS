@@ -1,13 +1,13 @@
-"""Tests for the pytams.tams class."""
+"""Tests for the pyrevs.sampler class."""
 
 import logging
 import shutil
 from pathlib import Path
 import pytest
 import toml
-from pytams.database import Database
-from pytams.sampler import build_sampler
-from pytams.utils.utils import is_mac_os
+from pyrevs.database import Database
+from pyrevs.sampler import build_sampler
+from pyrevs.utils.utils import is_mac_os
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
@@ -34,7 +34,7 @@ def test_init_sampler_missing_req():
     """Test failed sampler initialization."""
     fmodel = SimpleFModel
     with Path("input.toml").open("w") as f:
-        toml.dump({"sampler": {}, "tams": {"nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f)
+        toml.dump({"sampler": {}, "ams": {"nsplititer": 200}, "trajectory": {"end_time": 0.02, "step_size": 0.001}}, f)
     with pytest.raises(ValueError):
         _ = build_sampler(fmodel_t=fmodel, a_args=[])
     Path("input.toml").unlink(missing_ok=True)
@@ -271,7 +271,7 @@ def test_simple_model_twice_tams():
     re_proba = sampler.database.get_event_probability()
     assert re_proba == 1.0
     del sampler
-    # Re-init TAMS and run to test competing database
+    # Re-init pyREVS and run to test competing database
     # on disk.
     sampler = build_sampler(fmodel_t=fmodel, a_args=[])
     sampler.run()

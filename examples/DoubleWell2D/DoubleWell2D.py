@@ -2,8 +2,8 @@ import typing
 from typing import Any
 import numpy as np
 import numpy.typing as npt
-from pytams.core import ForwardModelBaseClass
-from pytams.core import Snapshot
+from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
 
 
 class Doublewell2D(ForwardModelBaseClass):

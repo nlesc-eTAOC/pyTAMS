@@ -50,7 +50,7 @@ In your favorite environment manager, simply use:
 
 .. code-block:: shell
 
-   pip install pytams
+   pip install pyrevs
    tams_check
 
 The second line check that `pyREVS` is effectively installed and should return (with proper version numbers):
@@ -218,9 +218,9 @@ a single trajectory. In a separate python file (e.g. ``test_dw1D.py``), copy the
     from pathlib import Path
     import toml
     import matplotlib.pyplot as plt
-    from pytams.core import Config
-    from pytams.trajectory import Trajectory
-    from pytams.trajectory import TrajectoryConfig
+    from pyrevs.core import Config
+    from pyrevs.trajectory import Trajectory
+    from pyrevs.trajectory import TrajectoryConfig
     from doublewell1D import doublewell1D
 
     if __name__ == "__main__":
@@ -293,7 +293,7 @@ assemble a small script to run the sampler (e.g. in ``sample_dw1D.py``):
 
 .. code-block:: python
 
-    from pytams.sampler import build_sampler
+    from pyrevs.sampler import build_sampler
     from doublewell1D import doublewell1D
 
     if __name__ == "__main__":
@@ -350,7 +350,7 @@ entire process, and reports a final summary of the form:
 .. code-block:: shell
 
             ####################################################
-            # pyTAMS v1.0.0                                    #
+            # pyREVS v1.0.0                                    #
             # Date: 2025-11-26 14:58:21.980592+00:00           #
             # Model: doublewell1D                              #
             # Sampling strategy: montecarlo                    #
@@ -398,7 +398,7 @@ This time, the final summary should look something like:
 .. code-block:: shell
 
             ####################################################
-            # pyTAMS v1.0.0                                    #
+            # pyREVS v1.0.0                                    #
             # Date: 2025-11-26 14:58:21.980592+00:00           #
             # Model: doublewell1D                              #
             # Sampling strategy: ams                           #
@@ -422,7 +422,7 @@ run:
 
 .. code-block:: python
 
-    from pytams.sampler import build_sampler
+    from pyrevs.sampler import build_sampler
     from doublewell1D import doublewell1D
 
     if __name__ == "__main__":
@@ -565,8 +565,8 @@ In order to have access to the example suite, you will need to install the packa
 
 .. code-block:: shell
 
-   git clone git@github.com:nlesc-eTAOC/pyTAMS.git
-   cd pyTAMS
+   git clone git@github.com:nlesc-eTAOC/pyREVS.git
+   cd pyREVS
    pip install -e .
    tams_check
 
@@ -670,7 +670,7 @@ bi-channel model ``sample_bichannel.py``:
   import numpy as np           
   from bichannel2d import BiChannel2D
   from bichannel2d import plot_in_landscape
-  from pytams.sampler import build_sampler
+  from pyrevs.sampler import build_sampler
   
   if __name__ == "__main__":   
       # For convenience
@@ -882,7 +882,7 @@ In a new Python file (e.g. ``load_database.py``):
 
 .. code-block:: python
 
-  from pytams.database import load_database
+  from pyrevs.database import load_database
   from pathlib import Path
 
 
@@ -932,7 +932,7 @@ This is all for this tutorial. We have covered the following points:
 
 To go further, modify the change the value of the inverse temperature :math:`\beta` parameter
 and see how that affect the probability of transitioning through the `upper` and `lower` channels,
-look at the ``Database`` and ``Trajectory`` APIs (`database API <./autoapi/pytams/database/index.html>`_)
+look at the ``Database`` and ``Trajectory`` APIs (`database API <./autoapi/pyrevs/database/index.html>`_)
 to extract more data from the database and get the most out of your sampling runs !
 
 2D Boussinesq model
@@ -966,8 +966,8 @@ In order to have access to the example suite, you will need to install the packa
 
 .. code-block:: shell
 
-   git clone git@github.com:nlesc-eTAOC/pyTAMS.git
-   cd pyTAMS
+   git clone git@github.com:nlesc-eTAOC/pyREVS.git
+   cd pyREVS
    pip install -e .
    tams_check
 
@@ -1266,7 +1266,7 @@ The standard output should look something like:
 
     [INFO] 2025-12-04 22:46:02,769 -
                 ####################################################
-                # pyTAMS v1.0.0                                    #
+                # pyREVS v1.0.0                                    #
                 # Date: 2025-12-04 21:46:02.752567+00:00           #
                 # Model: 2DBoussinesqModelCpp                      #
                 # Strategy: ams                                    #

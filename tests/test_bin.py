@@ -3,40 +3,40 @@
 from pathlib import Path
 import pytest
 import toml
-from pytams.bin import tams_alive
-from pytams.bin import tams_input_help
-from pytams.bin import tams_run
-from pytams.bin import tams_template_model
+from pyrevs.bin import alive
+from pyrevs.bin import input_help
+from pyrevs.bin import sampling_run
+from pyrevs.bin import template_model
 
 
-def test_tams_alive(capsys: pytest.CaptureFixture[str]):
+def test_alive(capsys: pytest.CaptureFixture[str]):
     """Test pyREVS check function."""
-    tams_alive()
+    alive()
     assert "rare-event finder tool" in capsys.readouterr().out
 
 
-def test_tams_help(capsys: pytest.CaptureFixture[str]):
+def test_help(capsys: pytest.CaptureFixture[str]):
     """Test pyREVS help function."""
-    tams_input_help()
+    input_help()
     assert "pyREVS input file help" in capsys.readouterr().out
 
 
-def test_tams_template_model():
-    """Test TAMS new model init function."""
-    tams_template_model(a_args=[])
+def test_template_model():
+    """Test pyREVS new model init function."""
+    template_model(a_args=[])
     assert Path("./MyNewClass.py").exists()
     Path("./MyNewClass.py").unlink(missing_ok=True)
 
 
-def test_tams_template_model_with_name():
-    """Test TAMS new model init function."""
-    tams_template_model(a_args=["-n", "MyCustomClass"])
+def test_template_model_with_name():
+    """Test pyREVS new model init function."""
+    template_model(a_args=["-n", "MyCustomClass"])
     assert Path("./MyCustomClass.py").exists()
     Path("./MyCustomClass.py").unlink(missing_ok=True)
 
 
-def test_tams_run():
-    """Test TAMS run."""
+def test_sampling_run():
+    """Test sampling run."""
     params_dict = {
         "sampler": {"strategy": "ams", "deterministic": True},
         "runtime": {"walltime": 20.0},
@@ -47,17 +47,17 @@ def test_tams_run():
     }
     with Path("input.toml").open("w") as f:
         toml.dump(params_dict, f)
-    tams_run(a_args=["-m", "./tests/dwmodel.py", "-i", "input.toml"])
+    sampling_run(a_args=["-m", "./tests/dwmodel.py", "-i", "input.toml"])
     Path("input.toml").unlink(missing_ok=True)
 
 
-def test_tams_run_fail_two_fmodel():
-    """Test TAMS run."""
+def test_sampling_run_fail_two_fmodel():
+    """Test sampling run."""
     with pytest.raises(RuntimeError):
-        tams_run(a_args=["-m", "./tests/models.py", "-i", "input.toml"])
+        sampling_run(a_args=["-m", "./tests/models.py", "-i", "input.toml"])
 
 
-def test_tams_run_fail_nofmodel():
-    """Test TAMS run."""
+def test_sampling_run_fail_nofmodel():
+    """Test sampling run."""
     with pytest.raises(RuntimeError):
-        tams_run(a_args=["-m", "./tests/test_xmlutils.py", "-i", "input.toml"])
+        sampling_run(a_args=["-m", "./tests/test_xmlutils.py", "-i", "input.toml"])

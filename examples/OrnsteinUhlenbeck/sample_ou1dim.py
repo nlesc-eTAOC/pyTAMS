@@ -1,6 +1,6 @@
 import numpy as np
 from ornsteinuhlenbeck import OrnsteinUhlenbeck
-from pytams.sampler import build_sampler
+from pyrevs.sampler import build_sampler
 
 if __name__ == "__main__":
     # For convenience

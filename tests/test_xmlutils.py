@@ -1,9 +1,9 @@
-"""Tests for the pytams.xmlutils class."""
+"""Tests for the pyrevs.xmlutils class."""
 
 import datetime
 import numpy as np
 import pytest
-import pytams.utils.xmlutils as pxml
+import pyrevs.utils.xmlutils as pxml
 
 
 def test_castTypes():

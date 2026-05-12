@@ -1,14 +1,14 @@
-"""Tests for the pytams.database class."""
+"""Tests for the pyrevs.database class."""
 
 import shutil
 from pathlib import Path
 import pytest
 import toml
-from pytams.core import Config
-from pytams.database import Database
-from pytams.database import load_database
-from pytams.sampler import build_sampler
-from pytams.utils.dbutils import prepare_database_path
+from pyrevs.core import Config
+from pyrevs.database import Database
+from pyrevs.database import load_database
+from pyrevs.sampler import build_sampler
+from pyrevs.utils.dbutils import prepare_database_path
 from tests.dwmodel import DoubleWellModel
 
 

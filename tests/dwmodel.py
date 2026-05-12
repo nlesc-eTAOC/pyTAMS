@@ -1,7 +1,7 @@
 import time
 from typing import Any
 import numpy as np
-from pytams.core import ForwardModelBaseClass
+from pyrevs.core import ForwardModelBaseClass
 
 
 class DoubleWellModel(ForwardModelBaseClass):

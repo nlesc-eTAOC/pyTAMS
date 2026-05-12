@@ -17,11 +17,11 @@ import sys
 _rootpath = pathlib.Path(__file__).parents[1]
 print('Project root path: {}'.format(_rootpath))
 sys.path.insert(0, str(_rootpath))
-sys.path.insert(0, str(_rootpath / 'pytams'))
+sys.path.insert(0, str(_rootpath / 'pyrevs'))
 
 # -- Project information -----------------------------------------------------
 
-project = u"pyTAMS"
+project = u"pyREVS"
 copyright = u"2023, Netherlands eScience Center"
 author = u"Lucas Esclapez"
 
@@ -82,7 +82,7 @@ napoleon_google_docstring = True
 # -- Use autoapi.extension to run sphinx-apidoc -------
 
 autoapi_type = "python"
-autoapi_dirs = ['../pytams']
+autoapi_dirs = ['../pyrevs']
 autodoc_typehints = 'signature'
 add_module_names = False
 autoapi_template_dir = '_templates/autoapi'
@@ -109,7 +109,7 @@ html_theme = "furo"
 html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyTAMS_documentation'
+htmlhelp_basename = 'pyREVS_documentation'
 
 def setup(app):
     app.add_css_file('theme.css')

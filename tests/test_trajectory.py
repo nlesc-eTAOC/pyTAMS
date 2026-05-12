@@ -1,16 +1,16 @@
-"""Tests for the pytams.trajectory class."""
+"""Tests for the pyrevs.trajectory class."""
 
 from dataclasses import FrozenInstanceError
 from math import isclose
 from pathlib import Path
 import pytest
-from pytams.core import Config
-from pytams.core import ForwardModelBaseClass
-from pytams.core import Snapshot
-from pytams.diagnostics import DiagnosticAnalyst
-from pytams.trajectory import Trajectory
-from pytams.trajectory import TrajectoryConfig
-from pytams.utils.utils import moving_avg
+from pyrevs.core import Config
+from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
+from pyrevs.diagnostics import DiagnosticAnalyst
+from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory import TrajectoryConfig
+from pyrevs.utils.utils import moving_avg
 from tests.dwmodel import DoubleWellModel
 from tests.models import SimpleFModel
 
