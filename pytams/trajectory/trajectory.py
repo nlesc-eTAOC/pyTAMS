@@ -243,7 +243,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
     def advance(
         self,
-        termination_criteria: list[TerminationCriterion],
+        termination_criteria: list[TerminationCriterion] | None = None,
         nstep_end: int = -1,
         t_end: float = -1.0,
         walltime: float = 1.0e12,
@@ -281,6 +281,9 @@ class Trajectory(Generic[T_Noise, T_State]):
         end_time = self._calculate_end_time(t_end)
 
         # Termination from sampling strategy termination criteria
+        if termination_criteria is None:
+            termination_criteria = []
+
         # or from runtime arguments (end time, nstep_end)
         # (A previous call to advance with other arguments might have switched the boolean)
         self._has_terminated = any(
