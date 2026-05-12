@@ -13,6 +13,8 @@ from pytams.runner import pool_worker
 from pytams.trajectory import Trajectory
 from pytams.trajectory import TrajectoryConfig
 from pytams.utils.utils import setup_logger
+from pytams.strategies.base import TimeTerminationCriterion
+from pytams.strategies.base import LowScoreTerminationCriterion
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
@@ -25,6 +27,18 @@ def test_run_pool_worker():
     t_test = Trajectory(1, 1.0, fmodel, cfg.load(TrajectoryConfig))
     enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
     t_test = pool_worker(t_test, [], enddate)
+    assert isclose(t_test.score_max(), 0.1, abs_tol=1e-9)
+    assert t_test.is_converged() is False
+
+
+def test_run_pool_worker_with_termination():
+    """Advance trajectory through pool_worker."""
+    fmodel = SimpleFModel
+    cfg = Config({"trajectory": {"end_time": 0.01, "step_size": 0.001, "targetscore": 0.25}})
+    t_test = Trajectory(1, 1.0, fmodel, cfg.load(TrajectoryConfig))
+    enddate = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(seconds=10.0)
+    term_crit = [TimeTerminationCriterion(0.01), LowScoreTerminationCriterion(-0.01)]
+    t_test = pool_worker(t_test, term_crit, enddate)
     assert isclose(t_test.score_max(), 0.1, abs_tol=1e-9)
     assert t_test.is_converged() is False
 
