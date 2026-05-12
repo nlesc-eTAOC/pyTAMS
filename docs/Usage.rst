@@ -84,22 +84,29 @@ data structures of the code:
     ntrajectories = 20          # [REQ] Number of ensemble members
     nsplititer = 200            # [REQ] Maximum number of splitting iterations
     variant = "tams"            # [OPT, DEF = "tams"] Sampling variant
+    end_time = 10.0             # [OPT, DEF = -1] End time, REQ if variant = "tams"
+    min_score = 0.01            # [OPT, DEF = None] Minimum score, REQ if variant = "ams"
+
 
     [montecarlo]
     ntrajectories = 20          # [REQ] Number of ensemble members
+    end_time = 10.0             # [OPT, DEF = -1] End time
 
   Depending on the strategy prescribed, one of the above blocks is required.
   Whem running TAMS, one must specify the number of members in the ensemble :math:`N`
   (``ntrajectories`` in the snippet above) as well as the maximum number of (splitting) iterations :math:`J`
-  (``nsplititer`` above). The ``variant`` enable to switch between TAMS and AMS.
+  (``nsplititer`` above). The ``variant`` enable to switch between TAMS and AMS, and a different termination
+  must then be provided.
   When running a Monte Carlo run, only the number of ensemble members is required (``ntrajectories`` above).
+  If no end time is provided when using Monte-Carlo, trajectory will continue until convergence, which might
+  take a long time, so it is recommended to provide an end time if only to avoid infinite trajectories.
+
 
 - Trajectory parameters:
 
   .. code-block:: python
     
     [trajectory]
-    end_time = 10.0             # [OPT, DEF = -1] End time
     step_size = 0.01            # [REQ] Step size
     targetscore = 0.95          # [OPT, DEF = 0.95] Target score
     sparse_freq = 1             # [OPT, DEF = 1] Frequency of states sampling
@@ -107,7 +114,7 @@ data structures of the code:
     chkfile_dump_all = false    # [OPT, DEF = false] Update trajectory checkpoint file at each step
 
   The trajectory object holds the system states in a chronological order, from time :math:`t=0` to
-  an possibly a prescribed end time :math:`t=T_a` specified in the input file (``end_time``).
+  an possibly a prescribed end time ``t_end`` provided at runtime.
   The step size must also be prescribed (``step_size``), but note that it needs not be the time step size
   of your dynamical system but rather the relevant step size for the stochastic forcing applied on the system.
   The trajectory object also enables sub-sampling the system state, only storing the state every n steps (``sparse_freq = n``).
