@@ -1,7 +1,7 @@
 # pyREVS
 
 [![RSD](https://img.shields.io/badge/rsd-pyREVS-222c71.svg)](https://research-software-directory.org/software/pytams)
-[![DOI](https://img.shields.io/badge/DOI-10.5281/15349506-222c71.svg)](https://zenodo.org/doi/10.5281/zenodo.15349506)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20144970.svg)](https://doi.org/10.5281/zenodo.20144970)
 [![build](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml)
 [![PyPI version](https://badge.fury.io/py/pytams.svg)](https://badge.fury.io/py/pytams)
 [![sonarcloud](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/sonarcloud.yml)
