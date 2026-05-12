@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrevs"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
     { name = "Lucas Esclapez", email = "l.esclapez@esciencecenter.nl" }
 ]
@@ -170,7 +170,7 @@ pyrevs = ["py.typed"]
 #where = ["pyrevs"]
 
 [tool.bumpversion]
-current_version = "1.0.0"
+current_version = "1.1.0"
 
 [[tool.bumpversion.files]]
 filename = "pyrevs/__init__.py"
