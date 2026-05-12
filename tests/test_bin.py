@@ -33,10 +33,11 @@ def test_tams_template_model_with_name():
 def test_tams_run():
     """Test TAMS run."""
     params_dict = {
-        "sampler": {"strategy": "ams", "walltime": 20.0},
-        "ams": {"ntrajectories": 20, "nsplititer": 20, "deterministic": True},
+        "sampler": {"strategy": "ams",  "deterministic": True},
+        "runtime": {"walltime": 20.0},
+        "ams": {"ntrajectories": 20, "nsplititer": 20, "variant": "tams", "end_time": 6.0},
         "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
-        "trajectory": {"end_time": 6.0, "step_size": 0.01, "targetscore": 0.6},
+        "trajectory": {"step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
     }
     with Path("input.toml").open("w") as f:
