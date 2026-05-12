@@ -14,6 +14,9 @@ from pytams.runner import make_runner
 from pytams.runner import ms_worker
 from pytams.runner import pool_worker
 from pytams.strategies.base import BaseSamplingStrategy
+from pytams.strategies.base import LowScoreTerminationCriterion
+from pytams.strategies.base import TerminationCriterion
+from pytams.strategies.base import TimeTerminationCriterion
 from pytams.utils.utils import get_min_scored
 from .config import AMSConfig
 from .extension import AMSDatabaseExtension
@@ -81,6 +84,29 @@ class AMS(BaseSamplingStrategy):
         self._logfile = runtime_cfg.logfile
         self._deterministic = deterministic
         self._db_ext: AMSDatabaseExtension | None = None
+        self._term_crit: list[TerminationCriterion] = []
+
+        if strategy_cfg.variant == "ams":
+            # Check for None. TODO: validate() above does not satisfy mypy
+            if self._ams_cfg.min_score is None:
+                err_msg = "AMSConfig.min_score must be set for AMS"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
+            self._term_crit.append(LowScoreTerminationCriterion(self._ams_cfg.min_score))
+        elif strategy_cfg.variant == "tams":
+            self._term_crit.append(TimeTerminationCriterion(self._ams_cfg.end_time))
+        elif strategy_cfg.variant == "hams":
+            # Check for None. TODO: validate() above does not satisfy mypy
+            if self._ams_cfg.min_score is None:
+                err_msg = "AMSConfig.min_score must be set for HAMS"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
+            self._term_crit.append(TimeTerminationCriterion(self._ams_cfg.end_time))
+            self._term_crit.append(LowScoreTerminationCriterion(self._ams_cfg.min_score))
+        else:
+            err_msg = f"Unknown variant {self._ams_cfg.variant}"
+            _logger.exception(err_msg)
+            raise ValueError(err_msg)
 
     def _req_db_ext(self) -> AMSDatabaseExtension:
         if self._db_ext is None:
@@ -116,7 +142,7 @@ class AMS(BaseSamplingStrategy):
             logfile=self._logfile,
         ) as runner:
             for t in tdb.traj_list():
-                task = [t, self._end_date, tdb.pool_file(), tdb.path()]
+                task = [t, self._term_crit, self._end_date, tdb.pool_file(), tdb.path()]
                 runner.make_promise(task)
 
             try:
@@ -199,7 +225,7 @@ class AMS(BaseSamplingStrategy):
             ) as runner:
                 for i in ongoing_list:
                     t = tdb.get_traj(i)
-                    task = [t, self._end_date, tdb.pool_file(), tdb.path()]
+                    task = [t, self._term_crit, self._end_date, tdb.pool_file(), tdb.path()]
                     runner.make_promise(task)
 
                 try:
@@ -336,6 +362,7 @@ class AMS(BaseSamplingStrategy):
                         tdb.get_traj(min_idx_list[i]),
                         np.max(min_vals),
                         new_traj_weight,
+                        self._term_crit,
                         self._end_date,
                         tdb.pool_file(),
                         tdb.path(),

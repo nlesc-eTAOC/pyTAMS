@@ -11,6 +11,8 @@ from pytams.runner import RunnerConfig
 from pytams.runner import make_runner
 from pytams.runner import pool_worker
 from pytams.strategies.base import BaseSamplingStrategy
+from pytams.strategies.base import TerminationCriterion
+from pytams.strategies.base import TimeTerminationCriterion
 from .config import MCConfig
 from .extension import MCDatabaseExtension
 
@@ -65,6 +67,10 @@ class MonteCarlo(BaseSamplingStrategy):
         self._loglevel = runtime_cfg.loglevel
         self._logfile = runtime_cfg.logfile
         self._deterministic = deterministic
+        self._term_crit: list[TerminationCriterion] = []
+
+        if strategy_cfg.end_time is not None:
+            self._term_crit.append(TimeTerminationCriterion(strategy_cfg.end_time))
 
     def generate_trajectory_ensemble(self, tdb: Database) -> None:
         """Schedule the generation of an ensemble of stochastic trajectories.
@@ -90,7 +96,7 @@ class MonteCarlo(BaseSamplingStrategy):
             logfile=self._logfile,
         ) as runner:
             for t in tdb.traj_list():
-                task = [t, self._end_date, tdb.pool_file(), tdb.path()]
+                task = [t, self._term_crit, self._end_date, tdb.pool_file(), tdb.path()]
                 runner.make_promise(task)
 
             try:

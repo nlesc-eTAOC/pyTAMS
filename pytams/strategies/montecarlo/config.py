@@ -17,6 +17,13 @@ class MCConfig:
         },
     )
 
+    end_time: float | None = field(
+        default=None,
+        metadata={
+            "doc": "End time of the individual simulations",
+        },
+    )
+
     def validate(self) -> None:
         """Validate MC configuration."""
         if self.ntrajectories <= 0:
