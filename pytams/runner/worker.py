@@ -1,17 +1,22 @@
 """A set of functions used by TAMS workers."""
 
+from __future__ import annotations
 import asyncio
-import concurrent.futures
 import datetime
 import functools
 import logging
-from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from pytams.core import CoreDB
-from pytams.strategies.base import TerminationCriterion
 from pytams.trajectory import Trajectory
 from pytams.trajectory.trajectory import WallTimeLimitError
+
+if TYPE_CHECKING:
+    import concurrent.futures
+    from collections.abc import Callable
+    from pytams.strategies.base import TerminationCriterion
+
 
 _logger = logging.getLogger(__name__)
 

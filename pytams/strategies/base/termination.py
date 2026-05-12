@@ -1,9 +1,13 @@
 """Defines the interface and simple implementations of termination criteria."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import TypeVar
-from pytams.core import ForwardModelBaseClass
-from pytams.trajectory import Trajectory
+
+if TYPE_CHECKING:
+    from pytams.core import ForwardModelBaseClass
+    from pytams.trajectory import Trajectory
 
 T_Noise = TypeVar("T_Noise")
 T_State = TypeVar("T_State")
