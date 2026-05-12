@@ -1,8 +1,9 @@
 """Tests for the pytams.xmlutils class."""
+
+import datetime
 import numpy as np
 import pytest
 import pytams.utils.xmlutils as pxml
-import datetime
 
 
 def test_castTypes():
@@ -28,10 +29,10 @@ def test_castTypes():
     elem = pxml.new_element("test", np.ones(5, dtype=int))
     casted_elem = pxml.manual_cast(elem)
     assert isinstance(casted_elem[1], np.ndarray)
-    elem = pxml.new_element("test", np.ones(5,dtype=bool))
+    elem = pxml.new_element("test", np.ones(5, dtype=bool))
     casted_elem = pxml.manual_cast(elem)
     assert isinstance(casted_elem[1], np.ndarray)
-    elem = pxml.new_element("test", {'key1': 'val1','key2': "val2", 'key3': 1, 'key4': 1.0})
+    elem = pxml.new_element("test", {"key1": "val1", "key2": "val2", "key3": 1, "key4": 1.0})
     casted_elem = pxml.manual_cast(elem)
     assert isinstance(casted_elem[1], dict)
     elem = pxml.new_element("test", datetime.datetime.now(tz=datetime.timezone.utc))
@@ -46,7 +47,7 @@ def test_castSnapshot():
     """Test casting of XML trajectory snapshot."""
     snap = pxml.make_xml_snapshot(1, 0.0, 1.0, 0.0, 10.0)
     time, score, noise, state = pxml.read_xml_snapshot(snap)
-    assert(time == 0.0)
-    assert(score == 1.0)
-    assert(noise == 0.0)
-    assert(state == 10.0)
+    assert time == 0.0
+    assert score == 1.0
+    assert noise == 0.0
+    assert state == 10.0

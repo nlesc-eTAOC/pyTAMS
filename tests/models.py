@@ -1,6 +1,4 @@
-import time
 from typing import Any
-import numpy as np
 from pytams.core import ForwardModelBaseClass
 from pytams.core import Snapshot
 

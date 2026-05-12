@@ -15,5 +15,5 @@ def test_config():
         toml.dump(params_dict, f)
     config = Config(params_dict)
     sys_cfg = config.load(SystemConfig)
-    #sampler_cfg = config.load(SamplerConfig)
-    #print(sampler_cfg)
+    # sampler_cfg = config.load(SamplerConfig)
+    # print(sampler_cfg)
