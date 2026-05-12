@@ -10,7 +10,7 @@ authors:
 date-released: 2025-01-29
 doi: 10.5281/zenodo.14762701
 version: "1.0.0"
-repository-code: "git@github.com:nlesc-eTAOC/pyTAMS"
+repository-code: "git@github.com:nlesc-eTAOC/pyREVS"
 keywords:
   - Rare events probability
   - Stochastic systems

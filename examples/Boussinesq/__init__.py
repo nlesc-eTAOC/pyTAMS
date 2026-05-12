@@ -1,1 +1,1 @@
-"""Documentation about pyTAMS's Boussinesq example."""
+"""Documentation about pyREVS's Boussinesq example."""

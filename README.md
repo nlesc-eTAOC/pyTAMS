@@ -1,6 +1,6 @@
 # pyREVS
 
-[![RSD](https://img.shields.io/badge/rsd-pyTAMS-222c71.svg)](https://research-software-directory.org/software/pytams)
+[![RSD](https://img.shields.io/badge/rsd-pyREVS-222c71.svg)](https://research-software-directory.org/software/pytams)
 [![DOI](https://img.shields.io/badge/DOI-10.5281/15349506-222c71.svg)](https://zenodo.org/doi/10.5281/zenodo.15349506)
 [![build](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml)
 [![PyPI version](https://badge.fury.io/py/pytams.svg)](https://badge.fury.io/py/pytams)
@@ -14,7 +14,7 @@
 Rare events algorithms are powerful techniques allowing to sample rare occurrences of a computational model
 at a much lower cost than brute force Monte-Carlo. However, running such algorithms on models featuring more
 than a handull of dimensions become cumbersome as both compute and memory requirements increase.
-*pyREVS* is a modular implementation of the trajectory-adaptive multilevel splitting (TAMS) rare event method
+*pyREVS* is a modular implementation of rare-event algorithms, among which adaptive multilevel splitting (AMS) flavor
 introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856), aiming at alleviating the difficulty
 of performing rare event algorithms on high-dimensional systems such as the ones encountered in geophysical
 or engineering applications.
@@ -53,7 +53,7 @@ cd examples/DoubleWell2D
 python tams_dw2dim.py
 ```
 
-This minimal example runs TAMS 10 times in order to get an estimate of the transition probability
+This minimal example runs the TAMS 10 times in order to get an estimate of the transition probability
 as well as the corresponding relative error. For a more in-depth explanation about this case, setting up the
 model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyREVS/Tutorials.html).
 
