@@ -1,4 +1,4 @@
-# pyREVS
+# pyREVS: python Rare-EVent Sampling package
 
 [![RSD](https://img.shields.io/badge/rsd-pyREVS-222c71.svg)](https://research-software-directory.org/software/pytams)
 [![DOI](https://img.shields.io/badge/DOI-10.5281/15349506-222c71.svg)](https://zenodo.org/doi/10.5281/zenodo.15349506)
@@ -11,13 +11,15 @@
 
 ## Overview
 
-Rare events algorithms are powerful techniques allowing to sample rare occurrences of a computational model
+Rare-events algorithms are powerful techniques allowing to sample rare occurrences of a computational model
 at a much lower cost than brute force Monte-Carlo. However, running such algorithms on models featuring more
-than a handull of dimensions become cumbersome as both compute and memory requirements increase.
-*pyREVS* is a modular implementation of rare-event algorithms, among which adaptive multilevel splitting (AMS) flavor
+than a handfull of dimensions become cumbersome as both compute and memory requirements increase.
+*pyREVS* is a modular implementation of rare-event algorithms, initially focused on
+[adaptive multilevel splitting (AMS)](https://doi.org/10.1080/07362990601139628) and its TAMS variant
 introduced by [Lestang et al.](https://doi.org/10.1088/1742-5468/aab856), aiming at alleviating the difficulty
 of performing rare event algorithms on high-dimensional systems such as the ones encountered in geophysical
-or engineering applications.
+or engineering applications. The package is built from basic building blocks that can be used to implement
+new rare-event algorithms.
 
 
 ## Installation
@@ -41,6 +43,12 @@ To install the examples dependencies, run:
 python -m pip install .[exec]
 ```
 
+You can check that the package was successfully installed using:
+
+```console
+pyrevs_check
+```
+
 ## Quick start
 
 To get started with *pyREVS*, let's have a look at the classical double-well potential case.
@@ -50,7 +58,7 @@ simply do:
 
 ```console
 cd examples/DoubleWell2D
-python tams_dw2dim.py
+python sample_dw2dim.py
 ```
 
 This minimal example runs the TAMS 10 times in order to get an estimate of the transition probability
