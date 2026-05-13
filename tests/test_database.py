@@ -97,9 +97,9 @@ def test_generate_and_load_tdb():
             {
                 "sampler": {"strategy": "ams"},
                 "runtime": {"loglevel": "INFO"},
-                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 10.0},
+                "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 10.0, "l_j": 1},
                 "database": {"path": "dwTest.tdb"},
-                "runner": {"type": "asyncio", "nworkers_init": 2, "nworkers_iter": 1},
+                "runner": {"type": "asyncio", "nworkers": 2},
                 "model": {"noise_amplitude": 0.8},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.51},
             },
