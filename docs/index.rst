@@ -67,6 +67,7 @@ otherwise, please read through this documentation and in particular follow the
    :caption: Developer guide:
 
    Implementation.rst 
+   Extension.rst
    autoapi/pyrevs/index.rst
 
 Documentation
