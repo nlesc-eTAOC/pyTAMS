@@ -137,9 +137,9 @@ class AMS(BaseSamplingStrategy):
         with make_runner(
             self._runner_cfg,
             pool_worker,
-            is_pool_worker=True,
             loglevel=self._loglevel,
             logfile=self._logfile,
+            max_workers=self._ams_cfg.ntrajectories,
         ) as runner:
             for t in tdb.traj_list():
                 task = [t, self._term_crit, self._end_date, tdb.pool_file(), tdb.path()]
@@ -219,9 +219,9 @@ class AMS(BaseSamplingStrategy):
             with make_runner(
                 self._runner_cfg,
                 pool_worker,
-                is_pool_worker=False,
                 loglevel=self._loglevel,
                 logfile=self._logfile,
+                max_workers=self._ams_cfg.l_j,
             ) as runner:
                 for i in ongoing_list:
                     t = tdb.get_traj(i)
@@ -305,9 +305,9 @@ class AMS(BaseSamplingStrategy):
         with make_runner(
             self._runner_cfg,
             ms_worker,
-            is_pool_worker=False,
             loglevel=self._loglevel,
             logfile=self._logfile,
+            max_workers=self._ams_cfg.l_j,
         ) as runner:
             while k < self._ams_cfg.nsplititer:
                 inf_msg = f"Starting AMS iter. {k} with {runner.n_workers()} workers"

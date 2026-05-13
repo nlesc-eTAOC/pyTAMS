@@ -329,7 +329,7 @@ to the algorithm parameters. We will start with a Monte-Carlo sampling approach.
 
     [runner]
     type = "asyncio"
-    nworkers_init=1
+    nworkers=1
 
 With above input parameters, the Monte-Carlo ensemble will contain 200 members.
 The model is assumed to have
@@ -658,8 +658,7 @@ All of these parameter can be set in the ``input.toml`` file (differs from defau
 
     [runner]
     type = "asyncio"
-    nworkers_init=1
-    nworkers_iter=1
+    nworkers=1
 
 Note that the log level here was decreased to ``WARNING`` in order to minimize standard output clutering
 when running TAMS multiple times. Let's now look at the short script provided for running TAMS with the
@@ -1237,8 +1236,7 @@ in order to limit the compute time.
 
     [runner]
     type = "dask"
-    nworkers_init=2
-    nworkers_iter=2
+    nworkers=2
 
 When running the model locally, both `asyncio` and `dask` runner are valid options. Here we use Dask by default,
 spawning two workers during the initial ensemble generation and two workers during the TAMS iterations. The

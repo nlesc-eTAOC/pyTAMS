@@ -41,7 +41,7 @@ def test_sampling_run():
         "sampler": {"strategy": "ams", "deterministic": True},
         "runtime": {"walltime": 20.0},
         "ams": {"ntrajectories": 20, "nsplititer": 20, "variant": "tams", "end_time": 6.0},
-        "runner": {"type": "asyncio", "nworker_init": 1, "nworker_iter": 1},
+        "runner": {"type": "asyncio", "nworkers": 1},
         "trajectory": {"step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
     }

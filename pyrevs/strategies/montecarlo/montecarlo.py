@@ -91,9 +91,9 @@ class MonteCarlo(BaseSamplingStrategy):
         with make_runner(
             self._runner_cfg,
             pool_worker,
-            is_pool_worker=True,
             loglevel=self._loglevel,
             logfile=self._logfile,
+            max_workers=self._mc_cfg.ntrajectories,
         ) as runner:
             for t in tdb.traj_list():
                 task = [t, self._term_crit, self._end_date, tdb.pool_file(), tdb.path()]

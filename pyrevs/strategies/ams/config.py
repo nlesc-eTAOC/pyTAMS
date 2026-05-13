@@ -28,6 +28,12 @@ class AMSConfig:
             "doc": "Variant of AMS to use (one of [tams, ams])",
         },
     )
+    l_j: int = field(
+        default=1,
+        metadata={
+            "doc": "Number of score function levels discarded at each splitting iteration",
+        },
+    )
     init_ensemble_only: bool = field(
         default=False,
         metadata={

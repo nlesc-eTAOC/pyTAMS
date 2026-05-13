@@ -422,8 +422,8 @@ def test_doublewell_2_workers_tams():
             {
                 "sampler": {"strategy": "ams", "deterministic": True},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0},
-                "runner": {"type": "dask", "nworkers_init": 2, "nworkers_iter": 2},
+                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0, "l_j": 2},
+                "runner": {"type": "dask", "nworkers": 2},
                 "model": {"noise_amplitude": 0.8},
                 "database": {"path": "dwTest.tdb", "archive_discarded": True},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.5},
@@ -457,8 +457,8 @@ def test_doublewell_2_workers_restore_sampler():
             {
                 "sampler": {"strategy": "ams", "deterministic": True},
                 "runtime": {"walltime": 500.0},
-                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0},
-                "runner": {"type": "dask", "nworkers_init": 2, "nworkers_iter": 2},
+                "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0, "l_j": 2},
+                "runner": {"type": "dask", "nworkers": 2},
                 "model": {"noise_amplitude": 0.8},
                 "database": {"path": "dwTest.tdb", "archive_discarded": True},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.5},
@@ -587,7 +587,7 @@ def test_doublewell_slow_tams_restore_more_split():
         "runtime": {"walltime": 20.0},
         "ams": {"ntrajectories": 20, "nsplititer": 20, "variant": "tams", "end_time": 6.0},
         "database": {"path": "dwTest.tdb"},
-        "runner": {"type": "asyncio", "nworkers_init": 2, "nworkers_iter": 1},
+        "runner": {"type": "asyncio", "nworkers": 2},
         "trajectory": {"step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
     }

@@ -19,8 +19,7 @@ epsilon = 0.2
 
 [runner]
 type = "asyncio"
-nworker_init=2
-nworker_iter=1
+nworkers = 2
 
 [database]
 path = "./dw2dim.tdb"

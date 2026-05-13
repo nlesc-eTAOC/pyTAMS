@@ -350,18 +350,18 @@ class DaskRunner(BaseRunner):
 def make_runner(
     runner_cfg: RunnerConfig,
     worker_fn: Callable,
-    is_pool_worker: bool = False,
     loglevel: str = "INFO",
     logfile: str | None = None,
+    max_workers: int = -1,
 ) -> BaseRunner:
     """Factory that instantiates a configured runner.
 
     Args:
         runner_cfg: a config mapping for the runner
         worker_fn: a worker function
-        is_pool_worker: True if the worker is a pool worker
         loglevel: logging level
         logfile: logging file
+        max_workers: maximum number of workers
     """
     runner_type = runner_cfg.type.lower()
 
@@ -370,7 +370,7 @@ def make_runner(
         "dask": DaskRunner,
     }
 
-    n_workers = runner_cfg.nworkers_init if is_pool_worker else runner_cfg.nworkers_iter
+    n_workers = min(runner_cfg.nworkers, max_workers) if max_workers > 0 else runner_cfg.nworkers
 
     if runner_type not in runner_map:
         err_msg = f"Unknown runner type: {runner_type}"
