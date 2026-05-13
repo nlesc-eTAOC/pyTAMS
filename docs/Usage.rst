@@ -86,6 +86,7 @@ data structures of the code:
     variant = "tams"            # [OPT, DEF = "tams"] Sampling variant
     end_time = 10.0             # [OPT, DEF = -1] End time, REQ if variant = "tams"
     min_score = 0.01            # [OPT, DEF = None] Minimum score, REQ if variant = "ams"
+    l_j = 2                     # [OPT, DEF = 1] Number of score function levels discarded at each iteration
 
 
     [montecarlo]
@@ -96,7 +97,7 @@ data structures of the code:
   Whem running TAMS, one must specify the number of members in the ensemble :math:`N`
   (``ntrajectories`` in the snippet above) as well as the maximum number of (splitting) iterations :math:`J`
   (``nsplititer`` above). The ``variant`` enable to switch between TAMS and AMS, and a different termination
-  must then be provided.
+  must then be provided. By default, a single score function level is discarded at each iteration (``l_j`` above).
   When running a Monte Carlo run, only the number of ensemble members is required (``ntrajectories`` above).
   If no end time is provided when using Monte-Carlo, trajectory will continue until convergence, which might
   take a long time, so it is recommended to provide an end time if only to avoid infinite trajectories.
@@ -127,18 +128,16 @@ data structures of the code:
   
     [runner]
     type = "asyncio"            # [REQ] Runner type
-    nworkers_init = 2            # [OPT, DEF = 1] Number of workers for initial ensemble generation
-    nworkers_iter = 2            # [OPT, DEF = 1] Number of workers for splitting iterations
+    nworkers = 2                # [OPT, DEF = 1] Number of workers
 
   The ``runner`` manages scheduling the worker tasks over the course of the algorithm. Currently, two
   runner types are supported: ``asyncio`` is a light runner based on `the asyncio library <https://docs.python.org/3/library/asyncio.html>`_
   more suited when running `pyREVS` locally (or within the scope of a Slurm job), and ``dask``
   leverage `Dask <https://www.dask.org/>`_ and is required when deploying a large `pyREVS` run on a
   cluster.
-  [TODO] The ``nworkers_init`` and ``nworkers_iter`` set the number of workers, i.e. number of parallel 
-  tasks, used during the generation of the initial ensemble and during the splitting iterations, respectively.
-  Note that ``nworkers_iter`` effectively set the number of trajectories discarded at each iteration
-  :math:`l_j` (see :ref:`the theory Section <sec:theory>`).
+  The number of independent workers is set by the ``nworkers`` parameter, which defaults to 1. Not that this
+  is a maximum numbers of workers, for instance when running TAMS iteration with a single discarded level, the actual
+  number of workers might be lower (i.e. the ``l_j`` parameter).
 
 - Database parameters:
 
