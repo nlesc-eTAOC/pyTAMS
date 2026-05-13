@@ -73,16 +73,10 @@ class RunnerConfig:
             "doc": "The type of runner to use. Currently only `asyncio` and `dask` are supported.",
         },
     )
-    nworkers_init: int = field(
+    nworkers: int = field(
         default=1,
         metadata={
-            "doc": "The number of workers used to initialize the ensemeble.",
-        },
-    )
-    nworkers_iter: int = field(
-        default=1,
-        metadata={
-            "doc": "The number of workers used to iterate on the ensemeble.",
+            "doc": "The number of workers.",
         },
     )
     dask_config: DaskConfig = field(
