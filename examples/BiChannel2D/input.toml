@@ -20,8 +20,7 @@ inv_temperature = 3.67
 
 [runner]
 type = "asyncio"
-nworker_init=8
-nworker_iter=1
+nworkers=8
 
 [test]
 trigger_type = "score"

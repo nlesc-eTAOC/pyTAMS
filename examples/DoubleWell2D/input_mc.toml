@@ -17,4 +17,4 @@ epsilon = 0.2
 
 [runner]
 type = "asyncio"
-nworker_init=2
+nworkers=2

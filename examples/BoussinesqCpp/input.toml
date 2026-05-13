@@ -6,6 +6,7 @@ ntrajectories = 20
 nsplititer = 200
 variant = "tams"
 end_time = 20.0
+l_j = 2
 
 [runtime]
 loglevel = "INFO"
@@ -26,8 +27,7 @@ K = 7
 
 [runner]
 type = "dask"
-nworkers_init=2
-nworkers_iter=2
+nworkers=2
 
 [database]
 path = "2DBoussinesqCpp.tdb"
