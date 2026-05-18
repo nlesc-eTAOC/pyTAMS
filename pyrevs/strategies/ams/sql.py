@@ -161,7 +161,7 @@ class AMSDB:
                 iteration.status = "completed"
 
     def get_k_split(self) -> int:
-        """Get the current splitting iteration counter.
+        """Get the current discarded trajectories counter.
 
         Returns:
             The ksplit from the last entry in the SplittingIterations table
