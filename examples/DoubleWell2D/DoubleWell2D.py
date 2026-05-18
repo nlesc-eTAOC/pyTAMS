@@ -121,6 +121,19 @@ class Doublewell2D(ForwardModelBaseClass):
         """
         return self._rng.standard_normal(2)
 
+    def make_noise_history(self) -> list[npt.NDArray[np.number]]:
+        """Return the model's latest noise increment.
+
+        Note that the noise type is left to the concrete model definition.
+
+        Returns:
+            The model next noise increment
+        """
+        # TODO: right now a hard coded list of len 1001 is used
+        # could be adapted to actual trajectory length later.
+        rng_array = self._rng.standard_normal((1001,2))
+        return list(rng_array)
+
     # def check_termination(self, step: int, time: float, nstep_end: int, time_end: float, current_score: float) -> bool:
     #    """Check if the trajectory is terminated.
 

@@ -46,6 +46,12 @@ class TrajectoryConfig:
             "doc": "Whether to dump all trajectory chkfile at every step.",
         },
     )
+    use_noise_history: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether to generate and store the noise history in the trajectory.",
+        },
+    )
 
     def validate(self) -> None:
         """Validate trajectory configuration."""

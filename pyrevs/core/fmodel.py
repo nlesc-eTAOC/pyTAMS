@@ -193,6 +193,19 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
             The model next noise increment
         """
 
+    def make_noise_history(self) -> list[T_Noise]:
+        """Return the model's noise history.
+
+        Note that the noise type is left to the concrete model definition.
+        But in contrast to make_noise(), this method returns a list.
+
+        Returns:
+            The model noise history
+        """
+        err_msg = "make_noise_history() is not implemented"
+        _logger.exception(err_msg)
+        raise NotImplementedError
+
     @final
     def post_trajectory_branching_hook(self, step: int, time: float) -> None:
         """Model post trajectory branching hook.
