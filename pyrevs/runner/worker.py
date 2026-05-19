@@ -167,7 +167,7 @@ def ms_worker(
                 _logger.error(err_msg)
                 raise RuntimeError(err_msg)
 
-        inf_msg = f"Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
+        inf_msg = f"    Restarting [{rst_traj.id()}] from {from_traj.idstr()} [time left: {wall_time}]"
         _logger.info(inf_msg)
 
         traj = Trajectory.branch_from_trajectory(from_traj, rst_traj, min_val, new_weight)
