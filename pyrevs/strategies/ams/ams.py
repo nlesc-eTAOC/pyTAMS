@@ -163,12 +163,13 @@ class AMS(BaseSamplingStrategy):
         inf_msg = f"Run time: {self.elapsed_time()} s"
         _logger.info(inf_msg)
 
-    def check_exit_splitting_loop(self, tdb: Database, k: int) -> tuple[bool, npt.NDArray[np.number]]:
+    def check_exit_splitting_loop(self, tdb: Database, k: int, k_it: int) -> tuple[bool, npt.NDArray[np.number]]:
         """Check for exit criterion of the splitting loop.
 
         Args:
             tdb: the AMS database
-            k: loop counter
+            k: counter of discarded trajectories
+            k_it: loop counter
 
         Returns:
             bool to trigger splitting loop break
@@ -190,7 +191,7 @@ class AMS(BaseSamplingStrategy):
 
         # Exit if our work is done
         if all_converged:
-            inf_msg = f"All trajectories converged after {k} splitting iterations"
+            inf_msg = f"All trajectories converged after {k_it} splitting iterations and {k} discarded trajectories"
             _logger.info(inf_msg)
             return True, maxes
 
@@ -299,8 +300,11 @@ class AMS(BaseSamplingStrategy):
         # Finish any unfinished splitting iteration
         self.finish_ongoing_splitting(tdb)
 
-        # Initialize splitting iterations counter
+        # Initialize number of discarded trajectories counter
         k = self._req_db_ext().k_split()
+
+        # Initialize the splitting iteration counter
+        k_it = self._req_db_ext().get_iteration_count()
 
         with make_runner(
             self._runner_cfg,
@@ -310,7 +314,10 @@ class AMS(BaseSamplingStrategy):
             max_workers=self._ams_cfg.l_j,
         ) as runner:
             while k < self._ams_cfg.nsplititer:
-                inf_msg = f"Starting AMS iter. {k} with {runner.n_workers()} workers"
+                inf_msg = (
+                    f"### [{k_it}] AMS iteration - total # of discarded traj. {k}"
+                    f" - discarding {self._ams_cfg.l_j} score level(s)"
+                )
                 _logger.info(inf_msg)
 
                 # Plot trajectory database scores
@@ -322,11 +329,11 @@ class AMS(BaseSamplingStrategy):
                     tdb.plot_score_functions(pltfile)
 
                 # Get the ensemble maximums and check for early exit conditions
-                early_exit, maxes = self.check_exit_splitting_loop(tdb, k)
+                early_exit, maxes = self.check_exit_splitting_loop(tdb, k, k_it)
 
-                # Get the nworker lower scored trajectories
+                # Get the l_j lower scored trajectories
                 # or more if equal score
-                min_idx_list, min_vals = get_min_scored(maxes, runner.n_workers())
+                min_idx_list, min_vals = get_min_scored(maxes, self._ams_cfg.l_j)
 
                 # Randomly select trajectory to branch from
                 ancestor_idx = self.get_restart_at_random(tdb, min_idx_list)
@@ -372,7 +379,7 @@ class AMS(BaseSamplingStrategy):
                 try:
                     restarted_trajs = runner.execute_promises()
                 except Exception as exc:
-                    err_msg = f"Failed to branch {n_branch} trajectories at iteration {k}"
+                    err_msg = f"Failed to branch {n_branch} trajectories at iteration {k_it}"
                     _logger.exception(err_msg)
                     raise RuntimeError(err_msg) from exc
 
@@ -387,14 +394,17 @@ class AMS(BaseSamplingStrategy):
                 if self.out_of_time():
                     # Save splitting data with ongoing trajectories
                     # but do not increment splitting index yet
-                    warn_msg = f"Ran out of time after {k} splitting iterations"
+                    warn_msg = f"Ran out of time after {k_it} splitting iterations, and {k} discarded trajectories"
                     _logger.warning(warn_msg)
                     break
 
                 # Wrap up the iteration by updating its status in the
-                # database and incrementing the iteration counter
+                # database and incrementing the counter of discarded trajectories
                 self._req_db_ext().mark_last_splitting_iteration_as_done()
                 k = k + n_branch
+
+                # Update the splitting iteration counter
+                k_it = self._req_db_ext().get_iteration_count()
 
     def compute_probability(self, tdb: Database, plot_diags: bool) -> float:
         """Compute the probability using AMS.

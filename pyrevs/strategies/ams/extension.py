@@ -132,6 +132,14 @@ class AMSDatabaseExtension(StrategyDatabaseExtension):
         """Flag the last splitting iteration as done."""
         self._req_ams_db().mark_last_iteration_as_completed()
 
+    def get_iteration_count(self) -> int:
+        """Get the number of splitting iteration stored.
+
+        Returns:
+            The length of the SplittingIterations table
+        """
+        return self._req_ams_db().get_iteration_count()
+
     def append_splitting_iteration_data(
         self,
         ksplit: int,
