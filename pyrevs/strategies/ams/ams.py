@@ -473,6 +473,7 @@ class AMS(BaseSamplingStrategy):
             raise RuntimeError(err_msg)
 
         proba = self.compute_probability(database, plot_diags)
+        database.get_pool_db().dump_file_json()
         inf_msg = f"Event probability: {proba}"
         _logger.info(inf_msg)
 

@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 from sqlalchemy import JSON
+from sqlalchemy import LargeBinary
 from sqlalchemy import CursorResult
+from sqlalchemy import Float
 from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
@@ -43,6 +45,19 @@ class ArchivedTrajectory(CoreBase):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     traj_file: Mapped[str] = mapped_column(nullable=False)
     t_metadata: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+class Snapshot(CoreBase):
+    """A table to store the trajectories snapshots."""
+
+    __tablename__ = "snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    tid: Mapped[int] = mapped_column(nullable=False)
+    sid: Mapped[int] = mapped_column(nullable=False)
+    time: Mapped[float] = mapped_column(Float, nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    noise: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    state: Mapped[bytes] = mapped_column(LargeBinary, nullable=True)
 
 
 valid_statuses = ["locked", "idle", "completed"]
@@ -348,7 +363,28 @@ class CoreDB(BaseSQLManager):
                 traj.id - 1: {"file": traj.traj_file, "metadata": traj.t_metadata}
                 for traj in session.execute(select(ArchivedTrajectory)).scalars().all()
             }
+            db_data["snapshots"] = {
+                snap.tid : {"time": snap.time, "score": snap.score}
+                for snap in session.execute(select(Snapshot)).scalars().all()
+            }
 
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
+
+    def append_snapshot(self,
+                        traj_id: int,
+                        snapshot_id: int,
+                        time: float,
+                        score: float,
+                        noise: bytes,
+                        state: bytes) -> None:
+
+        with self.session_scope() as session:
+            new_snap = Snapshot(tid=traj_id,
+                                sid=snapshot_id,
+                                time=time,
+                                score=score,
+                                noise=noise,
+                                state=state)
+            session.add(new_snap)

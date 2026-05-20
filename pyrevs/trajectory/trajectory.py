@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import pickle
 import shutil
 import time
 import xml.etree.ElementTree as ET
@@ -16,6 +17,7 @@ from typing import TypeVar
 from typing import cast
 import numpy as np
 import numpy.typing as npt
+from pyrevs.core import CoreDB
 from pyrevs.core import Snapshot
 from pyrevs.diagnostics import DiagDB
 from pyrevs.diagnostics import DiagnosticPlugin
@@ -778,6 +780,21 @@ class Trajectory(Generic[T_Noise, T_State]):
             )
             with json_path.open("w") as f:
                 f.write(self.serialize_metadata_json())
+
+    def store_sql(self, trajdb: CoreDB | None = None) -> None:
+        """Add the content of the trajectory to an SQL db."""
+        if trajdb is None:
+            return
+
+        for k in range(len(self._snaps)):
+            trajdb.append_snapshot(
+                self.unique_id(),
+                k,
+                self._snaps[k].time,
+                self._snaps[k].score,
+                pickle.dumps(self._snaps[k].noise),
+                pickle.dumps(self._snaps[k].state),
+            )
 
     def set_weight(self, weight: float) -> None:
         """Set the trajectory weight.

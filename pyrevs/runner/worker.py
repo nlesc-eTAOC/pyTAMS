@@ -78,8 +78,9 @@ def traj_advance_with_exception(
 
         # Trigger a checkfile dump if we are provided with
         # a database path
-        if db_path:
-            traj.store()
+        #if db_path:
+            #traj.store()
+            #traj.store_sql(trajdb)
 
     return traj
 
