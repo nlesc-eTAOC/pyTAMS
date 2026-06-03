@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 def oneliner_ndarray() -> Generator[Any, None, None]:
     """Force ndarray print on a single line temporarily."""
     oldoptions = np.get_printoptions()
-    np.set_printoptions(threshold=np.iinfo(np.int32).max, linewidth=np.iinfo(np.int32).max, precision=12)
+    np.set_printoptions(threshold=np.iinfo(np.int32).max, linewidth=np.iinfo(np.int32).max, precision=16)
     yield
     np.set_printoptions(**oldoptions)
 
