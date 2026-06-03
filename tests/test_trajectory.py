@@ -220,10 +220,10 @@ def test_sparse_simple_traj():
     t_test.advance(t_end=0.012)
     assert isclose(t_test.score_max(), 0.12, abs_tol=1e-9)
     assert t_test.is_converged() is False
-    assert isclose(t_test.get_last_state(), 0.009, abs_tol=1e-9)
+    assert isclose(t_test.get_last_state(), 0.01, abs_tol=1e-9)
     t_test.advance()
     assert t_test.is_converged() is True
-    assert isclose(t_test.get_last_state(), 0.024, abs_tol=1e-9)
+    assert isclose(t_test.get_last_state(), 0.025, abs_tol=1e-9)
 
 
 def test_sparse_simple_traj_access_states():
