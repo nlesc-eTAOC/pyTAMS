@@ -376,13 +376,13 @@ class Trajectory(Generic[T_Noise, T_State]):
             raise RuntimeError(err_msg)
 
         # Add the initial snapshot to the list
-        if self._step == 0:
+        if len(self._snaps) == 0:
             self.setup_noise()
             self._append_snapshot()
 
         # Trigger storing the end state of the current time step
         # if the next trajectory snapshot needs it
-        need_end_state = (self._traj_cfg.sparse_start + 1 + self._step + 1) % self._traj_cfg.sparse_freq == 0
+        need_end_state = (self._traj_cfg.sparse_start + self._step + 1) % self._traj_cfg.sparse_freq == 0
 
         try:
             dt = self._fmodel.advance(self._dt, need_end_state)
@@ -469,7 +469,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         # Append the current snapshot to the trajectory list
         if self._fmodel:
             need_state = (
-                self._traj_cfg.sparse_start + 1 + self._step
+                self._traj_cfg.sparse_start + self._step
             ) % self._traj_cfg.sparse_freq == 0 or self._step == 0
             self._snaps.append(
                 Snapshot[T_Noise, T_State](
