@@ -265,12 +265,15 @@ class DiagDB(BaseSQLManager):
 
         return results_dict
 
-    def get_diagnostic_data_traj(self, label: str, tid: int) -> dict[float, list[tuple[Any, float, float]]]:
+    def get_diagnostic_data_traj(
+        self, label: str, tid: int, time_ordered: bool = False
+    ) -> dict[float, list[tuple[Any, float, float]]]:
         """Retrieve diagnostic snapshots for a specific label and trajectory.
 
         Args:
             label: the label of the diagnostic of interest
             tid: the ID of the trajectory
+            time_ordered: whether to order the results by time (default: False, by level)
 
         Returns:
             A dictionary mapping each iso-level (float) to a list of tuples.
@@ -279,18 +282,31 @@ class DiagDB(BaseSQLManager):
         results_dict: dict[float, list[tuple[Any, float, float]]] = {}
 
         with self.session_scope() as session:
-            # Query entries for the specific label, ordered by level
-            stmt = (
-                select(
-                    DiagnosticEntry.level_crossed,
-                    DiagnosticEntry.weight,
-                    DiagnosticEntry.time,
-                    DiagnosticEntry.model_data,
+            # Query entries for the specific label, ordered by time or level
+            if time_ordered:
+                stmt = (
+                    select(
+                        DiagnosticEntry.level_crossed,
+                        DiagnosticEntry.weight,
+                        DiagnosticEntry.time,
+                        DiagnosticEntry.model_data,
+                    )
+                    .where(DiagnosticEntry.diaglabel == label)
+                    .where(DiagnosticEntry.traj_id == tid)
+                    .order_by(DiagnosticEntry.time.asc())
                 )
-                .where(DiagnosticEntry.diaglabel == label)
-                .where(DiagnosticEntry.traj_id == tid)
-                .order_by(DiagnosticEntry.level_crossed.asc())
-            )
+            else:
+                stmt = (
+                    select(
+                        DiagnosticEntry.level_crossed,
+                        DiagnosticEntry.weight,
+                        DiagnosticEntry.time,
+                        DiagnosticEntry.model_data,
+                    )
+                    .where(DiagnosticEntry.diaglabel == label)
+                    .where(DiagnosticEntry.traj_id == tid)
+                    .order_by(DiagnosticEntry.level_crossed.asc())
+                )
 
             rows = session.execute(stmt).all()
 

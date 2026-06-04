@@ -59,7 +59,10 @@ class DiagnosticPlugin:
         old_snapshot: Snapshot,
         new_snapshot: Snapshot,
     ) -> None:
-        """Write crossing event to DB."""
+        """Write crossing event to DB.
+
+        This is tailored for recording level crossing event.
+        """
         ldata = self._process(
             self._label,
             self._tid,
@@ -98,6 +101,75 @@ class DiagnosticPlugin:
             self._record_event(level, old_snapshot, new_snapshot)
 
 
+class EveryTimeCrossing(DiagnosticPlugin):
+    """Triggers at fixed time intervals.
+
+    Check if the time interval between the old and
+    new snapshot crossed fixed time 'level' defined
+    evenly from a start time and a time interval:
+    t_0 + N * delta_t.
+
+    Attributes:
+        _time_interval: the time interval between two recording events
+        _time_start: the start time
+    """
+
+    def __init__(
+        self,
+        dlabel: str,
+        params: dict[Any, Any],
+        tid: int,
+        tweight: float,
+        workdir: Path,
+        fprocess: Callable[..., Any],
+        ddb: DiagDB,
+    ) -> None:
+        super().__init__(dlabel, params, tid, tweight, workdir, fprocess, ddb)
+        self._delta_t = self._params.get("time_interval", 1.0)
+        self._t0 = self._params.get("time_start", 0.0)
+
+    def update(self, old_snapshot: Snapshot, new_snapshot: Snapshot) -> None:
+        """Entry point called after every MCMC step.
+
+        This plugin does not depends on the score function so bypass
+        some of the logic of the base class.
+        """
+        eps = 1e-9
+
+        n_old = np.floor((old_snapshot.time - self._t0 + eps) / self._delta_t)
+        n_new = np.floor((new_snapshot.time - self._t0 + eps) / self._delta_t)
+
+        if n_old == n_new:
+            return
+
+        # If more than one level is crossed (because the model time step
+        # is larger than delta_t) only the last crossing is recorded
+        # The score associated with the last crossing is linearly interpolated
+        # between the two snapshots using time
+        time_level = self._t0 + n_new * self._delta_t
+
+        score = old_snapshot.score + (new_snapshot.score - old_snapshot.score) * (time_level - old_snapshot.time)
+
+        # Some duplication of the record_event function since
+        # we are crossing a time level here
+        ldata = self._process(
+            self._label,
+            self._tid,
+            score,
+            old_snapshot,
+            new_snapshot,
+        )
+
+        self._ddb.add_diagnostic_entry(
+            diaglabel=self._label,
+            traj_id=self._tid,
+            level=score,
+            time=time_level,
+            weight=self._weight,
+            ldata=pickle.dumps(ldata),
+        )
+
+
 class FirstTimeCrossingDiagnostic(DiagnosticPlugin):
     """Triggers when the score function crosses pre-defined levels.
 
@@ -108,6 +180,8 @@ class FirstTimeCrossingDiagnostic(DiagnosticPlugin):
     This allows to evaluate the probability of crossing any
     intermediate score levels from a pyREVS run, as well as
     estimating mean first passage time.
+
+    # Note: might want to always add this diagnostic
 
     Attributes:
         _levels: the threshold levels
@@ -310,8 +384,7 @@ class FirstAndLastEveryCrossingDiagnostic(DiagnosticPlugin):
             if level != self._active_level:
                 # We left the last active level
                 # Trigger a last crossing record
-                if (self._old_last_snapshot is None or
-                    self._new_last_snapshot is None):
+                if self._old_last_snapshot is None or self._new_last_snapshot is None:
                     wrn_msg = f"Unable to trigger record for level {level}: missing snapshots !"
                     _logger.warning(wrn_msg)
                 else:
@@ -365,6 +438,10 @@ def diagnosticfactory(
             diags_l.append(FirstAndLastEveryCrossingDiagnostic(k, v, tid, tweight, workdir, fprocess, ddb))
             dbg_msg = f"Created FirstAndLastEveryCrossing Diagnostic {k} for traj {tid}"
             _logger.debug(dbg_msg)
+        elif diag_type == "EveryTimeCrossing":
+            diags_l.append(EveryTimeCrossing(k, v, tid, tweight, workdir, fprocess, ddb))
+            dbg_msg = f"Created EveryTimeCrossing Diagnostic {k} for traj {tid}"
+            _logger.debug(dbg_msg)
         else:
             err_msg = f"Diagnostic {k} has unknown trigger type {diag_type} !"
             raise ValueError(err_msg)
@@ -394,16 +471,23 @@ class DiagnosticAnalyst:
         """
         return self.db.get_diagnostic_data(label)
 
-    def get_traj_diagnostic_data(self, label: str, tid: int) -> dict[float, list[tuple[Any, float, float]]]:
+    def get_traj_diagnostic_data(
+        self, label: str, tid: int, time_ordered: bool = False
+    ) -> dict[float, list[tuple[Any, float, float]]]:
         """A user-facing access to the diag DB.
 
         Access to the diagnostic data for a specific trajectory.
+
+        Args:
+            label: the label of the diagnostic of interest
+            tid: the ID of the trajectory
+            time_ordered: whether to order the results by time (default: False, by level)
 
         Returns:
             A dictionary mapping each score iso-level (float) to a (list of) tuple.
             Each tuple contains (unpickled_data, trajectory_weight, time).
         """
-        return self.db.get_diagnostic_data_traj(label, tid)
+        return self.db.get_diagnostic_data_traj(label, tid, time_ordered)
 
     def compute_weighted_stats(self, label: str) -> dict[float, dict[str, Any]]:
         """Aggregate data and compute mean/variance per level."""
