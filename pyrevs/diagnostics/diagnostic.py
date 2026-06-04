@@ -68,7 +68,11 @@ class DiagnosticPlugin:
             new_snapshot,
         )
 
-        alpha = (level - old_snapshot.score) / (new_snapshot.score - old_snapshot.score)
+        # If the score is constant, use new_snapshot time
+        try:
+            alpha = (level - old_snapshot.score) / (new_snapshot.score - old_snapshot.score)
+        except ZeroDivisionError:
+            alpha = 1.0
         t_cross = old_snapshot.time + alpha * (new_snapshot.time - old_snapshot.time)
 
         self._ddb.add_diagnostic_entry(
