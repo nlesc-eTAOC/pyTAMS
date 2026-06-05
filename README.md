@@ -3,7 +3,7 @@
 [![RSD](https://img.shields.io/badge/rsd-pyREVS-222c71.svg)](https://research-software-directory.org/software/pytams)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20144970.svg)](https://doi.org/10.5281/zenodo.20144970)
 [![build](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/build.yml)
-[![PyPI version](https://badge.fury.io/py/pytams.svg)](https://badge.fury.io/py/pytams)
+[![PyPI version](https://badge.fury.io/py/pyrevs.svg)](https://badge.fury.io/py/pyrevs)
 [![sonarcloud](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/nlesc-eTAOC/pyREVS/actions/workflows/sonarcloud.yml)
 [![workflow scc badge](https://sonarcloud.io/api/project_badges/measure?project=nlesc-eTAOC_pyREVS&metric=coverage)](https://sonarcloud.io/dashboard?id=nlesc-eTAOC_pyREVS)
 [![github license badge](https://img.shields.io/github/license/nlesc-eTAOC/pyREVS)](https://github.com/nlesc-eTAOC/pyREVS)
@@ -61,7 +61,7 @@ cd examples/DoubleWell2D
 python sample_dw2dim.py
 ```
 
-This minimal example runs the TAMS 10 times in order to get an estimate of the transition probability
+This minimal example runs the TAMS sampling algorithm 10 times in order to get an estimate of the transition probability
 as well as the corresponding relative error. For a more in-depth explanation about this case, setting up the
 model and running the simulations, have a look at the tutorial [here](https://nlesc-eTAOC.github.io/pyREVS/Tutorials.html).
 
