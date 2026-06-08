@@ -39,6 +39,8 @@ T_State = TypeVar("T_State")
 class WallTimeLimitError(Exception):
     """Exception for running into wall time limit."""
 
+class UserInterrupt(Exception):
+    """Exception for handling user-triggered interruption."""
 
 def form_trajectory_id(n: int, nb: int = 0) -> str:
     """Helper to assemble a trajectory ID string.
@@ -255,6 +257,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         the end time is reached or the model has converged.
 
         If the walltime limit is reached, a WallTimeLimitError exception is raised.
+        If a 'pyrevs_stop' file is found, a UserInterrupt exception is raised.
         Note that this exception is treated as a warning not an error by the
         pyREVS workers.
 
@@ -269,6 +272,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         Raises:
             WallTimeLimitError: if the walltime limit is reached
+            UserInterrupt: if a 'pyrevs_stop' file is found
             RuntimeError: if the model advance run into a problem
         """
         # Check if the trajectory is frozen
@@ -309,6 +313,10 @@ class Trajectory(Generic[T_Noise, T_State]):
             if (time.monotonic() - start_time) >= walltime:
                 break
 
+            # Check for user interruption
+            if self.interrupt_trigger():
+                break
+
         # If the model has converged, terminate
         if self._has_converged:
             self._has_terminated = True
@@ -323,10 +331,23 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._diagplugins = []
             self._initialized_diags = False
 
+        if self.interrupt_trigger():
+            warn_msg = f"{self.idstr()} interrupt during advance()"
+            _logger.warning(warn_msg)
+            raise UserInterrupt(warn_msg)
+
         if (time.monotonic() - start_time) >= walltime:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
             _logger.warning(warn_msg)
             raise WallTimeLimitError(warn_msg)
+
+    def interrupt_trigger(self) -> bool:
+        """Check for user interrupt trigger.
+
+        pyREVS can be interrupted cleanly by creating a
+        pyrevs_stop file in the run folder.
+        """
+        return Path("./pyrevs_stop").exists()
 
     def _runtime_termination(self, end_time: float, nstep_end: int) -> bool:
         """Returns True if the trajectory should terminate from the runtime arguments."""
