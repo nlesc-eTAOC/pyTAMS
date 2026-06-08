@@ -15,6 +15,7 @@ from pyrevs.runner import ms_worker
 from pyrevs.runner import pool_worker
 from pyrevs.strategies.base import BaseSamplingStrategy
 from pyrevs.strategies.base import LowScoreTerminationCriterion
+from pyrevs.strategies.base import ModelTerminationCriterion
 from pyrevs.strategies.base import TerminationCriterion
 from pyrevs.strategies.base import TimeTerminationCriterion
 from pyrevs.utils.utils import get_min_scored
@@ -107,6 +108,10 @@ class AMS(BaseSamplingStrategy):
             err_msg = f"Unknown variant {self._ams_cfg.variant}"
             _logger.exception(err_msg)
             raise ValueError(err_msg)
+
+        # If requested, also add the custom model termination check
+        if strategy_cfg.use_custom_termination:
+            self._term_crit.append(ModelTerminationCriterion())
 
     def _req_db_ext(self) -> AMSDatabaseExtension:
         if self._db_ext is None:
