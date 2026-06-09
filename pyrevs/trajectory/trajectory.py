@@ -8,6 +8,7 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import asdict
+from math import isclose
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
@@ -352,7 +353,8 @@ class Trajectory(Generic[T_Noise, T_State]):
     def _runtime_termination(self, end_time: float, nstep_end: int) -> bool:
         """Returns True if the trajectory should terminate from the runtime arguments."""
         step_termination = self._step >= nstep_end if nstep_end > 0 else False
-        time_termination = self._t_cur >= end_time if end_time > 0.0 else False
+        time_termination = (isclose(self._t_cur, end_time, abs_tol=1e-9) or
+                            self._t_cur >= end_time) if end_time > 0.0 else False
         return step_termination or time_termination
 
     def _calculate_end_time(self, t_end: float) -> float:
@@ -575,10 +577,11 @@ class Trajectory(Generic[T_Noise, T_State]):
                     rest_traj.noise_backlog.append(rest_traj._snaps[k].noise)
                     rest_traj._snaps.pop()
                 else:
-                    # Because the noise in the snapshot is the noise
-                    # used to reach the next state, append the last to the backlog too
-                    rest_traj.noise_backlog.append(rest_traj._snaps[k].noise)
                     break
+
+            # Because the noise in the snapshot is the noise
+            # used to reach the next state, append the last to the backlog too
+            rest_traj.noise_backlog.append(rest_traj._snaps[-1].noise)
 
             # Current step with python indexing, so remove 1
             rest_traj.set_current_time_and_step(rest_traj._snaps[-1].time, len(rest_traj._snaps) - 1)
@@ -632,7 +635,8 @@ class Trajectory(Generic[T_Noise, T_State]):
         cls._transfer_data(from_traj, rest_traj, high_score_idx, last_snap_with_state)
 
         # Finalize branching
-        cls._finalize_branch(from_traj.unique_id(), rst_traj.unique_id(), rest_traj, new_weight)
+        ancestor_workdir = from_traj.get_workdir()
+        cls._finalize_branch(from_traj.unique_id(), rst_traj.unique_id(), rest_traj, new_weight, ancestor_workdir)
 
         return rest_traj
 
@@ -712,13 +716,19 @@ class Trajectory(Generic[T_Noise, T_State]):
         """
         # Prepend existing backlog if states align
         if state_idx == from_traj.get_last_state_id() and from_traj.noise_backlog:
+
+            # Grab the noise that might already has been moved from the backlog
+            # to the current noise increment
+            if from_traj._fmodel and from_traj._fmodel.noise is not None:
+                 rest_traj.noise_backlog.append(from_traj._fmodel.noise)
+
             rest_traj.noise_backlog.extend(reversed(from_traj.noise_backlog))
 
         # Separate snapshots from noise backlog
         # Everything up to the last state is a full snapshot
         rest_traj._snaps = from_traj._snaps[: state_idx + 1]
 
-        # Everything between last state and high_score_idx becomes noise backlog
+        # Everything from last state and high_score_idx becomes noise backlog
         for k in range(state_idx, high_idx + 1):
             rest_traj.noise_backlog.append(from_traj._snaps[k].noise)
 
@@ -726,7 +736,8 @@ class Trajectory(Generic[T_Noise, T_State]):
 
     @staticmethod
     def _finalize_branch(
-        ancestor_id: int, discarded_id: int, rest_traj: Trajectory[T_Noise, T_State], weight: float
+        ancestor_id: int, discarded_id: int, rest_traj: Trajectory[T_Noise, T_State], weight: float,
+        ancestor_workdir: Path,
     ) -> None:
         """Finalizes metadata, model state, and diagnostics.
 
@@ -735,6 +746,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             discarded_id: the unique ID of the discarded traj
             rest_traj: the child trajectory
             weight: the weight of the new child trajectory
+            ancestor_workdir: the workdir of the ancestor trajectory
         """
         rest_traj._t_cur = rest_traj._snaps[-1].time
         rest_traj._step = len(rest_traj._snaps) - 1
@@ -746,7 +758,7 @@ class Trajectory(Generic[T_Noise, T_State]):
                 rest_traj._fmodel.set_current_state(last_snap.state)
 
             rest_traj.update_metadata()
-            rest_traj._fmodel.post_trajectory_branching_hook(rest_traj._step, rest_traj._t_cur)
+            rest_traj._fmodel.post_trajectory_branching_hook(rest_traj._step, rest_traj._t_cur, ancestor_workdir.absolute().as_posix())
 
         if rest_traj._has_diagnostics:
             rest_traj._branch_diagnostics(
