@@ -2,6 +2,7 @@ import time
 from typing import Any
 import numpy as np
 from pyrevs.core import ForwardModelBaseClass
+from pyrevs.core import Snapshot
 
 
 class DoubleWellModel(ForwardModelBaseClass):
@@ -71,6 +72,19 @@ class DoubleWellModel(ForwardModelBaseClass):
     def make_noise(self):
         """Override the template."""
         return self._rng.standard_normal(2)
+
+    def diagnostic_hook(
+        self,
+        dlabel: str,
+        tid: int,
+        score_level: float,
+        old_snap: Snapshot,
+        new_snap: Snapshot,
+    ) -> None:
+        """Override the template."""
+        _, _, _, _ = dlabel, tid, score_level, old_snap
+        old_factor = (score_level - old_snap.score) / (new_snap.score - old_snap.score)
+        return old_factor * old_snap.state + (1 - old_factor) * new_snap.state
 
     @classmethod
     def name(cls) -> str:

@@ -114,7 +114,7 @@ def test_simple_model_traj_with_diag():
     t_test_2 = Trajectory(2, 0.5, fmodel, cfg.load(TrajectoryConfig), diag_configs=diagdict)
     t_test_2.advance()
     analyst = DiagnosticAnalyst("./diagDB.db")
-    _ = analyst.get_diagnostic_data("testd")
+    _ = analyst.get_all_diagnostic_data("testd")
     dstat = analyst.compute_weighted_stats("testd")
     assert dstat[0.0]["mean"] == 42.0
     _ = analyst.get_conditional_means("testd")
@@ -289,6 +289,49 @@ def test_sparse_dw_traj_with_restore():
     assert rst_test.is_converged()
     chkfile.unlink(missing_ok=True)
     Path("test.json").unlink(missing_ok=True)
+
+
+def test_dw_traj_with_restore_and_diags():
+    """Test restore a trajectory with DW model and diagnostics."""
+    fmodel = DoubleWellModel
+    cfg = Config(
+        {
+            "trajectory": {"end_time": 15.0, "step_size": 0.01, "targetscore": 0.95},
+            "model": {"noise_amplitude": 0.8},
+            "testd": {"type": "FirstAndLastEveryCrossing", "score_min": 0.0, "score_max": 0.85, "n_levels": 11},
+            "testd2": {"type": "EveryTimeCrossing", "time_start": 0.005, "time_interval": 0.02},
+        }
+    )
+    model_params = cfg.section_dict("model")
+    diagdict = {"testd": cfg.section("testd"), "testd2": cfg.section("testd2")}
+    t_test = Trajectory(
+        1, 1.0, fmodel, cfg.load(TrajectoryConfig), diag_configs=diagdict, model_params=model_params, deterministic=True
+    )
+    t_test.advance(t_end=4.07)
+    chkfile = Path("./test.xml")
+    t_test.store(chkfile, write_metadata_json=True)
+    with Path("./test.json").open("r") as f:
+        metadata_str = f.read()
+    metadata = Trajectory.deserialize_metadata(metadata_str)
+    rst_test = Trajectory.restore_from_checkfile(
+        chkfile,
+        metadata,
+        fmodel,
+        cfg.load(TrajectoryConfig),
+        diag_configs=diagdict,
+        model_params=model_params,
+        frozen=False,
+    )
+    rst_test.advance()
+    analyst = DiagnosticAnalyst("./diagDB.db")
+    _ = analyst.get_traj_diagnostic_data("testd", 1)
+    _ = analyst.get_traj_diagnostic_data("testd2", 1, time_ordered=True)
+    analyst.db.dump_to_json("test_ddb.json")
+    analyst = None
+    chkfile.unlink(missing_ok=True)
+    Path("test.json").unlink(missing_ok=True)
+    Path("./diagDB.db").unlink(missing_ok=True)
+    Path("test_ddb.json").unlink(missing_ok=True)
 
 
 def test_sparse_dw_traj_with_branching():
