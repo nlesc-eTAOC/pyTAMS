@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from pyrevs.core import CoreDB
 from pyrevs.trajectory import Trajectory
+from pyrevs.trajectory.trajectory import UserInterruptError
 from pyrevs.trajectory.trajectory import WallTimeLimitError
-from pyrevs.trajectory.trajectory import UserInterrupt
 
 if TYPE_CHECKING:
     import concurrent.futures
@@ -59,7 +59,7 @@ def traj_advance_with_exception(
     try:
         traj.advance(walltime=walltime, termination_criteria=termination_criteria)
 
-    except UserInterrupt:
+    except UserInterruptError:
         warn_msg = f"Trajectory {traj.idstr()} advance ran interrupted with file !"
         _logger.warning(warn_msg)
 

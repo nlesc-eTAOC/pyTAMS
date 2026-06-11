@@ -40,8 +40,10 @@ T_State = TypeVar("T_State")
 class WallTimeLimitError(Exception):
     """Exception for running into wall time limit."""
 
-class UserInterrupt(Exception):
+
+class UserInterruptError(Exception):
     """Exception for handling user-triggered interruption."""
+
 
 def form_trajectory_id(n: int, nb: int = 0) -> str:
     """Helper to assemble a trajectory ID string.
@@ -258,7 +260,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         the end time is reached or the model has converged.
 
         If the walltime limit is reached, a WallTimeLimitError exception is raised.
-        If a 'pyrevs_stop' file is found, a UserInterrupt exception is raised.
+        If a 'pyrevs_stop' file is found, a UserInterruptError exception is raised.
         Note that this exception is treated as a warning not an error by the
         pyREVS workers.
 
@@ -273,7 +275,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         Raises:
             WallTimeLimitError: if the walltime limit is reached
-            UserInterrupt: if a 'pyrevs_stop' file is found
+            UserInterruptError: if a 'pyrevs_stop' file is found
             RuntimeError: if the model advance run into a problem
         """
         # Check if the trajectory is frozen
@@ -318,11 +320,28 @@ class Trajectory(Generic[T_Noise, T_State]):
             if self.interrupt_trigger():
                 break
 
+        # Wrap-up the advance function
+        self._terminate_advance(start_time, walltime)
+
+    def _terminate_advance(self, start_time: float, walltime: float) -> None:
+        """Wrap-up the advance function.
+
+        Args:
+            start_time: the start time of the advance
+            walltime: the walltime limit
+
+        Returns:
+            None
+
+        Raises:
+            WallTimeLimitError: if the walltime limit is reached
+            UserInterruptError: if a 'pyrevs_stop' file is found
+        """
         # If the model has converged, terminate
         if self._has_converged:
             self._has_terminated = True
 
-        if self._has_terminated:
+        if self._has_terminated and self._fmodel:
             self._fmodel.clear()
 
         # Clear the diagnostic
@@ -335,7 +354,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         if self.interrupt_trigger():
             warn_msg = f"{self.idstr()} interrupt during advance()"
             _logger.warning(warn_msg)
-            raise UserInterrupt(warn_msg)
+            raise UserInterruptError(warn_msg)
 
         if (time.monotonic() - start_time) >= walltime:
             warn_msg = f"{self.idstr()} ran out of time in advance()"
@@ -353,8 +372,9 @@ class Trajectory(Generic[T_Noise, T_State]):
     def _runtime_termination(self, end_time: float, nstep_end: int) -> bool:
         """Returns True if the trajectory should terminate from the runtime arguments."""
         step_termination = self._step >= nstep_end if nstep_end > 0 else False
-        time_termination = (isclose(self._t_cur, end_time, abs_tol=1e-9) or
-                            self._t_cur >= end_time) if end_time > 0.0 else False
+        time_termination = (
+            (isclose(self._t_cur, end_time, abs_tol=1e-9) or self._t_cur >= end_time) if end_time > 0.0 else False
+        )
         return step_termination or time_termination
 
     def _calculate_end_time(self, t_end: float) -> float:
@@ -716,11 +736,10 @@ class Trajectory(Generic[T_Noise, T_State]):
         """
         # Prepend existing backlog if states align
         if state_idx == from_traj.get_last_state_id() and from_traj.noise_backlog:
-
             # Grab the noise that might already has been moved from the backlog
             # to the current noise increment
             if from_traj._fmodel and from_traj._fmodel.noise is not None:
-                 rest_traj.noise_backlog.append(from_traj._fmodel.noise)
+                rest_traj.noise_backlog.append(from_traj._fmodel.noise)
 
             rest_traj.noise_backlog.extend(reversed(from_traj.noise_backlog))
 
@@ -736,7 +755,10 @@ class Trajectory(Generic[T_Noise, T_State]):
 
     @staticmethod
     def _finalize_branch(
-        ancestor_id: int, discarded_id: int, rest_traj: Trajectory[T_Noise, T_State], weight: float,
+        ancestor_id: int,
+        discarded_id: int,
+        rest_traj: Trajectory[T_Noise, T_State],
+        weight: float,
         ancestor_workdir: Path,
     ) -> None:
         """Finalizes metadata, model state, and diagnostics.
@@ -758,7 +780,9 @@ class Trajectory(Generic[T_Noise, T_State]):
                 rest_traj._fmodel.set_current_state(last_snap.state)
 
             rest_traj.update_metadata()
-            rest_traj._fmodel.post_trajectory_branching_hook(rest_traj._step, rest_traj._t_cur, ancestor_workdir.absolute().as_posix())
+            rest_traj._fmodel.post_trajectory_branching_hook(
+                rest_traj._step, rest_traj._t_cur, ancestor_workdir.absolute().as_posix()
+            )
 
         if rest_traj._has_diagnostics:
             rest_traj._branch_diagnostics(

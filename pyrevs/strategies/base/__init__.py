@@ -4,4 +4,10 @@ from .termination import ModelTerminationCriterion
 from .termination import TerminationCriterion
 from .termination import TimeTerminationCriterion
 
-__all__ = ["BaseSamplingStrategy", "LowScoreTerminationCriterion", "ModelTerminationCriterion", "TerminationCriterion", "TimeTerminationCriterion"]
+__all__ = [
+    "BaseSamplingStrategy",
+    "LowScoreTerminationCriterion",
+    "ModelTerminationCriterion",
+    "TerminationCriterion",
+    "TimeTerminationCriterion",
+]
