@@ -344,7 +344,7 @@ def test_doublewell_save_tams():
                 "runtime": {"walltime": 500.0},
                 "ams": {"ntrajectories": 50, "nsplititer": 200, "variant": "tams", "end_time": 10.0},
                 "runner": {"type": "dask"},
-                "database": {"path": "dwTest.tdb"},
+                "database": {"path": "dwTestsv.tdb"},
                 "model": {"noise_amplitude": 0.8},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.3},
             },
@@ -357,7 +357,7 @@ def test_doublewell_save_tams():
     del sampler
     Path("input.toml").unlink(missing_ok=True)
     if not is_windows_os():
-        shutil.rmtree("dwTest.tdb")
+        shutil.rmtree("dwTestsv.tdb")
 
 
 def test_doublewell_deterministic_tams():
