@@ -1,6 +1,7 @@
 """An extension class for the AMS data as an SQL database using SQLAlchemy."""
 
 from __future__ import annotations
+import gc
 import json
 import logging
 from contextlib import contextmanager
@@ -317,3 +318,17 @@ class AMSDB:
         json_path = Path(json_file) if json_file else Path(f"{Path(self._file_name).stem}.json")
         with json_path.open("w") as f:
             json.dump(db_data, f, indent=2)
+
+    def close(self) -> None:
+        """Dispose of the engine and clear connections."""
+        if self._engine:
+            self._engine.dispose()
+
+    def __del__(self) -> None:
+        """Destructor of the AMS extension.
+
+        Force deletion of the engine for Windows.
+        """
+        del self._Session
+        self.close()
+        gc.collect()

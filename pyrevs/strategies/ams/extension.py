@@ -1,5 +1,6 @@
 """An extension class for the AMS strategy."""
 
+import gc
 import json
 import logging
 from pathlib import Path
@@ -360,3 +361,4 @@ class AMSDatabaseExtension(StrategyDatabaseExtension):
             del self._tdb
         if hasattr(self, "_ams_db"):
             del self._ams_db
+        gc.collect()
