@@ -9,6 +9,7 @@ from pyrevs.database import Database
 from pyrevs.database import load_database
 from pyrevs.sampler import build_sampler
 from pyrevs.utils.dbutils import prepare_database_path
+from pyrevs.utils.utils import is_windows_os
 from tests.dwmodel import DoubleWellModel
 
 
@@ -227,4 +228,6 @@ def test_explore_active_at_k():
     assert len(act_trajs) == 50
     assert act_trajs[42].idstr() == "traj000042_0000"
     del tdb
-    shutil.rmtree("dwTest.tdb")
+    # Do not try to delete on Windows.
+    if not is_windows_os():
+        shutil.rmtree("dwTest.tdb")

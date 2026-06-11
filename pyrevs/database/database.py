@@ -827,3 +827,6 @@ class Database(Generic[T_Noise, T_State]):
             # Remove the hidden db file
             if not self.to_disk():
                 Path(self.pool_file()).unlink(missing_ok=True)
+
+        if hasattr(self, "_strategy_extension"):
+            del self._strategy_extension
