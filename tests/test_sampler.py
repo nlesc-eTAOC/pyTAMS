@@ -539,12 +539,12 @@ def test_doublewell_slow_tams_restore_during_initial_ensemble():
         toml.dump(
             {
                 "sampler": {"strategy": "ams"},
-                "runtime": {"walltime": 20.0, "loglevel": "INFO"},
+                "runtime": {"walltime": 10.0, "loglevel": "INFO"},
                 "ams": {"ntrajectories": 10, "nsplititer": 400, "variant": "tams", "end_time": 8.0},
                 "database": {"path": "slowdwTest.tdb"},
                 "runner": {"type": "asyncio"},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.9},
-                "model": {"slow_factor": 0.0005, "noise_amplitude": 0.05},
+                "model": {"slow_factor": 0.0002, "noise_amplitude": 0.05},
             },
             f,
         )
