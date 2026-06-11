@@ -52,6 +52,12 @@ class AMSConfig:
             "doc": "The minimum score of the trajectory (AMS)",
         },
     )
+    use_custom_termination: bool = field(
+        default=False,
+        metadata={
+            "doc": "Trigger use of the fmodel check_termination during sampling",
+        },
+    )
 
     def validate(self) -> None:
         """Validate AMS configuration."""

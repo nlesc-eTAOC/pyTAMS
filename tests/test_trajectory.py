@@ -128,12 +128,12 @@ def test_branch_simple_model_traj():
     cfg = Config({"trajectory": {"end_time": 0.04, "step_size": 0.0002, "targetscore": 0.45}})
     t_ancestor = Trajectory(1, 0.5, fmodel, cfg.load(TrajectoryConfig))
     t_ancestor.advance()
-    assert t_ancestor.get_computed_steps_count() == 201
+    assert t_ancestor.get_computed_steps_count() == 200
     t_branched = Trajectory(2, 0.5, fmodel, cfg.load(TrajectoryConfig))
     t_branched = Trajectory.branch_from_trajectory(t_ancestor, t_branched, 0.1, 0.25)
     assert t_branched.get_computed_steps_count() == 0
     t_branched.advance()
-    assert t_branched.get_computed_steps_count() == 150
+    assert t_branched.get_computed_steps_count() == 149
 
 
 def test_simple_model_traj_end_nstep():

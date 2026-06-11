@@ -194,19 +194,21 @@ class ForwardModelBaseClass(ABC, Generic[T_Noise, T_State]):
         """
 
     @final
-    def post_trajectory_branching_hook(self, step: int, time: float) -> None:
+    def post_trajectory_branching_hook(self, step: int, time: float, ancestor_workdir: str) -> None:
         """Model post trajectory branching hook.
 
         Args:
             step: the current step counter
             time: the time of the simulation
+            ancestor_workdir: the ancestor trajectory workdir
         """
         self._step = step
         self._time = time
-        self._trajectory_branching_hook()
+        self._trajectory_branching_hook(ancestor_workdir)
 
-    def _trajectory_branching_hook(self) -> None:
+    def _trajectory_branching_hook(self, ancestor_workdir: str) -> None:
         """Model-specific post trajectory branching hook."""
+        _ = ancestor_workdir
 
     @final
     def post_trajectory_restore_hook(self, step: int, time: float) -> None:
