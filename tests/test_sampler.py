@@ -8,6 +8,7 @@ import toml
 from pyrevs.database import Database
 from pyrevs.sampler import build_sampler
 from pyrevs.utils.utils import is_mac_os
+from pyrevs.utils.utils import is_windows_os
 from tests.dwmodel import DoubleWellModel
 from tests.models import FailingFModel
 from tests.models import SimpleFModel
@@ -198,8 +199,10 @@ def test_simple_model_tams_with_db():
     re_proba = sampler.database.get_event_probability()
     del sampler
     assert re_proba == 1.0
-    shutil.rmtree("simpleModelTest.tdb")
+    tdb = Database.load(Path("simpleModelTest.tdb"))
+    del tdb
     Path("input.toml").unlink(missing_ok=True)
+    shutil.rmtree("simpleModelTest.tdb")
 
 
 def test_simple_model_tams_with_db_access():
@@ -223,7 +226,8 @@ def test_simple_model_tams_with_db_access():
     assert tdb.get_event_probability() == 1
     del sampler
     del tdb
-    shutil.rmtree("simpleModelTest.tdb")
+    if not is_windows_os():
+        shutil.rmtree("simpleModelTest.tdb")
     Path("input.toml").unlink(missing_ok=True)
 
 
@@ -352,7 +356,8 @@ def test_doublewell_save_tams():
     assert re_proba >= 0.2
     del sampler
     Path("input.toml").unlink(missing_ok=True)
-    shutil.rmtree("dwTest.tdb")
+    if not is_windows_os():
+        shutil.rmtree("dwTest.tdb")
 
 
 def test_doublewell_deterministic_tams():
@@ -425,7 +430,7 @@ def test_doublewell_2_workers_tams():
                 "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0, "l_j": 2},
                 "runner": {"type": "dask", "nworkers": 2},
                 "model": {"noise_amplitude": 0.8},
-                "database": {"path": "dwTest.tdb", "archive_discarded": True},
+                "database": {"path": "dwTest2W.tdb", "archive_discarded": True},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.5},
             },
             f,
@@ -441,7 +446,7 @@ def test_doublewell_2_workers_tams():
 @pytest.mark.dependency(depends=["test_doublewell_2_workers_tams"])
 def test_doublewell_2_workers_load_db():
     """Load the database from previous test."""
-    tdb = Database.load(Path("dwTest.tdb"))
+    tdb = Database.load(Path("dwTest2W.tdb"))
     tdb.load_data(True)
     assert tdb.traj_list_len() == 50
     assert tdb.archived_traj_list_len() == 16
@@ -460,7 +465,7 @@ def test_doublewell_2_workers_restore_sampler():
                 "ams": {"ntrajectories": 50, "nsplititer": 400, "variant": "tams", "end_time": 5.0, "l_j": 2},
                 "runner": {"type": "dask", "nworkers": 2},
                 "model": {"noise_amplitude": 0.8},
-                "database": {"path": "dwTest.tdb", "archive_discarded": True},
+                "database": {"path": "dwTest2W.tdb", "archive_discarded": True},
                 "trajectory": {"step_size": 0.01, "targetscore": 0.5},
             },
             f,
@@ -471,7 +476,8 @@ def test_doublewell_2_workers_restore_sampler():
     assert re_proba == 0.6925339958244802
     Path("input.toml").unlink(missing_ok=True)
     del sampler
-    shutil.rmtree("dwTest.tdb")
+    if not is_windows_os():
+        shutil.rmtree("dwTest2W.tdb")
 
 
 def test_doublewell_very_slow_model():
@@ -496,7 +502,8 @@ def test_doublewell_very_slow_model():
     assert re_proba <= 0.0
     Path("input.toml").unlink(missing_ok=True)
     del sampler
-    shutil.rmtree("vslowdwTest.tdb")
+    if not is_windows_os():
+        shutil.rmtree("vslowdwTest.tdb")
 
 
 @pytest.mark.dependency
@@ -586,7 +593,7 @@ def test_doublewell_slow_tams_restore_more_split():
         "sampler": {"strategy": "ams", "deterministic": True},
         "runtime": {"walltime": 20.0},
         "ams": {"ntrajectories": 20, "nsplititer": 20, "variant": "tams", "end_time": 6.0},
-        "database": {"path": "dwTest.tdb"},
+        "database": {"path": "dwTestrest.tdb"},
         "runner": {"type": "asyncio", "nworkers": 2},
         "trajectory": {"step_size": 0.01, "targetscore": 0.6},
         "model": {"slow_factor": 0.00000001, "noise_amplitude": 0.6},
@@ -613,4 +620,5 @@ def test_doublewell_slow_tams_restore_more_split():
         assert re_proba == 0.14983093771085937
     Path("input.toml").unlink(missing_ok=True)
     del sampler
-    shutil.rmtree("dwTest.tdb")
+    if not is_windows_os():
+        shutil.rmtree("dwTestrest.tdb")
