@@ -468,9 +468,7 @@ class Trajectory(Generic[T_Noise, T_State]):
         """Append the current snapshot to the trajectory list."""
         # Append the current snapshot to the trajectory list
         if self._fmodel:
-            need_state = (
-                self._traj_cfg.sparse_start + self._step
-            ) % self._traj_cfg.sparse_freq == 0 or self._step == 0
+            need_state = (self._traj_cfg.sparse_start + self._step) % self._traj_cfg.sparse_freq == 0 or self._step == 0
             self._snaps.append(
                 Snapshot[T_Noise, T_State](
                     time=self._t_cur,

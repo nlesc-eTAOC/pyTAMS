@@ -111,7 +111,6 @@ class DiagDB(BaseSQLManager):
             the highest value of level_crossed
         """
         with self.session_scope() as session:
-            # Assuming your DiagnosticEntry model has these columns
             stmt = (
                 select(func.max(DiagnosticEntry.level_crossed))
                 .where(DiagnosticEntry.traj_id == traj_id)
@@ -119,6 +118,31 @@ class DiagDB(BaseSQLManager):
             )
             result = session.scalar(stmt)
             return float(result) if result is not None else -np.inf
+
+    def get_last_diagnostic_entry_metadata(self, traj_id: int, label: str) -> tuple[float, float, float] | None:
+        """Return the last diagnostic entry metadata for a given trajectory.
+
+        Args:
+            traj_id: the ID of a trajectory
+            label: the label of the diagnostic targeter
+
+        Returns:
+            a tuple (level, time, weight)
+        """
+        with self.session_scope() as session:
+            stmt = (
+                select(
+                    DiagnosticEntry.level_crossed,
+                    DiagnosticEntry.time,
+                    DiagnosticEntry.weight,
+                )
+                .where(DiagnosticEntry.traj_id == traj_id)
+                .where(DiagnosticEntry.diaglabel == label)
+                .order_by(DiagnosticEntry.id.desc())
+                .limit(1)
+            )
+            result = session.execute(stmt).first()
+            return cast("tuple[float, float, float]", result) if result is not None else None
 
     def duplicate_diagnostic_history(
         self,
@@ -238,6 +262,62 @@ class DiagDB(BaseSQLManager):
                     results_dict[level] = []
 
                 results_dict[level].append((data, weight, time, tid))
+
+        return results_dict
+
+    def get_diagnostic_data_traj(
+        self, label: str, tid: int, time_ordered: bool = False
+    ) -> dict[float, list[tuple[Any, float, float]]]:
+        """Retrieve diagnostic snapshots for a specific label and trajectory.
+
+        Args:
+            label: the label of the diagnostic of interest
+            tid: the ID of the trajectory
+            time_ordered: whether to order the results by time (default: False, by level)
+
+        Returns:
+            A dictionary mapping each iso-level (float) to a list of tuples.
+            Each tuple contains (unpickled_data, trajectory_weight, time, tid).
+        """
+        results_dict: dict[float, list[tuple[Any, float, float]]] = {}
+
+        with self.session_scope() as session:
+            # Query entries for the specific label, ordered by time or level
+            if time_ordered:
+                stmt = (
+                    select(
+                        DiagnosticEntry.level_crossed,
+                        DiagnosticEntry.weight,
+                        DiagnosticEntry.time,
+                        DiagnosticEntry.model_data,
+                    )
+                    .where(DiagnosticEntry.diaglabel == label)
+                    .where(DiagnosticEntry.traj_id == tid)
+                    .order_by(DiagnosticEntry.time.asc())
+                )
+            else:
+                stmt = (
+                    select(
+                        DiagnosticEntry.level_crossed,
+                        DiagnosticEntry.weight,
+                        DiagnosticEntry.time,
+                        DiagnosticEntry.model_data,
+                    )
+                    .where(DiagnosticEntry.diaglabel == label)
+                    .where(DiagnosticEntry.traj_id == tid)
+                    .order_by(DiagnosticEntry.level_crossed.asc())
+                )
+
+            rows = session.execute(stmt).all()
+
+            for level, weight, time, blob in rows:
+                # Unpickle the model data
+                data = pickle.loads(blob)  # noqa: S301
+
+                if level not in results_dict:
+                    results_dict[level] = []
+
+                results_dict[level].append((data, weight, time))
 
         return results_dict
 
