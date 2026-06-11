@@ -350,3 +350,13 @@ class AMSDatabaseExtension(StrategyDatabaseExtension):
                 active_list_at_k.append(self._tdb.archived_traj_list()[idx])
 
         return active_list_at_k
+
+    def __del__(self) -> None:
+        """Destructor of the AMS extension.
+
+        Force deletion of SQL accesses for Windows.
+        """
+        if hasattr(self, "_tdb"):
+            del self._tdb
+        if hasattr(self, "_ams_db"):
+            del self._ams_db
