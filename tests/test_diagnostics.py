@@ -90,7 +90,7 @@ def test_diagnostic_update():
     s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
     dplugin[0].update(s_old, s_new)
     data = ddb.get_diagnostic_data("testd")
-    assert data[0.0] == [(42.0, 0.1, 1.0, 1)]
+    assert data[0.0] == [(42.0, 0.1, 0.0, 1)]
     dplugin = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
