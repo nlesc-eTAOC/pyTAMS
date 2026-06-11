@@ -114,7 +114,7 @@ def test_simple_model_traj_with_diag():
     t_test_2 = Trajectory(2, 0.5, fmodel, cfg.load(TrajectoryConfig), diag_configs=diagdict)
     t_test_2.advance()
     analyst = DiagnosticAnalyst("./diagDB.db")
-    _ = analyst.get_diagnostic_data("testd")
+    _ = analyst.get_all_diagnostic_data("testd")
     dstat = analyst.compute_weighted_stats("testd")
     assert dstat[0.0]["mean"] == 42.0
     _ = analyst.get_conditional_means("testd")
