@@ -1,6 +1,7 @@
 """Defines the interface and simple implementations of termination criteria."""
 
 from __future__ import annotations
+from math import isclose
 from typing import TYPE_CHECKING
 from typing import Protocol
 from typing import TypeVar
@@ -55,7 +56,10 @@ class TimeTerminationCriterion(TerminationCriterion):
     ) -> bool:
         """Check if the trajectory should terminate."""
         _ = model
-        return trajectory.current_time() >= self._end_time
+        return (
+            isclose(trajectory.current_time(), self._end_time, abs_tol=1e-9)
+            or trajectory.current_time() >= self._end_time
+        )
 
 
 class LowScoreTerminationCriterion(TerminationCriterion):

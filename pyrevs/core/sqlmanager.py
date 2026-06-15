@@ -36,10 +36,10 @@ class BaseSQLManager:
         # URI mode requires absolute path
         file_path = Path(file_name).absolute().as_posix()
         if in_memory:
-            self._engine = create_engine("sqlite:///:memory:", echo=False, connect_args={"timeout": 10.0})
+            self._engine = create_engine("sqlite:///:memory:", echo=False, connect_args={"timeout": 120.0})
         else:
             uri = f"sqlite:///file:{file_path}?mode=ro&uri=true" if ro_mode else f"sqlite:///{file_path}"
-            self._engine = create_engine(uri, echo=False, connect_args={"timeout": 10.0})
+            self._engine = create_engine(uri, echo=False, connect_args={"timeout": 120.0})
 
         self._Session = sessionmaker(bind=self._engine, expire_on_commit=False)
         self._init_db(base_metadata)

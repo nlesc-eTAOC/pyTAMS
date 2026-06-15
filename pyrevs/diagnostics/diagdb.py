@@ -12,6 +12,7 @@ from sqlalchemy import Boolean
 from sqlalchemy import CursorResult
 from sqlalchemy import Float
 from sqlalchemy import LargeBinary
+from sqlalchemy import delete
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
@@ -320,6 +321,16 @@ class DiagDB(BaseSQLManager):
                 results_dict[level].append((data, weight, time))
 
         return results_dict
+
+    def delete_traj_diagnostic_data(self, traj_id: int) -> None:
+        """Delete all the diagnostic data for a specific trajectory.
+
+        Args:
+            traj_id: the ID of the trajectory
+        """
+        with self.session_scope() as session:
+            stmt = delete(DiagnosticEntry).where(DiagnosticEntry.traj_id == traj_id)
+            session.execute(stmt)
 
     def dump_to_json(self, json_path: str) -> None:
         """Export the entire diagnostic database to a JSON file.
