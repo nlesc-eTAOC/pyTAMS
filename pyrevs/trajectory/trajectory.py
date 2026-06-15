@@ -687,13 +687,16 @@ class Trajectory(Generic[T_Noise, T_State]):
             workdir=new_workdir,
         )
 
-        xml_name = f"{new_traj.idstr()}.xml"
-        new_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / xml_name))
-
         # Copy history if not empty
         if from_traj._snaps:
             new_traj._branching_history = copy.deepcopy(rst_traj._branching_history)
             new_traj._branching_history.append(from_traj.id())
+
+        # Update the checkfile
+        # It needs to be done after copying the history
+        # as the unique traj ID uses the length of the history
+        xml_name = f"{new_traj.idstr()}.xml"
+        new_traj.set_checkfile(Path(rst_traj.get_checkfile().parents[0] / xml_name))
 
         return new_traj
 
