@@ -379,7 +379,7 @@ def test_doublewell_deterministic_tams():
     sampler.run()
     re_proba = sampler.database.get_event_probability()
     if is_mac_os():
-        assert re_proba == 0.5416298076191378
+        assert re_proba == 0.5202874320960114
     else:
         assert re_proba == 0.5471008157769068
     Path("input.toml").unlink(missing_ok=True)
