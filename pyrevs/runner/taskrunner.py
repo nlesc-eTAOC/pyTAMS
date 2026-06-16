@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 import dask
 from dask.distributed import Client
+from dask.distributed import Nanny
 from dask.distributed import WorkerPlugin
 from dask_jobqueue import SLURMCluster
 from typing_extensions import Self
@@ -292,8 +293,28 @@ class DaskRunner(BaseRunner):
                     ],
                     job_directives_skip=["--cpus-per-task=", "--mem"],
                 )
-            self.cluster.scale(jobs=self._n_workers)
             self.client = Client(self.cluster)
+            self.cluster.scale(jobs=self._n_workers-1)
+
+            # Define an internal async function to build and start the worker safely
+            async def _start_local_worker(scheduler_address):
+                worker = Nanny(
+                    scheduler_address,
+                    nthreads=1,
+                    resources={"mpi_ranks": 128},
+                )
+                await worker.start()
+                return worker
+
+            # Submit the async routine to the client's background event loop and wait for it
+            future = asyncio.run_coroutine_threadsafe(
+                _start_local_worker(self.cluster.scheduler_address),
+                self.client.loop.asyncio_loop  # Access the underlying standard asyncio loop
+            )
+
+            # This blocks the main thread for a moment until the local worker is fully up
+            self.local_worker = future.result(timeout=30)
+
         else:
             err_msg = f"Unknown [dask] backend: {backend}"
             _logger.exception(err_msg)
@@ -308,6 +329,15 @@ class DaskRunner(BaseRunner):
 
     def __exit__(self, *args: object) -> None:
         """Executed leaving with scope."""
+        if hasattr(self, "local_worker") and self.local_worker:
+            try:
+                future = asyncio.run_coroutine_threadsafe(
+                    self.local_worker.close(),
+                    self.client.loop.asyncio_loop
+                )
+                future.result(timeout=5)
+            except Exception:
+                pass
         if self.cluster:
             self.cluster.close()
         self.client.close()
