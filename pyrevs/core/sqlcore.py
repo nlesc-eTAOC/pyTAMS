@@ -107,6 +107,25 @@ class CoreDB(BaseSQLManager):
                 _logger.exception(err_msg)
                 raise ValueError(err_msg)
 
+    def update_trajectory_file(self, traj_id: int, traj_file: str) -> None:
+        """Update the trajectory file of a given trajectory data in the DB.
+
+        Args:
+            traj_id : The trajectory id
+            traj_file : The new trajectory file of that trajectory
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
+        """
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
+            if traj:
+                traj.traj_file = traj_file
+            else:
+                err_msg = f"Trajectory {traj_id} not found !"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
+
     def update_trajectory_weight(self, traj_id: int, weight: float) -> None:
         """Update a given trajectory weight in the DB.
 
