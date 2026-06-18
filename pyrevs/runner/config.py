@@ -22,6 +22,12 @@ class DaskConfig:
             "doc": "The path to the slurm config file.",
         },
     )
+    one_worker_with_scheduler: bool = field(
+        default=False,
+        metadata={
+            "doc": "Whether to assign one worker within the scheduler job.",
+        },
+    )
     queue: str = field(
         default="regular",
         metadata={
