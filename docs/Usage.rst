@@ -48,7 +48,7 @@ To get an overview of the available options, run the following command:
 
 .. code-block:: shell
 
-  tams_help
+  pyrevs_help
 
 Most input parameters have a default value, but the validity of the input parameters is checked
 at runtime.
@@ -94,7 +94,7 @@ data structures of the code:
     end_time = 10.0             # [OPT, DEF = -1] End time
 
   Depending on the strategy prescribed, one of the above blocks is required.
-  Whem running TAMS, one must specify the number of members in the ensemble :math:`N`
+  Whem running AMS, one must specify the number of members in the ensemble :math:`N`
   (``ntrajectories`` in the snippet above) as well as the maximum number of (splitting) iterations :math:`J`
   (``nsplititer`` above). The ``variant`` enable to switch between TAMS and AMS, and a different termination
   must then be provided. By default, a single score function level is discarded at each iteration (``l_j`` above).
@@ -115,7 +115,7 @@ data structures of the code:
     chkfile_dump_all = false    # [OPT, DEF = false] Update trajectory checkpoint file at each step
 
   The trajectory object holds the system states in a chronological order, from time :math:`t=0` to
-  an possibly a prescribed end time ``t_end`` provided at runtime.
+  an optional prescribed end time ``t_end`` provided at runtime.
   The step size must also be prescribed (``step_size``), but note that it needs not be the time step size
   of your dynamical system but rather the relevant step size for the stochastic forcing applied on the system.
   The trajectory object also enables sub-sampling the system state, only storing the state every n steps (``sparse_freq = n``).
@@ -135,9 +135,9 @@ data structures of the code:
   more suited when running `pyREVS` locally (or within the scope of a Slurm job), and ``dask``
   leverage `Dask <https://www.dask.org/>`_ and is required when deploying a large `pyREVS` run on a
   cluster.
-  The number of independent workers is set by the ``nworkers`` parameter, which defaults to 1. Not that this
-  is a maximum numbers of workers, for instance when running TAMS iteration with a single discarded level, the actual
-  number of workers might be lower (i.e. the ``l_j`` parameter).
+  The number of independent workers is set by the ``nworkers`` parameter, which defaults to 1. Note that this
+  is a maximum numbers of workers, for instance when running AMS iterations with a single discarded level, the actual
+  number of workers might be lower (i.e. equal to the ``l_j`` parameter).
 
 - Database parameters:
 
@@ -171,19 +171,21 @@ the score function crosses levels defined in the block:
 .. code-block:: python
   
   [testdiag] 
+  type = "FirstCrossing"
   score_min = 0.0 
   score_max = 1.0 
   n_levels = 21 
 
 The data sampled by the diagnostic will be stored in an SQL database located either in the
-run folder or in the `pyREVS` database if one is requested.
+run folder or within the `pyREVS` database if one is requested.
 
-Finally, note that a full TOML file, i.e. including defaults, is written in the database and can be inspected
-at any time.
+Finally, note that a full TOML file, i.e. including defaults, is written in the database if requested 
+and can be inspected at any time.
 
 To pass model-specific parameters to your `pyREVS` model, the sampler will parse the `[model]` dictionary
-of the TOML file and pass it to the model initializer. See the :ref:`tutorials Section <sec:tutorials>` for a more practical
-use of the above input parameters.
+of the TOML file and pass it to the model initializer.
+
+See the :ref:`tutorials Section <sec:tutorials>` for a more practical use of the above input parameters.
 
 Accessing the database
 ----------------------
@@ -216,7 +218,7 @@ from the sampling runs itself. To do so, in a separate Python script, one can:
       tdb.load_data(load_archived_trajectories=True)
 
 The optional argument to `load_data` (defaulting to false) enable loading the discarded
-trajectories data (for sampling strategys that archive them).
+trajectories data (for sampling strategies that archive them).
 Upon loading the data, a summary of the database state is logged to screen, e.g.:
 
 .. code-block:: shell
