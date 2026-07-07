@@ -477,7 +477,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             self._initialized_diags = True
 
     def _branch_diagnostics(
-        self, ancestor_id: int, discarded_id: int, child_id: int, child_weight: float, score_threshold: float
+        self, ancestor_id: int, discarded_id: int, child_id: int, child_weight: float, branching_time: float
     ) -> None:
         """Duplicate diagnostics entry while branching.
 
@@ -486,14 +486,14 @@ class Trajectory(Generic[T_Noise, T_State]):
             discarded_id: the ID of the discarded traj
             child_id: the ID of the child traj
             child_weight: the weight of the child traj
-            score_threshold: the score threshold up to which duplication is needed
+            branching_time: the time up to which copy must be performed
         """
         if self._workdir == Path.cwd():
             ddb = DiagDB("./diagDB.db")
         else:
             db_path = self._workdir.parents[1] / "./diagDB.db"
             ddb = DiagDB(db_path.absolute().as_posix())
-        ddb.duplicate_diagnostic_history(ancestor_id, discarded_id, child_id, child_weight, score_threshold)
+        ddb.duplicate_diagnostic_history_from_time(ancestor_id, discarded_id, child_id, child_weight, branching_time)
         ddb.close()
 
     def setup_noise(self) -> None:
@@ -789,7 +789,7 @@ class Trajectory(Generic[T_Noise, T_State]):
 
         if rest_traj._has_diagnostics:
             rest_traj._branch_diagnostics(
-                ancestor_id, discarded_id, rest_traj.unique_id(), weight, rest_traj._score_max
+                ancestor_id, discarded_id, rest_traj.unique_id(), weight, rest_traj._t_cur
             )
 
     def store(self, traj_file: Path | None = None, write_metadata_json: bool = False) -> None:

@@ -207,6 +207,68 @@ class DiagDB(BaseSQLManager):
 
             return len(new_entries)
 
+    def duplicate_diagnostic_history_from_time(
+        self,
+        ancestor_id: int,
+        discarded_id: int,
+        new_id: int,
+        new_weight: float,
+        branching_time: float,
+    ) -> int:
+        """Copy diagnostic entries from an ancestor to a descendant.
+
+        Copies all entries where time <= branching_time.
+        Returns the number of entries duplicated.
+
+        The entries belonging to the discarded trajectory are set
+        to inactive.
+
+        Args:
+            ancestor_id: the ID of the ancestor to copy data from
+            discarded_id: the ID of the discarded trajectory (during sampling iterations)
+            new_id: the ID of the new child trajectory
+            new_weight: the weight of the new child trajectory
+            branching_time: the time up to which copy must be performed
+        """
+        with self.session_scope() as session:
+            # Set the discarded trajectory to inactive
+            stmt_update = (
+                update(DiagnosticEntry)
+                .where(
+                    DiagnosticEntry.traj_id == discarded_id,
+                )
+                .values(active=False)
+            )
+            session.execute(stmt_update)
+
+            # Select the relevant entries from the ancestor
+            # Fetched as dictionaries to easily modify them for insertion
+            stmt = select(DiagnosticEntry).where(
+                DiagnosticEntry.traj_id == ancestor_id, DiagnosticEntry.time <= branching_time
+            )
+            ancestor_entries = session.execute(stmt).scalars().all()
+
+            if not ancestor_entries:
+                return 0
+
+            new_entries = []
+            for entry in ancestor_entries:
+                # Create a new entry object (stripping the original primary key 'id')
+                new_entry = DiagnosticEntry(
+                    diaglabel=entry.diaglabel,
+                    traj_id=new_id,
+                    level_crossed=entry.level_crossed,
+                    time=entry.time,
+                    weight=new_weight,
+                    active=True,
+                    model_data=entry.model_data,
+                )
+                new_entries.append(new_entry)
+
+            session.add_all(new_entries)
+
+            return len(new_entries)
+
     def update_all_active_weights(self, new_weight: float) -> int:
         """Update all the active trajectories weight.
 
@@ -331,6 +393,23 @@ class DiagDB(BaseSQLManager):
         with self.session_scope() as session:
             stmt = delete(DiagnosticEntry).where(DiagnosticEntry.traj_id == traj_id)
             session.execute(stmt)
+
+    def get_unique_traj_ids(self) -> list[int]:
+        """Return the list of unique trajectory IDs."""
+        with self.session_scope() as session:
+            stmt = (
+                select(DiagnosticEntry.traj_id)
+                .distinct()
+                .order_by(DiagnosticEntry.traj_id)
+            )
+
+            return list(session.scalars(stmt))
+
+    def count_entries(self) -> int:
+        """Return the total number of rows in the diagnostics table."""
+        with self.session_scope() as session:
+            stmt = select(func.count()).select_from(DiagnosticEntry)
+            return session.scalar(stmt)
 
     def dump_to_json(self, json_path: str) -> None:
         """Export the entire diagnostic database to a JSON file.
