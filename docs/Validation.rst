@@ -1,10 +1,13 @@
 .. highlight:: rst
 
-.. _BaarsThesis: https://research.rug.nl/en/publications/numerical-methods-for-studying-transition-probabilities-in-stocha/
+.. _BaarsThesis:
+   https://research.rug.nl/en/publications/numerical-methods-for-studying-transition-probabilities-in-stocha/
 
-.. _LestangTAMS: https://doi.org/10.1088/1742-5468/aab856
+.. _LestangTAMS:
+   https://doi.org/10.1088/1742-5468/aab856
 
-.. _LestangThesis: https://theses.hal.science/tel-01974316v1/file/LESTANG_Thibault_2018LYSEN049_These.pdf
+.. _LestangThesis:
+   https://theses.hal.science/tel-01974316v1/file/LESTANG_Thibault_2018LYSEN049_These.pdf
 
 .. _sec:validation:
 
@@ -31,7 +34,8 @@ The simple case of a one dimensional Ornstein-Uhlenbeck (OU) process is part of
 `Lestang et al. <LestangTAMS>`_ used this model while developing the TAMS
 algorithm. In contrast with the :ref:`Theory Section <sec:Theory>`, the OU
 process does not feature multistability, but we are interested in predicting
-the occurrence of extreme values of the process.
+the occurrence of extreme values of the process. This is another classical
+application of rare-event algorithms.
 
 Before jumping into TAMS results, we can provide an estimate of the process
 stationary distribution :math:`P_s(x)` using a very long trajectory (:math:`10^{8} steps`).
@@ -48,7 +52,7 @@ The log-scale plot of the distribution shows that extreme values of the process
 
    :Stationary distribution :math:`P_s(x)` of the OU process obtained with TAMS
 
-We will now use TAMS to predict the return time :math:`r(a)` of the value $a$ in the OU process.
+We will now use TAMS to predict the return time :math:`r(a)` of the value :math:`a` in the OU process.
 This is specifically what TAMS was developed for. The results of TAMS are obtained from 25
 independent TAMS runs, with :math:`N = 100`, :math:`T_a = 5 \tau_c` and :math:`\xi_{max} = 8\sigma`.
 The long trajectory used in producing :numref:`fig-Distrib_OU1D` is processed using the block-maximum
@@ -56,7 +60,7 @@ method to provide an estimate of :math:`\hat{r}(a)`
 and the theoretical :math:`r(a)` in also given by equation A6 of `Lestang et al. <LestangTAMS>`_.
 The graph :numref:`fig-ReturnTime_OU1D` shows the return time in abscissa and the value of :math:`a` in ordonate for all
 three methods. The agreements between `pyREVS` and the theoretical value of the return time demonstrate
-that the current implementation is able to correctly estimate rare events, down to very probability
+that the current implementation is able to correctly estimate rare events, down to very low probability
 (:math:`P(\mathcal{E}) < 10^{-10}`)
 
 
