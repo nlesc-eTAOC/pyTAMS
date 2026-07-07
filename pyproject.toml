@@ -28,7 +28,7 @@ urls = {Repository = "https://github.com/nlesc-eTAOC/pyREVS", Documentation = "h
 requires-python = ">=3.10"
 dependencies = [
   "toml",
-  "numpy",
+  "numpy<2.5.0",
   "matplotlib",
   "dask",
   "dask [distributed]",
