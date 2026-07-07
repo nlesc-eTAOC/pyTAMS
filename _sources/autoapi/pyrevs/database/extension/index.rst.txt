@@ -1,0 +1,57 @@
+pyrevs.database.extension
+=========================
+
+.. py:module:: pyrevs.database.extension
+
+.. autoapi-nested-parse::
+
+   A protocol database extension class for specific strategies.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   pyrevs.database.extension.StrategyDatabaseExtension
+
+
+Module Contents
+---------------
+
+.. py:class:: StrategyDatabaseExtension
+
+   Bases: :py:obj:`Protocol`
+
+
+   A base extension class for specific strategies.
+
+   Currently an empty type definition might be extended
+   in the future for pickling purposes.
+
+
+   .. py:method:: serialize() -> None
+      :abstractmethod:
+
+
+      Serialize the extension.
+
+
+
+   .. py:method:: deserialize() -> None
+      :abstractmethod:
+
+
+      Deserialize the extension.
+
+
+
+   .. py:method:: get_event_probability() -> float
+      :abstractmethod:
+
+
+      Return the event probability.
+
+
+
