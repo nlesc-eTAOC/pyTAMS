@@ -340,6 +340,18 @@ class CoreDB(BaseSQLManager):
         with self.session_scope() as session:
             return session.scalar(select(func.count(ArchivedTrajectory.id))) or 0
 
+    def discard_archived_trajectory(self, traj_id: int) -> None:
+        """Remove a trajectory from the archive.
+
+        Args:
+            traj_id : The trajectory id
+        """
+        with self.session_scope() as session:
+            db_id = traj_id + 1
+            traj = session.get(ArchivedTrajectory, db_id)
+            if traj:
+                session.delete(traj)
+
     def clear_archived_trajectories(self) -> int:
         """Delete the content of the archived traj table.
 
