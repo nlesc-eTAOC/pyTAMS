@@ -788,9 +788,7 @@ class Trajectory(Generic[T_Noise, T_State]):
             )
 
         if rest_traj._has_diagnostics:
-            rest_traj._branch_diagnostics(
-                ancestor_id, discarded_id, rest_traj.unique_id(), weight, rest_traj._t_cur
-            )
+            rest_traj._branch_diagnostics(ancestor_id, discarded_id, rest_traj.unique_id(), weight, rest_traj._t_cur)
 
     def store(self, traj_file: Path | None = None, write_metadata_json: bool = False) -> None:
         """Store the trajectory data to an XML chkfile.
