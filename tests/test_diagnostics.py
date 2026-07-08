@@ -80,6 +80,40 @@ def test_diagnostic_crossed():
     Path("./diagDBtest.db").unlink(missing_ok=True)
 
 
+def test_multiple_diagnostic_crossed():
+    """Test initialize two diagnostic and crossed."""
+    fmodel = SimpleFModel(1, {})
+    ddb = DiagDB("./diagDBtest.db")
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 3}),
+               "testd2": Config({"type": "FirstCrossing", "n_levels": 3})}
+    dplugin = diagnosticfactory(dconfig, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    s_old = Snapshot(time=0.0, score=0.0, noise=0.0)
+    s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
+    dplugin[0].update(s_old, s_new)
+    dplugin[1].update(s_old, s_new)
+    assert ddb.count_entries() == 4
+    dplugin = []
+    del ddb
+    Path("./diagDBtest.db").unlink(missing_ok=True)
+
+def test_multiple_traj_diagnostic_crossed():
+    """Test initialize a diagnostic and crossed by two trajectories."""
+    fmodel = SimpleFModel(1, {})
+    ddb = DiagDB("./diagDBtest.db")
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 3})}
+    dplugin1 = diagnosticfactory(dconfig, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    dplugin2 = diagnosticfactory(dconfig, 2, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    s_old = Snapshot(time=0.0, score=0.0, noise=0.0)
+    s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
+    dplugin1[0].update(s_old, s_new)
+    dplugin2[0].update(s_old, s_new)
+    assert ddb.get_unique_traj_ids() == [1, 2]
+    dplugin1 = []
+    dplugin2 = []
+    del ddb
+    Path("./diagDBtest.db").unlink(missing_ok=True)
+
+
 def test_diagnostic_update():
     """Test initialize a diagnostic and update."""
     fmodel = SimpleFModel(1, {})
@@ -92,5 +126,24 @@ def test_diagnostic_update():
     data = ddb.get_diagnostic_data("testd")
     assert data[0.0] == [(42.0, 0.1, 0.0, 1)]
     dplugin = []
+    del ddb
+    Path("./diagDBtest.db").unlink(missing_ok=True)
+
+def test_diagnostic_duplicate_history():
+    """Test initialize a diagnostic, update and duplicate."""
+    fmodel = SimpleFModel(1, {})
+    ddb = DiagDB("./diagDBtest.db")
+    dconfig = {"testd": Config({"type": "FirstCrossing", "n_levels": 10})}
+    dplugin_disc = diagnosticfactory(dconfig, 1, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    dplugin_anc = diagnosticfactory(dconfig, 2, 0.1, "./", fmodel.diagnostic_hook, ddb)
+    s_old = Snapshot(time=0.0, score=0.0, noise=0.0)
+    s_new = Snapshot(time=1.0, score=0.6, noise=0.0)
+    dplugin_disc[0].update(s_old, s_new)
+    dplugin_anc[0].update(s_old, s_new)
+    ddb.duplicate_diagnostic_history_from_time(1, 2, 3, 0.05, 0.2)
+    data = ddb.get_diagnostic_data("testd")
+    assert data[0.0] == [(42.0, 0.1, 0.0, 1), (42.0, 0.1, 0.0, 2), (42.0, 0.05, 0.0, 3)]
+    dplugin_disc = []
+    dplugin_anc = []
     del ddb
     Path("./diagDBtest.db").unlink(missing_ok=True)
