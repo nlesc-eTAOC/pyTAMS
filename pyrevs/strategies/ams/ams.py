@@ -9,6 +9,7 @@ from pyrevs.core import Config
 from pyrevs.core import RuntimeConfig
 from pyrevs.database import Database
 from pyrevs.database import DatabaseCoreSpec
+from pyrevs.runner import BaseRunner
 from pyrevs.runner import RunnerConfig
 from pyrevs.runner import make_runner
 from pyrevs.runner import ms_worker
@@ -319,97 +320,140 @@ class AMS(BaseSamplingStrategy):
             max_workers=self._ams_cfg.l_j,
         ) as runner:
             while k < self._ams_cfg.nsplititer:
-                inf_msg = (
-                    f"### [{k_it}] AMS iteration - total # of discarded traj. {k}"
-                    f" - discarding {self._ams_cfg.l_j} score level(s)"
-                )
-                _logger.info(inf_msg)
-
-                # Plot trajectory database scores
-                if plot_diags:
-                    pltfile = f"Score_k{k:05}.png"
-                    if Path(pltfile).exists():
-                        wrn_msg = f"Attempting to overwrite the plot file {pltfile}"
-                        _logger.warning(wrn_msg)
-                    tdb.plot_score_functions(pltfile)
-
-                # Get the ensemble maximums and check for early exit conditions
-                early_exit, maxes = self.check_exit_splitting_loop(tdb, k, k_it)
-
-                # Get the l_j lower scored trajectories
-                # or more if equal score
-                min_idx_list, min_vals = get_min_scored(maxes, self._ams_cfg.l_j)
-
-                # Randomly select trajectory to branch from
-                ancestor_idx = self.get_restart_at_random(tdb, min_idx_list)
-                n_branch = len(min_idx_list)
-
-                # Update the database with the data of the current
-                # iteration
-                self._req_db_ext().append_splitting_iteration_data(
-                    k, n_branch, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
+                # Perform a single splitting iteration
+                should_stop, n_discarded = self._one_splitting_iteration(
+                    tdb,
+                    runner,
+                    k,
+                    k_it,
+                    plot_diags,
                 )
 
-                # Query the current iteration weight
-                # to compute the individual weight of each trajectory in the ensemble
-                # at the end of the splitting iteration
-                new_traj_weight = self._req_db_ext().weights()[-1]
-
-                # Exit the loop if needed
-                if early_exit:
-                    # If AMS converged, final update of the weights.
-                    if tdb.all_converged():
-                        self._req_db_ext().update_trajectories_weights()
-                    break
-
-                # Assemble a list of promises
-                # and archive the discarded trajectories
-                for i in range(n_branch):
-                    # Archive
-                    tdb.archive_trajectory(tdb.get_traj(min_idx_list[i]))
-
-                    # Worker task
-                    task = [
-                        tdb.get_traj(ancestor_idx[i]),
-                        tdb.get_traj(min_idx_list[i]),
-                        np.max(min_vals),
-                        new_traj_weight,
-                        self._term_crit,
-                        self._end_date,
-                        tdb.pool_file(),
-                        tdb.path(),
-                    ]
-                    runner.make_promise(task)
-
-                try:
-                    restarted_trajs = runner.execute_promises()
-                except Exception as exc:
-                    err_msg = f"Failed to branch {n_branch} trajectories at iteration {k_it}"
-                    _logger.exception(err_msg)
-                    raise RuntimeError(err_msg) from exc
-
-                # Update the trajectories in the database
-                for t in restarted_trajs:
-                    tdb.overwrite_traj(t.id(), t)
-
-                # Update the weights of all trajectories in the ensemble with the current
-                # iteration weight
-                self._req_db_ext().update_trajectories_weights()
-
-                if self.out_of_time():
-                    # Save splitting data with ongoing trajectories
-                    # but do not increment splitting index yet
-                    warn_msg = f"Ran out of time after {k_it} splitting iterations, and {k} discarded trajectories"
-                    _logger.warning(warn_msg)
+                # Stop the splitting loop for any reason
+                if should_stop:
                     break
 
                 # Wrap up the iteration by updating its status in the
                 # database and incrementing the counter of discarded trajectories
                 self._req_db_ext().mark_last_splitting_iteration_as_done()
-                k = k + n_branch
+                k = k + n_discarded
 
-                # Update the splitting iteration counter
+                # Update the local splitting iteration counter
                 k_it = self._req_db_ext().get_iteration_count()
+
+    def _one_splitting_iteration(
+        self, tdb: Database, runner: BaseRunner, k: int, k_it: int, plot_diags: bool
+    ) -> tuple[bool, int]:
+        """Perform a single splitting iteration.
+
+        Args:
+            tdb: the AMS database
+            runner: the runner
+            k: counter of discarded trajectories
+            k_it: loop counter
+            plot_diags: whether or not to plot diagnostics
+
+        Returns:
+            bool to trigger splitting loop break
+            number of discarded trajectories
+        """
+        inf_msg = (
+            f"### [{k_it}] AMS iteration - total # of discarded traj. {k}"
+            f" - discarding {self._ams_cfg.l_j} score level(s)"
+        )
+        _logger.info(inf_msg)
+
+        # Plot trajectory database scores
+        if plot_diags:
+            pltfile = f"Score_k{k:05}.png"
+            if Path(pltfile).exists():
+                wrn_msg = f"Attempting to overwrite the plot file {pltfile}"
+                _logger.warning(wrn_msg)
+            tdb.plot_score_functions(pltfile)
+
+        # Get the ensemble maximums and check for early exit conditions
+        early_exit, maxes = self.check_exit_splitting_loop(tdb, k, k_it)
+
+        # Get the l_j lower scored trajectories
+        # or more if equal score
+        min_idx_list, min_vals = get_min_scored(maxes, self._ams_cfg.l_j)
+
+        # Randomly select trajectory to branch from
+        ancestor_idx = self.get_restart_at_random(tdb, min_idx_list)
+        n_discarded = len(min_idx_list)
+
+        # Update the database with the data of the current
+        # iteration
+        self._req_db_ext().append_splitting_iteration_data(
+            k, n_discarded, min_idx_list, ancestor_idx, min_vals.tolist(), [np.min(maxes), np.max(maxes)]
+        )
+
+        # Query the current iteration weight
+        # to compute the individual weight of each trajectory in the ensemble
+        # at the end of the splitting iteration
+        new_traj_weight = self._req_db_ext().weights()[-1]
+
+        # Exit the loop if needed
+        if early_exit:
+            # If AMS converged, final update of the weights.
+            if tdb.all_converged():
+                self._req_db_ext().update_trajectories_weights()
+            return True, n_discarded
+
+        # Assemble a list of promises
+        # and archive the discarded trajectories
+        for i in range(n_discarded):
+            # Archive
+            tdb.archive_trajectory(tdb.get_traj(min_idx_list[i]))
+
+            # Worker task
+            task = [
+                tdb.get_traj(ancestor_idx[i]),
+                tdb.get_traj(min_idx_list[i]),
+                np.max(min_vals),
+                new_traj_weight,
+                self._term_crit,
+                self._end_date,
+                tdb.pool_file(),
+                tdb.path(),
+            ]
+            runner.make_promise(task)
+
+        try:
+            restarted_trajs = runner.execute_promises()
+        except Exception as exc:
+            err_msg = f"Failed to branch {n_discarded} trajectories at iteration {k_it}"
+            _logger.exception(err_msg)
+            raise RuntimeError(err_msg) from exc
+
+        # Update the trajectories in the database
+        for t in restarted_trajs:
+            tdb.overwrite_traj(t.id(), t)
+
+        # Update the weights of all trajectories in the ensemble with the current
+        # iteration weight
+        self._req_db_ext().update_trajectories_weights()
+
+        # If OOT or interrupted, the database was updated
+        # above, but do not increment splitting index yet or
+        # mark the iteration as completed.
+        # The ongoing trajectories will be completed upon restarting.
+        if self.out_of_time():
+            warn_msg = f"Ran out of time after {k_it} splitting iterations, and {k} discarded trajectories"
+            _logger.warning(warn_msg)
+            return True, n_discarded
+
+        if Path("./pyrevs_stop").exists():
+            warn_msg = f"User-interupt triggered after {k_it} splitting iterations, and {k} discarded trajectories"
+            _logger.warning(warn_msg)
+
+            # Remove the stop file
+            Path("./pyrevs_stop").unlink(missing_ok=True)
+            return True, n_discarded
+
+        # Return to the main loop
+        # to continue splitting
+        return False, n_discarded
 
     def compute_probability(self, tdb: Database, plot_diags: bool) -> float:
         """Compute the probability using AMS.
