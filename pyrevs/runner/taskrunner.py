@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 import dask
 from dask.distributed import Client
+from dask.distributed import Nanny
 from dask.distributed import WorkerPlugin
 from dask_jobqueue import SLURMCluster
 from typing_extensions import Self
@@ -226,6 +227,25 @@ class AsIORunner(BaseRunner):
         return self._n_workers
 
 
+# An async function to build and start a worker alongside
+# the scheduler when running with SLURMCluster
+async def _start_local_worker(scheduler_address: str, nthreads: int = 1, nranks: int = 1) -> Nanny:
+    """Start a worker on the same node as the scheduler.
+
+    Args:
+        scheduler_address: the address of the scheduler
+        nthreads: number of threads
+        nranks: number of ranks
+    """
+    worker = Nanny(
+        scheduler_address,
+        nthreads=nthreads,
+        resources={"mpi_ranks": nranks},
+    )
+    await worker.start()
+    return worker
+
+
 class DaskRunner(BaseRunner):
     """A task runner class based on Dask.
 
@@ -292,8 +312,33 @@ class DaskRunner(BaseRunner):
                     ],
                     job_directives_skip=["--cpus-per-task=", "--mem"],
                 )
-            self.cluster.scale(jobs=self._n_workers)
             self.client = Client(self.cluster)
+
+            # Start a local worker alongside the
+            # scheduler slurm job and scale the cluster
+            # accordingly
+            if dask_cfg.one_worker_with_scheduler:
+                cluster_nworkers = max(0, self._n_workers - 1)
+                self.cluster.scale(jobs=cluster_nworkers)
+
+                if self.client.loop is None:
+                    err_msg = "Dask client loop is None."
+                    _logger.exception(err_msg)
+                    raise RuntimeError(err_msg)
+
+                asyncio_loop = self.client.loop.asyncio_loop  # type: ignore[attr-defined]
+
+                # Submit the async routine to the client's background event loop and wait for it
+                future = asyncio.run_coroutine_threadsafe(
+                    _start_local_worker(self.cluster.scheduler_address, nthreads=1, nranks=dask_cfg.ntasks_per_job),
+                    asyncio_loop,
+                )
+
+                # This blocks the main thread for a moment until the local worker is fully up
+                self.local_worker = future.result(timeout=30)
+            else:
+                self.cluster.scale(jobs=self._n_workers)
+
         else:
             err_msg = f"Unknown [dask] backend: {backend}"
             _logger.exception(err_msg)
@@ -308,6 +353,19 @@ class DaskRunner(BaseRunner):
 
     def __exit__(self, *args: object) -> None:
         """Executed leaving with scope."""
+        if hasattr(self, "local_worker") and self.local_worker:
+            if self.client.loop is None:
+                err_msg = "Dask client loop is None."
+                _logger.exception(err_msg)
+                raise RuntimeError(err_msg)
+
+            asyncio_loop = self.client.loop.asyncio_loop  # type: ignore[attr-defined]
+            try:
+                future = asyncio.run_coroutine_threadsafe(self.local_worker.close(), asyncio_loop)
+                future.result(timeout=5)
+            except Exception as e:
+                err_msg = f"Error while closing local worker: {e}"
+                _logger.exception(err_msg)
         if self.cluster:
             self.cluster.close()
         self.client.close()

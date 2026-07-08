@@ -147,6 +147,28 @@ def test_archive_and_fetch_traj_to_db():
     Path("./test.db").unlink(missing_ok=True)
 
 
+def test_archive_and_delete_traj_to_db():
+    """Archive then delete trajectory to CoreDB."""
+    poolfile = CoreDB("test.db")
+    poolfile.archive_trajectory("test.xml", "")
+    assert poolfile.get_archived_trajectory_count() == 1
+    poolfile.discard_archived_trajectory(0)
+    assert poolfile.get_archived_trajectory_count() == 0
+    del poolfile
+    Path("./test.db").unlink(missing_ok=True)
+
+def test_archive_and_clear_db():
+    """Archive multiple traj then clear archive."""
+    poolfile = CoreDB("test.db")
+    poolfile.archive_trajectory("test_01.xml", "")
+    poolfile.archive_trajectory("test_02.xml", "")
+    assert poolfile.get_archived_trajectory_count() == 2
+    poolfile.clear_archived_trajectories()
+    assert poolfile.get_archived_trajectory_count() == 0
+    del poolfile
+    Path("./test.db").unlink(missing_ok=True)
+
+
 def test_fetch_unknown_archived_traj():
     """Fetch an unknown archived trajectory."""
     poolfile = CoreDB("test.db")
@@ -237,6 +259,16 @@ def test_lock_unknown_trajectory():
     Path("./test.db").unlink(missing_ok=True)
 
 
+def test_update_chkfile_trajectory():
+    """Update only the traj chkfile."""
+    poolfile = CoreDB("test.db")
+    poolfile.add_trajectory("test.xml", "")
+    poolfile.update_trajectory_file(0, "test_updated.xml")
+    assert poolfile.fetch_trajectory(0)[0] == "test_updated.xml"
+    del poolfile
+    Path("./test.db").unlink(missing_ok=True)
+
+
 @pytest.mark.usefixtures("skip_on_windows")
 def test_lock_in_missing_db():
     """Lock a trajectory in a missing CoreDB."""
@@ -290,6 +322,29 @@ def test_splitting_data_add_and_query():
         amsfile.add_splitting_data(2 * i, 1, 0.1, [2 * i - 1], [0], [0.0], [0.0, 0.0])
         amsfile.mark_last_iteration_as_completed()
     assert np.all(amsfile.get_minmax()[0] == np.array([2.0, 0.0, 0.0], dtype="float64"))
+
+
+def test_splitting_data_add_and_discard_last():
+    """Adding splitting data to the database."""
+    poolfile = CoreDB("", in_memory=True)
+    amsfile = AMSDB(poolfile.engine())
+    for i in range(1, 4):
+        amsfile.add_splitting_data(2 * i, 1, 0.1, [2 * i - 1], [0], [0.0], [i*0.01, i*0.05])
+        amsfile.mark_last_iteration_as_completed()
+    assert np.all(np.isclose(amsfile.get_minmax()[-1], np.array([6.0, 0.03, 0.15], dtype="float64")))
+    amsfile.discard_last_iteration()
+    assert np.all(np.isclose(amsfile.get_minmax()[-1], np.array([4.0, 0.02, 0.1], dtype="float64")))
+
+def test_splitting_data_add_dump_json():
+    """Adding splitting data to the database."""
+    poolfile = CoreDB("", in_memory=True)
+    amsfile = AMSDB(poolfile.engine())
+    for i in range(1, 4):
+        amsfile.add_splitting_data(2 * i, 1, 0.1, [2 * i - 1], [0], [0.0], [i*0.01, i*0.05])
+        amsfile.mark_last_iteration_as_completed()
+    amsfile.dump_file_json("test.json")
+    assert Path("./test.json").exists() is True
+    Path("./test.json").unlink()
 
 
 def test_splitting_data_add_update_and_query():

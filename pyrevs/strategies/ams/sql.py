@@ -161,6 +161,14 @@ class AMSDB:
             if iteration:
                 iteration.status = "completed"
 
+    def discard_last_iteration(self) -> None:
+        """Discard the last iteration from the database."""
+        with self.session_scope() as session:
+            stmt = select(SplittingIterations).order_by(SplittingIterations.id.desc())
+            iteration = session.execute(stmt).scalars().first()
+            if iteration:
+                session.delete(iteration)
+
     def get_k_split(self) -> int:
         """Get the current discarded trajectories counter.
 

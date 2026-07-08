@@ -107,6 +107,25 @@ class CoreDB(BaseSQLManager):
                 _logger.exception(err_msg)
                 raise ValueError(err_msg)
 
+    def update_trajectory_file(self, traj_id: int, traj_file: str) -> None:
+        """Update the trajectory file of a given trajectory data in the DB.
+
+        Args:
+            traj_id : The trajectory id
+            traj_file : The new trajectory file of that trajectory
+
+        Raises:
+            SQLAlchemyError if the DB could not be accessed
+        """
+        with self.session_scope() as session:
+            traj = session.get(Trajectory, traj_id + 1)
+            if traj:
+                traj.traj_file = traj_file
+            else:
+                err_msg = f"Trajectory {traj_id} not found !"
+                _logger.exception(err_msg)
+                raise ValueError(err_msg)
+
     def update_trajectory_weight(self, traj_id: int, weight: float) -> None:
         """Update a given trajectory weight in the DB.
 
@@ -320,6 +339,18 @@ class CoreDB(BaseSQLManager):
         """
         with self.session_scope() as session:
             return session.scalar(select(func.count(ArchivedTrajectory.id))) or 0
+
+    def discard_archived_trajectory(self, traj_id: int) -> None:
+        """Remove a trajectory from the archive.
+
+        Args:
+            traj_id : The trajectory id
+        """
+        with self.session_scope() as session:
+            db_id = traj_id + 1
+            traj = session.get(ArchivedTrajectory, db_id)
+            if traj:
+                session.delete(traj)
 
     def clear_archived_trajectories(self) -> int:
         """Delete the content of the archived traj table.
