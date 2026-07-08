@@ -397,15 +397,11 @@ class DiagDB(BaseSQLManager):
     def get_unique_traj_ids(self) -> list[int]:
         """Return the list of unique trajectory IDs."""
         with self.session_scope() as session:
-            stmt = (
-                select(DiagnosticEntry.traj_id)
-                .distinct()
-                .order_by(DiagnosticEntry.traj_id)
-            )
+            stmt = select(DiagnosticEntry.traj_id).distinct().order_by(DiagnosticEntry.traj_id)
 
             return list(session.scalars(stmt))
 
-    def count_entries(self) -> int:
+    def count_entries(self) -> int | None:
         """Return the total number of rows in the diagnostics table."""
         with self.session_scope() as session:
             stmt = select(func.count()).select_from(DiagnosticEntry)
