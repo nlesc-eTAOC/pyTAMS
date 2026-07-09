@@ -8,6 +8,7 @@ import shutil
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import asdict
+from enum import Enum
 from math import isclose
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -35,6 +36,23 @@ _logger = logging.getLogger(__name__)
 
 T_Noise = TypeVar("T_Noise")
 T_State = TypeVar("T_State")
+
+
+class TrajectoryStateType(Enum):
+    """Enumeration of trajectory state types.
+
+    Attributes:
+        UNINIT : trajectory has not been initialized
+        ONGOING : trajectory is running
+        INTERRUPTED : trajectory has been interrupted (expected to continue later)
+        TERMINATED : trajectory has been terminated
+        CONVERGED : trajectory has converged
+    """
+    UNINIT = 0
+    ONGOING = 1
+    INTERRUPTED = 2
+    TERMINATED = 3
+    CONVERGED = 4
 
 
 class WallTimeLimitError(Exception):
@@ -294,10 +312,12 @@ class Trajectory(Generic[T_Noise, T_State]):
         # or from runtime arguments (end time, nstep_end)
         # (A previous call to advance with other arguments might have switched the boolean)
         self._has_terminated = any(
-            c.should_terminate(self._fmodel, self) for c in termination_criteria
+            c.should_terminate(self._fmodel, self) == TrajectoryStateType.TERMINATED for c in termination_criteria
         ) or self._runtime_termination(end_time, nstep_end)
 
-        while not (self._has_terminated or self._has_converged):
+        interrupt = False
+
+        while not (self._has_terminated or self._has_converged or interrupt):
             # Do a single model step
             score = self._one_step()
 
@@ -306,19 +326,23 @@ class Trajectory(Generic[T_Noise, T_State]):
                 self._step, self._t_cur, score, self._traj_cfg.targetscore
             )
             self._has_terminated = any(
-                c.should_terminate(self._fmodel, self) for c in termination_criteria
+                c.should_terminate(self._fmodel, self) == TrajectoryStateType.TERMINATED for c in termination_criteria
             ) or self._runtime_termination(end_time, nstep_end)
+
+            interrupt = any(
+                c.should_terminate(self._fmodel, self) == TrajectoryStateType.INTERRUPTED for c in termination_criteria
+            )
 
             # Handle diagnostics
             self._update_diagnostics()
 
             # Check timeout before continuing
             if (time.monotonic() - start_time) >= walltime:
-                break
+                interrupt = True
 
             # Check for user interruption
             if self.interrupt_trigger():
-                break
+                interrupt = True
 
         # Wrap-up the advance function
         self._terminate_advance(start_time, walltime)
