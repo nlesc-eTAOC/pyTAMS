@@ -78,6 +78,7 @@ pyrevs_help = "pyrevs.bin:input_help"
 [project.entry-points."pyrevs.strategies"]
 ams = "pyrevs.strategies.ams"
 montecarlo = "pyrevs.strategies.montecarlo"
+gktl = "pyrevs.strategies.gktl"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
